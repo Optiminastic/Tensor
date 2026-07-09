@@ -27,6 +27,13 @@ export const metadata: Metadata = {
   },
   description:
     'Tensor — 3D printing design costing and selling-price approval. Slicer-driven cost estimation, design pre-checks, and margin-safe pricing.',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon.png', type: 'image/png', sizes: '48x48' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }): JSX.Element {
