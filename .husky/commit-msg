@@ -1,1 +1,6 @@
-npx --no -- commitlint --edit "$1"
+msg="$1"
+case "$msg" in
+  /*) : ;;
+  *) msg="$(git rev-parse --show-toplevel)/$msg" ;;
+esac
+cd fe && npx --no -- commitlint --edit "$msg"

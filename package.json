@@ -20,7 +20,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "prepare": "husky"
+    "prepare": "cd .. && husky fe/.husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
