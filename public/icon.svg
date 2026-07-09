@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <rect width="512" height="512" rx="112" fill="#1B1C1F" />
   <path
-    d="M190 150 H150 V362 H190"
+    d="M168 120 H110 V392 H168"
     stroke="#5C5D66"
-    stroke-width="22"
+    stroke-width="26"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
   <path
-    d="M322 150 H362 V362 H322"
+    d="M344 120 H402 V392 H344"
     stroke="#5C5D66"
-    stroke-width="22"
+    stroke-width="26"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-  <circle cx="220" cy="220" r="30" fill="#4C6EF5" />
-  <circle cx="292" cy="220" r="30" fill="#ECECEF" />
-  <circle cx="220" cy="292" r="30" fill="#ECECEF" />
-  <circle cx="292" cy="292" r="30" fill="#ECECEF" />
+  <circle cx="208" cy="208" r="40" fill="#4C6EF5" />
+  <circle cx="304" cy="208" r="40" fill="#ECECEF" />
+  <circle cx="208" cy="304" r="40" fill="#ECECEF" />
+  <circle cx="304" cy="304" r="40" fill="#ECECEF" />
 </svg>
