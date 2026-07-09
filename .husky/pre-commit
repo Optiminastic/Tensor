@@ -1,1 +1,1 @@
-cd fe && pnpm lint-staged
+pnpm lint-staged
