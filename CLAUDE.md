@@ -130,6 +130,20 @@ middleware.ts             # Next.js edge middleware (auth gating)
 
 ---
 
+## Data visualization — must be distinctive, never generic
+
+Tensor is a costing/pricing tool: charts and metrics ARE the product. Every visualization must look considered and bespoke — never a default library chart dropped in as-is.
+
+- **No off-the-shelf defaults.** Never ship a chart with library default colors, gridlines, tooltips, or legends. Always restyle to the Tensor design language (tokens in `app/globals.css`).
+- **Use the design tokens, not raw hex.** Pull series/status colors from the theme (`--accent`, `--success`, `--warning`, `--danger`, graphite neutrals). Saturated color carries meaning (status, thresholds) — never decoration. Must work in both light and dark.
+- **Numbers are tabular mono.** All figures (₹, grams, hours, %) use the mono/tabular treatment (`font-mono tabular-nums`) so columns and axes align. Reuse `DataValue`/`Stat` where they fit.
+- **Pick the right form for the question.** Match chart type to the decision being made (e.g. Design CP vs SP ladder, CP-%-of-SP thresholds, machine-time distributions, batch efficiency). Don't force everything into a bar chart. Show the threshold/target line when one exists (the ≤25% / ≤30% CP rules, the 2-hour machine-time target).
+- **Craft the details.** Deliberate axes, spacing, and typographic hierarchy; direct labels over legends when possible; meaningful empty/loading/zero states; accessible contrast and non-color-only encoding (shape/label as well as hue).
+- **Before writing ANY chart code, load the `dataviz` skill** and follow it. `recharts` is already a dependency — prefer it; ask before adding a new charting lib.
+- **No AI-generic look.** No gradient fills for their own sake, no glassmorphism, no rainbow categorical palettes. Restrained, precise, instrument-grade — consistent with "Graphite Precision".
+
+---
+
 ## What NOT to do (common AI mistakes to avoid)
 
 - Don't create a new `utils.ts` at the root — check if `lib/` already has what you need
@@ -139,3 +153,4 @@ middleware.ts             # Next.js edge middleware (auth gating)
 - Don't create a new Context when Zustand already handles that state
 - Don't write inline styles — use Tailwind classes
 - Don't generate placeholder/TODO code and leave it — finish what you start
+- Don't drop in a default library chart — restyle every visualization to the design language (see "Data visualization" above)

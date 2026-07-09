@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Instrument_Serif } from 'next/font/google'
+import { IBM_Plex_Mono, Inter } from 'next/font/google'
 import type React from 'react'
 
 import { QueryProvider } from '@/components/providers/query-provider'
@@ -13,25 +13,26 @@ const inter = Inter({
   preload: true,
 })
 
-const instrumentSerif = Instrument_Serif({
+const plexMono = IBM_Plex_Mono({
   subsets: ['latin'],
-  variable: '--font-instrument-serif',
-  weight: ['400'],
+  weight: ['400', '500', '600'],
+  variable: '--font-plex-mono',
   display: 'swap',
-  preload: true,
 })
 
 export const metadata: Metadata = {
-  title: 'Varaads - Effortless Custom Contract Billing',
+  title: {
+    default: 'Tensor',
+    template: '%s · Tensor',
+  },
   description:
-    'Streamline your billing process with seamless automation for every custom contract, tailored by Varaads.',
-  generator: 'v0.app',
+    'Tensor — 3D printing design costing and selling-price approval. Slicer-driven cost estimation, design pre-checks, and margin-safe pricing.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }): JSX.Element {
   return (
-    <html lang="en" className={`${inter.variable} ${instrumentSerif.variable} antialiased`}>
-      <body className="font-sans antialiased">
+    <html lang="en" className={`${inter.variable} ${plexMono.variable}`} suppressHydrationWarning>
+      <body>
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
