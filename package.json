@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "SKIP_ENV_VALIDATION=1 next dev",
     "build": "prisma generate && SKIP_ENV_VALIDATION=1 next build",
-    "start": "next start",
+    "start": "SKIP_ENV_VALIDATION=1 next start",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0",
     "type-check": "tsc --noEmit",

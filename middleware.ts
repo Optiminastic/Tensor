@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 const protectedRoutes = ['/dashboard']
-const authRoutes = ['/sign-in', '/sign-up']
+const authRoutes = ['/login']
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const sessionCookie = getSessionCookie(request)
@@ -13,13 +13,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
   if (isProtected && !sessionCookie) {
-    const signInUrl = new URL('/sign-in', request.url)
-    signInUrl.searchParams.set('callbackUrl', pathname)
-    return NextResponse.redirect(signInUrl)
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('callbackUrl', pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   if (isAuthRoute && sessionCookie) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return NextResponse.next()
