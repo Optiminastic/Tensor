@@ -1,4 +1,13 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 /** @type {import('next').NextConfig} */
+
+// This directory, not wherever Next guesses. Next walks up looking for a
+// lockfile to infer the workspace root, and on this machine it walks clear out
+// of the repo and finds a stray package-lock.json in the home directory —
+// which makes it resolve modules against the wrong root and fail the build.
+const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 
 // Headers applied to every response. Tune CSP for your asset/CDN/auth setup.
 const securityHeaders = [
@@ -33,6 +42,9 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
+  turbopack: {
+    root: projectRoot,
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   images: {

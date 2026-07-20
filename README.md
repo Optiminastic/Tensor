@@ -18,7 +18,7 @@ An opinionated, production-ready Next.js 14 (App Router) template wired for ship
 ### Authentication & data
 
 - **Better Auth** with email/password, session cookies, 30-day expiry, cookie cache
-- **Prisma 5** + **PostgreSQL** (pooled `DATABASE_URL` + direct `DIRECT_URL` for migrations)
+- **PostgreSQL** via `pg` — Better Auth's five tables only. The domain, RBAC and audit live in Tensor-Core.
 - **Built-in rate limiting** on auth endpoints (5/min on sign-in, sign-up, reset)
 - Auth-gated routes via `middleware.ts` (redirects to `/sign-in` with `callbackUrl`)
 
@@ -103,20 +103,18 @@ lib/
 ├── auth-client.ts        # Better Auth React client
 ├── env.ts                # Validated env (t3-oss/env-nextjs)
 ├── logger.ts             # pino logger
-├── prisma.ts             # Prisma singleton (HMR-safe)
+├── db.ts                 # pg Pool for Better Auth only (HMR-safe)
 ├── query-client.ts       # TanStack Query client factory (SSR-safe)
 ├── query-keys.ts         # Centralized query keys
 ├── utils.ts              # cn() helper
 └── validators/           # Cross-feature Zod schemas
 
 services/                 # All external API / data-access calls — typed
-└── auth.service.ts       # Wraps Better Auth client calls
+├── auth.service.ts       # Wraps Better Auth client calls
+└── authz.service.ts      # Resolves roles/permissions from Tensor-Core
 
 stores/                   # Zustand stores
 └── useUiStore.ts         # Sidebar open state
-
-prisma/
-└── schema.prisma         # User, Session, Account, Verification models
 
 middleware.ts             # Edge middleware: redirects /dashboard → /sign-in
 ```
@@ -142,53 +140,72 @@ Example: `import { auth } from '@/lib/auth'`
 
 ## Scripts
 
-| Command             | What it does                                          |
-| ------------------- | ----------------------------------------------------- |
-| `pnpm dev`          | Start dev server on `:3000`                           |
-| `pnpm build`        | Production build                                      |
-| `pnpm start`        | Run the production server                             |
-| `pnpm lint`         | ESLint with `--max-warnings 0` (CI-strict)            |
-| `pnpm lint:fix`     | Auto-fix lint errors                                  |
-| `pnpm type-check`   | `tsc --noEmit`                                        |
-| `pnpm format`       | Prettier write all files                              |
-| `pnpm format:check` | Verify formatting (CI)                                |
-| `pnpm test`         | Vitest (unit)                                         |
-| `pnpm test:e2e`     | Playwright (e2e)                                      |
-| `pnpm analyze`      | Bundle analysis (`ANALYZE=true next build`)           |
-| `pnpm dead-code`    | Knip — find unused files/exports/deps                 |
-| `pnpm db:generate`  | `prisma generate`                                     |
-| `pnpm db:push`      | `prisma db push` (no migrations)                      |
-| `pnpm db:migrate`   | `prisma migrate dev`                                  |
-| `pnpm db:studio`    | Open Prisma Studio                                    |
-| `pnpm prepare`      | Reinstall husky hooks (runs automatically on install) |
+| Command              | What it does                                          |
+| -------------------- | ----------------------------------------------------- |
+| `pnpm dev`           | Start dev server on `:3000`                           |
+| `pnpm build`         | Production build                                      |
+| `pnpm start`         | Run the production server                             |
+| `pnpm lint`          | ESLint with `--max-warnings 0` (CI-strict)            |
+| `pnpm lint:fix`      | Auto-fix lint errors                                  |
+| `pnpm type-check`    | `tsc --noEmit`                                        |
+| `pnpm format`        | Prettier write all files                              |
+| `pnpm format:check`  | Verify formatting (CI)                                |
+| `pnpm test`          | Vitest (unit)                                         |
+| `pnpm test:e2e`      | Playwright (e2e)                                      |
+| `pnpm analyze`       | Bundle analysis (`ANALYZE=true next build`)           |
+| `pnpm dead-code`     | Knip — find unused files/exports/deps                 |
+| `pnpm auth:generate` | Print the SQL for Better Auth's tables (review only)  |
+| `pnpm auth:migrate`  | Create/update Better Auth's tables in `DATABASE_URL`  |
+| `pnpm prepare`       | Reinstall husky hooks (runs automatically on install) |
 
 ---
 
 ## Quick start
 
 ```bash
-# 1. Install dependencies (uses pnpm)
+# 1. Start Postgres (compose file lives at the tensor/ root, one level up)
+cd .. && docker compose up -d && cd Tensor
+
+# 2. Install dependencies (uses pnpm)
 pnpm install
 
-# 2. Copy env template and fill in real values
-cp .env.example .env.local
+# 3. Copy env template and fill in real values
+cp .env.example .env
 
-# 3. Generate the Prisma client
-pnpm db:generate
+# 4. Create Better Auth's tables (user, session, account, verification, jwks)
+pnpm auth:migrate
 
-# 4. Push the schema to your Postgres database
-pnpm db:push
-
-# 5. Start the dev server
-pnpm dev
+# 5. Start the dev server on 3001 (3000 is taken on this machine)
+pnpm exec next dev -p 3001
 ```
 
-Open <http://localhost:3000>.
+> Roles and permissions are **not** created here. Tensor-Core owns them:
+> `uv run alembic upgrade head` then `uv run python -m app.auth.seed`. Run
+> Better Auth's migration first — the backend's `user_roles` table holds a
+> Better Auth user id.
+
+Open <http://localhost:3001>.
+
+**Ports are not the defaults.** Postgres is on **5434** (5432/5433/5544 belong to other projects on this machine), the frontend on **3001**, the backend on **8001**. `BETTER_AUTH_URL` is the JWT `iss` claim, so Tensor-Core's `AUTH_ISSUER` must match it exactly. See the root `CLAUDE.md`.
 
 To verify everything is wired up correctly:
 
 ```bash
 pnpm lint && pnpm type-check && pnpm build
+```
+
+To verify auth end to end, with both servers running:
+
+```bash
+# Sign up, mint a token, and call the backend with it.
+curl -s -c /tmp/c.txt -X POST http://localhost:3001/api/auth/sign-up/email \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Dev","email":"dev@optiminastic.com","password":"correct-horse-battery-staple"}'
+
+TOKEN=$(curl -s -b /tmp/c.txt http://localhost:3001/api/auth/token | jq -r .token)
+
+# 403 until a role is granted in Tensor-Core — the lookup fails closed.
+curl -i -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8001/config/materials
 ```
 
 ---
@@ -200,10 +217,11 @@ All variables are validated at startup by `lib/env.ts`. See [`.env.example`](./.
 | Variable              | Required                       | Purpose                                                      |
 | --------------------- | ------------------------------ | ------------------------------------------------------------ |
 | `NODE_ENV`            | no (defaults to `development`) | `development` \| `test` \| `production`                      |
-| `DATABASE_URL`        | yes                            | Pooled Postgres connection string                            |
-| `DIRECT_URL`          | yes                            | Direct (non-pooled) connection — used for migrations         |
+| `DATABASE_URL`        | yes                            | Postgres connection for Better Auth's tables only            |
 | `BETTER_AUTH_SECRET`  | yes                            | ≥ 32 chars. Generate with `openssl rand -base64 32`          |
-| `BETTER_AUTH_URL`     | yes                            | Public URL of the auth server (e.g. `http://localhost:3000`) |
+| `BETTER_AUTH_URL`     | yes                            | Public URL of the auth server. Also the JWT `iss` claim      |
+| `TENSOR_CORE_URL`     | yes                            | Backend base URL — roles are resolved from it at token issue |
+| `INTERNAL_API_SECRET` | yes                            | ≥ 32 chars. Shared with Tensor-Core. Server-side only        |
 | `NEXT_PUBLIC_APP_URL` | yes                            | Public app URL (used by `auth-client`)                       |
 | `SKIP_ENV_VALIDATION` | no                             | Set to `true` to bypass validation (CI builds)               |
 
@@ -223,11 +241,10 @@ All variables are validated at startup by `lib/env.ts`. See [`.env.example`](./.
 
 #### Auth & DB
 
-| Package          | Version | Purpose                                      |
-| ---------------- | ------- | -------------------------------------------- |
-| `better-auth`    | ^1.6.9  | Email/password auth, sessions, rate limiting |
-| `@prisma/client` | ^5.22.0 | Prisma runtime                               |
-| `prisma`         | ^5.22.0 | Prisma CLI/engine                            |
+| Package       | Version | Purpose                                                |
+| ------------- | ------- | ------------------------------------------------------ |
+| `better-auth` | ^1.6.9  | Email/password auth, sessions, rate limiting, JWT/JWKS |
+| `pg`          | ^8.22.0 | Postgres driver — Better Auth's tables only            |
 
 #### State / data
 
@@ -353,7 +370,9 @@ Subject ≤ 72 chars; body lines ≤ 100 chars.
 
 ## Troubleshooting
 
-**`Cannot find module '@prisma/client'`** — run `pnpm db:generate`.
+**Auth calls fail with a relation-does-not-exist error** — Better Auth's tables have not been created. Run `pnpm auth:migrate`.
+
+**Signed in, but every backend call returns 403** — the token was minted with no roles. Check `TENSOR_CORE_URL` and `INTERNAL_API_SECRET`, and that the user has a role assigned in Tensor-Core. The role lookup fails closed on purpose, so a backend that is down yields no permissions rather than over-granting.
 
 **Build fails with env errors** — copy `.env.example` to `.env.local` and fill it in, or set `SKIP_ENV_VALIDATION=true` (CI only).
 

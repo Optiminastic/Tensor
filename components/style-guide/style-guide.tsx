@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, JSX } from 'react'
 
 import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/style-guide/theme-toggle'
@@ -67,7 +67,7 @@ function ColorSection(): JSX.Element {
   return (
     <Section
       title="Colour"
-      caption="Near-monochrome graphite; saturation reserved for status and one signal accent."
+      caption="Ivory and ink; saturation reserved for status and one royal blue signal."
     >
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {SWATCHES.map(s => (
@@ -83,22 +83,41 @@ function ColorSection(): JSX.Element {
 
 function TypeSection(): JSX.Element {
   return (
-    <Section title="Type" caption="Inter for interface, Geist Mono (tabular) for every figure.">
+    <Section
+      title="Type"
+      caption="Three fonts, one job each. Mona Sans displays, Geist Sans interfaces, Geist Mono counts."
+    >
       <Card>
-        <CardContent className="flex flex-col gap-3">
-          <p className="text-foreground text-2xl font-semibold tracking-tight">
-            Costing that reads like an instrument.
-          </p>
-          <p className="text-muted-foreground max-w-prose text-sm">
-            The interface stays quiet so the numbers lead. Body copy is Inter at a comfortable
-            measure; data is set in a tabular monospace so columns of figures always line up.
-          </p>
-          <div className="border-border flex flex-wrap items-baseline gap-6 border-t pt-3">
-            <DataValue value="₹240" className="text-xl" />
-            <DataValue value="2h 14m" className="text-xl" />
-            <DataValue value="62" unit="g" className="text-xl" />
-            <DataValue value="4" unit="/bed" className="text-xl" />
-            <DataValue value="25.0" unit="%" className="text-xl" />
+        <CardContent className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
+            <p className="text-display text-foreground text-4xl sm:text-5xl">
+              Costing that reads like an <em className="text-accent">instrument</em>.
+            </p>
+            <p className="text-subtle-foreground font-mono text-xs">
+              text-display · Mona Sans · display sizes only
+            </p>
+          </div>
+          <div className="border-border flex flex-col gap-3 border-t pt-4">
+            <p className="text-muted-foreground max-w-prose text-sm">
+              The interface stays quiet so the numbers lead. The display face appears once per page,
+              at the top of the hierarchy, and never below it: no labels, no table headers, no body
+              copy. Everything you actually operate is Geist Sans.
+            </p>
+            <p className="text-subtle-foreground font-mono text-xs">
+              font-sans · Geist Sans · every label, control and paragraph
+            </p>
+          </div>
+          <div className="border-border flex flex-col gap-3 border-t pt-4">
+            <div className="flex flex-wrap items-baseline gap-6">
+              <DataValue value="₹240" className="text-xl" />
+              <DataValue value="2h 14m" className="text-xl" />
+              <DataValue value="62" unit="g" className="text-xl" />
+              <DataValue value="4" unit="/bed" className="text-xl" />
+              <DataValue value="25.0" unit="%" className="text-xl" />
+            </div>
+            <p className="text-subtle-foreground font-mono text-xs">
+              font-mono · Geist Mono · tabular, so columns of figures align
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -224,7 +243,7 @@ export function StyleGuide(): JSX.Element {
         <div className="flex flex-col gap-2">
           <Logo />
           <p className="text-muted-foreground max-w-prose text-sm">
-            Graphite Precision — the design language for Tensor&apos;s costing, pricing and approval
+            Editorial Ink - the design language for Tensor&apos;s costing, pricing and approval
             workspace.
           </p>
         </div>

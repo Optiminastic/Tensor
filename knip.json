@@ -4,14 +4,10 @@
     "app/**/{page,layout,template,error,loading,not-found,route}.{ts,tsx}",
     "middleware.ts",
     "next.config.{js,mjs,ts}",
-    "prisma/schema.prisma"
+    "lib/auth.ts"
   ],
   "project": ["**/*.{ts,tsx}!"],
-  "ignore": [
-    "components/ui/**",
-    ".next/**",
-    "node_modules/**"
-  ],
+  "ignore": ["components/ui/**", ".next/**", "node_modules/**"],
   "ignoreDependencies": [
     "tailwindcss",
     "tw-animate-css",

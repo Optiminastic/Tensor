@@ -1,7 +1,7 @@
 'use client'
 
 import { Moon, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 
 import { Button } from '@/components/ui/button'
 
@@ -19,7 +19,7 @@ export function ThemeToggle(): JSX.Element {
   }
 
   return (
-    <Button variant="secondary" size="icon" onClick={toggle} aria-label="Toggle theme">
+    <Button variant="primary" size="icon" onClick={toggle} aria-label="Toggle theme">
       {dark ? <Moon /> : <Sun />}
     </Button>
   )

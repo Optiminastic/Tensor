@@ -1,4 +1,4 @@
-import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from 'react'
+import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes, JSX } from 'react'
 
 import { cn } from '@/lib/utils'
 
