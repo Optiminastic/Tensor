@@ -1,30 +1,59 @@
+import type { JSX } from 'react'
+
 import { cn } from '@/lib/utils'
 
 export interface LogoProps {
   showWordmark?: boolean
   className?: string
+  /**
+   * Sizing for the mark itself. Defaults to `h-5`; width follows the aspect.
+   * Set this when the mark sits against large type — inline in a heading it has
+   * to reach roughly cap height or it reads as a stray glyph.
+   */
+  markClassName?: string
 }
 
 /**
- * Tensor mark — a 2×2 matrix of nodes inside precision brackets,
- * nodding to the name. Drawn in currentColor so it inherits context;
- * the leading node carries the single accent.
+ * Tensor mark — stacked bars stepping up through S-curve joins.
+ *
+ * Traced to vector from the supplied artwork rather than embedded as a bitmap,
+ * for three reasons that all matter at this size: it stays sharp at favicon
+ * scale, it has no background to knock out, and it inherits `currentColor` —
+ * which is what keeps it legible in dark mode, where a near-black bitmap would
+ * vanish into the charcoal ground.
+ *
+ * The mark is portrait (205:263), so it is sized by height and the width
+ * follows.
  */
-export function Logo({ showWordmark = true, className }: LogoProps): JSX.Element {
+export function Logo({ showWordmark = true, className, markClassName }: LogoProps): JSX.Element {
   return (
     <span className={cn('text-foreground inline-flex items-center gap-2', className)}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
+      <svg
+        viewBox="0 0 205 263"
+        fill="currentColor"
+        aria-hidden
+        className={cn('h-5 w-auto shrink-0', markClassName)}
+      >
         <path
-          d="M6 3H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h2M18 3h2a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-2"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          className="text-border-strong"
+          transform="translate(90.4 2.4)"
+          d="M0 0 C1.2 0 1.2 0 7.5 0 C10.2 0 12.9 0.1 15.6 0.1 C18.4 0.1 21.1 0.1 23.9 0.1 C31.2 0.1 38.4 0.2 45.7 0.2 C53.1 0.3 60.5 0.3 68 0.3 C82.5 0.4 97 0.5 111.6 0.6 C111.6 8.2 111.6 15.7 111.6 23.6 C109.8 23.6 109.8 23.6 100.8 23.6 C89.1 23.7 77.3 23.7 65.6 23.8 C58.4 23.8 51.3 23.9 44.2 23.9 C36 23.9 27.8 24 19.6 24.1 C17.1 24.1 14.5 24.1 11.9 24.1 C9.5 24.1 7.1 24.1 4.7 24.1 C3.6 24.1 3.6 24.1 -1.7 24.2 C-12 24.9 -20.2 26.9 -25.7 36.6 C-27.7 42.5 -28.5 48.3 -29.4 54.6 C-34.4 64.6 -39.5 70 -51.1 71 C-56.6 71.1 -62 71 -67.5 70.9 C-68.5 70.9 -68.5 70.9 -73.3 70.8 C-78 70.8 -82.7 70.7 -87.4 70.6 C-87.4 63 -87.4 55.4 -87.4 47.6 C-85.3 47.5 -83.2 47.5 -81.1 47.4 C-78.3 47.3 -75.5 47.3 -72.7 47.2 C-71.3 47.2 -70 47.1 -68.6 47.1 C-38.9 46.3 -38.9 46.3 -31.4 32.6 C-30.3 27.9 -30.3 27.9 -29.5 23.1 C-26.1 6.1 -17.2 -0.1 0 0 Z"
         />
-        <circle cx="9.5" cy="9.5" r="1.6" className="fill-accent" />
-        <circle cx="14.5" cy="9.5" r="1.6" fill="currentColor" />
-        <circle cx="9.5" cy="14.5" r="1.6" fill="currentColor" />
-        <circle cx="14.5" cy="14.5" r="1.6" fill="currentColor" />
+        <path
+          transform="translate(89.7 49.9)"
+          d="M0 0 C2.5 0 5 0 7.5 0 C10.2 0 13 0 15.7 0 C18.5 0 21.2 0 24 0 C31.3 0 38.7 0 46 0 C53.4 0.1 60.9 0.1 68.3 0.1 C83 0.1 97.6 0.1 112.3 0.1 C112.3 7.7 112.3 15.3 112.3 23.1 C110.5 23.1 110.5 23.1 101.2 23.1 C89.2 23.1 77.1 23.2 65.1 23.2 C57.8 23.3 50.5 23.3 43.2 23.3 C36.1 23.3 29 23.3 22 23.4 C18 23.4 14 23.4 10 23.4 C8.8 23.4 8.8 23.4 2.6 23.5 C0.5 23.5 -1.7 23.5 -3.9 23.5 C-12.9 24.5 -18.1 27.1 -23.7 34.1 C-26.1 39.7 -27.2 43.3 -28.1 49.1 C-30.1 60 -33.6 64.3 -43.7 69.1 C-48.2 70.2 -52 70.2 -56.6 70.2 C-58.4 70.2 -60.1 70.2 -61.9 70.2 C-62.9 70.2 -62.9 70.2 -67.5 70.2 C-69.3 70.2 -71.2 70.2 -73.1 70.2 C-77.6 70.2 -82.2 70.1 -86.7 70.1 C-86.8 66.3 -86.8 62.5 -86.8 58.7 C-86.8 56.6 -86.8 54.4 -86.8 52.2 C-86.7 47.1 -86.7 47.1 -85.7 46.1 C-82.9 46 -80 46 -77.2 45.9 C-76.3 45.9 -76.3 45.9 -71.8 45.9 C-68.1 45.8 -64.3 45.8 -60.6 45.8 C-59.7 45.8 -59.7 45.8 -55.2 45.7 C-54.4 45.7 -54.4 45.7 -50.3 45.6 C-45.3 45.1 -42.1 43.6 -37.7 41.1 C-36.7 40.8 -35.7 40.5 -34.7 40.1 C-31.6 33.8 -29.4 28.1 -28.4 21.2 C-26.6 11.2 -23.2 6.8 -14.7 1.1 C-9.9 -0.5 -5.1 -0 0 0 Z"
+        />
+        <path
+          transform="translate(93.2 95.9)"
+          d="M0 0 C2.2 -0 4.4 -0 6.6 -0 C8.9 -0 11.2 0 13.6 0 C14.7 0 14.7 0 20.6 -0 C22.8 -0 24.9 -0 27.2 0 C28.2 0 28.2 0 33.3 0 C37.8 0.1 37.8 0.1 38.8 1.1 C38.9 4.8 39 8.5 39 12.1 C39 14.2 39 16.2 39 18.3 C38.8 23.1 38.8 23.1 37.8 24.1 C34.2 24.2 30.6 24.3 26.9 24.3 C24.7 24.3 22.4 24.3 20.1 24.3 C15.3 24.4 10.6 24.4 5.8 24.4 C3.5 24.4 1.3 24.4 -1.1 24.5 C-3.2 24.5 -5.2 24.5 -7.4 24.5 C-17.3 25.6 -24.4 29.3 -29.2 38.1 C-30.1 42.4 -30.8 46.8 -31.4 51.1 C-33.2 60.4 -38.8 66.3 -47.5 69.9 C-52.2 71.2 -56.2 71.5 -61.1 71.5 C-62.7 71.5 -64.4 71.5 -66.1 71.4 C-66.9 71.4 -66.9 71.4 -71.2 71.4 C-72.9 71.4 -74.6 71.4 -76.4 71.4 C-89 71.3 -89 71.3 -90.2 70.1 C-90.2 66.3 -90.3 62.4 -90.2 58.6 C-90.2 56.4 -90.2 54.3 -90.2 52.1 C-90.2 50.5 -90.2 48.8 -90.2 47.1 C-89 47.1 -87.8 47.1 -86.6 47.1 C-81.3 47.1 -76 47 -70.7 46.9 C-68.9 46.9 -67.1 46.9 -65.2 46.8 C-63.4 46.8 -61.6 46.8 -59.8 46.7 C-58.2 46.7 -56.5 46.7 -54.9 46.7 C-46 45.6 -40.4 42.4 -35.2 35.1 C-33.2 30.1 -33.2 30.1 -31.9 22.3 C-30 11.7 -25.8 6.2 -16.2 1.1 C-10.6 0 -5.6 0 0 0 Z"
+        />
+        <path
+          transform="translate(92.0 142.8)"
+          d="M0 0 C2.3 0 4.7 0 7.1 0 C9.5 0 11.9 0.1 14.4 0.1 C16.9 0.1 19.3 0.1 21.8 0.1 C27.9 0.1 34 0.2 40 0.2 C40.1 4 40.1 7.8 40.1 11.6 C40.1 13.8 40.1 15.9 40.1 18.1 C40 23.2 40 23.2 39 24.2 C35.3 24.3 31.6 24.4 27.8 24.4 C25.5 24.4 23.2 24.4 20.9 24.4 C16 24.5 11.1 24.5 6.2 24.5 C5 24.6 5 24.6 -0.8 24.6 C-1.9 24.6 -1.9 24.6 -7.3 24.7 C-16.5 25.5 -21.5 28.8 -27 36.2 C-29 41.2 -29 41.2 -29.8 48 C-31.5 58.6 -35.1 63.3 -44 69.2 C-48.2 70.6 -52 70.3 -56.4 70.3 C-58.3 70.3 -60.2 70.3 -62.2 70.3 C-64.1 70.3 -66.1 70.3 -68.1 70.3 C-70.1 70.3 -72.1 70.2 -74.2 70.2 C-79.1 70.2 -84 70.2 -89 70.2 C-89 62.6 -89 55 -89 47.2 C-86.3 47.2 -83.6 47.1 -80.8 47.1 C-77.2 47.1 -73.7 47 -70.1 46.9 C-69.2 46.9 -69.2 46.9 -64.7 46.9 C-52 46.7 -41.8 46.3 -34 35.2 C-31.7 29.5 -30.9 24.1 -29.9 18.1 C-26.1 2.8 -13.8 -0.1 0 0 Z"
+        />
+        <path
+          transform="translate(61.0 218.0)"
+          d="M0 0 C0.3 0 0.7 0 1 0 C2 30.6 2 30.6 -11 40 C-16.4 42.2 -19.9 42.2 -25.7 42.2 C-26.6 42.2 -26.6 42.2 -31.4 42.2 C-33.3 42.2 -35.3 42.1 -37.3 42.1 C-38.3 42.1 -38.3 42.1 -43.3 42.1 C-48.2 42.1 -53.1 42 -58 42 C-58 34.4 -58 26.8 -58 19 C-55.5 19 -53 18.9 -50.4 18.9 C-47.1 18.8 -43.9 18.7 -40.6 18.6 C-38.9 18.6 -37.3 18.6 -35.6 18.5 C-34 18.5 -32.4 18.5 -30.8 18.4 C-30 18.4 -30 18.4 -26.3 18.3 C-14.8 17.5 -7.3 14.7 -2 4 C-1.3 2.7 -0.7 1.4 0 0 Z"
+        />
       </svg>
       {showWordmark ? (
         <span className="text-[0.975rem] font-semibold tracking-tight">Tensor</span>

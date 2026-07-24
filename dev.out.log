@@ -1,0 +1,79 @@
+▲ Next.js 16.2.10 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://172.22.80.1:3001
+- Environments: .env
+✓ Ready in 1044ms
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+- Experiments (use with caution):
+  · serverActions
+
+ GET /api/auth/ok 200 in 532ms
+ GET /manifest.webmanifest 200 in 104ms (next.js: 61ms, proxy.ts: 13ms, application-code: 31ms)
+ GET / 200 in 2.6s (next.js: 1526ms, proxy.ts: 14ms, application-code: 1094ms)
+ GET / 200 in 2.6s (next.js: 1605ms, proxy.ts: 12ms, application-code: 989ms)
+ GET / 200 in 3.0s (next.js: 565ms, proxy.ts: 301ms, application-code: 2.2s)
+ GET /api/auth/ok 200 in 17ms (next.js: 7ms, application-code: 10ms)
+ GET /api/auth/jwks 200 in 26ms (next.js: 9ms, application-code: 18ms)
+ GET /dashboard 200 in 437ms (next.js: 158ms, proxy.ts: 6ms, application-code: 272ms)
+ GET /dashboard/decor 200 in 1447ms (next.js: 1198ms, proxy.ts: 9ms, application-code: 240ms)
+ GET /dashboard/decor 200 in 229ms (next.js: 61ms, proxy.ts: 6ms, application-code: 161ms)
+ GET /dashboard/decor/designs 200 in 1187ms (next.js: 1018ms, proxy.ts: 4ms, application-code: 165ms)
+ POST /dashboard/decor/designs 200 in 1703ms (next.js: 22ms, proxy.ts: 437ms, application-code: 1245ms)
+  └─ ƒ uploadDesign("decor", {}) in 857ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/606f717f-fc1d-4fbb-9ae1-3ff708b9b7c3 200 in 4.0s (next.js: 3.0s, proxy.ts: 12ms, application-code: 1064ms)
+ GET /dashboard/decor/designs/606f717f-fc1d-4fbb-9ae1-3ff708b9b7c3 200 in 1113ms (next.js: 117ms, proxy.ts: 20ms, application-code: 976ms)
+ POST /dashboard/decor/designs/606f717f-fc1d-4fbb-9ae1-3ff708b9b7c3 200 in 180ms (next.js: 26ms, proxy.ts: 4ms, application-code: 150ms)
+  └─ ƒ fetchDesignDetail("606f717f-fc1d-4fbb-9ae1-3ff708b9b7c3") in 133ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/606f717f-fc1d-4fbb-9ae1-3ff708b9b7c3 200 in 395ms (next.js: 9ms, proxy.ts: 3ms, application-code: 383ms)
+ GET /dashboard/decor/designs 200 in 239ms (next.js: 21ms, proxy.ts: 7ms, application-code: 210ms)
+ POST /dashboard/decor/designs 200 in 1481ms (next.js: 24ms, proxy.ts: 605ms, application-code: 852ms)
+  └─ ƒ uploadDesign("decor", {}) in 251ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 438ms (next.js: 114ms, proxy.ts: 20ms, application-code: 305ms)
+ POST /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 136ms (next.js: 28ms, proxy.ts: 7ms, application-code: 101ms)
+  └─ ƒ fetchDesignDetail("eb9d9e5d-1b86-4beb-be01-114886787ebf") in 80ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 515ms (next.js: 20ms, proxy.ts: 6ms, application-code: 489ms)
+ POST /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 94ms (next.js: 17ms, proxy.ts: 3ms, application-code: 74ms)
+  └─ ƒ fetchDesignDetail("eb9d9e5d-1b86-4beb-be01-114886787ebf") in 58ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 434ms (next.js: 21ms, proxy.ts: 6ms, application-code: 407ms)
+ POST /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 420ms (next.js: 127ms, proxy.ts: 18ms, application-code: 274ms)
+  └─ ƒ fetchDesignDetail("eb9d9e5d-1b86-4beb-be01-114886787ebf") in 253ms app/dashboard/[brand]/designs/actions.ts
+ POST /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 844ms (next.js: 22ms, proxy.ts: 5ms, application-code: 817ms)
+  └─ ƒ resubmitDesign("decor", "eb9d9e5d-1b86-4beb-be01-114886787ebf", {"colour":"blue","finish":"none","infill_pct":15,"...":"3 items not stringified"}) in 120ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 725ms (next.js: 89ms, proxy.ts: 9ms, application-code: 627ms)
+ POST /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 132ms (next.js: 26ms, proxy.ts: 7ms, application-code: 99ms)
+  └─ ƒ fetchDesignDetail("eb9d9e5d-1b86-4beb-be01-114886787ebf") in 80ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 610ms (next.js: 16ms, proxy.ts: 6ms, application-code: 588ms)
+ POST /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 118ms (next.js: 25ms, proxy.ts: 9ms, application-code: 84ms)
+  └─ ƒ fetchDesignDetail("eb9d9e5d-1b86-4beb-be01-114886787ebf") in 63ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 454ms (next.js: 14ms, proxy.ts: 5ms, application-code: 435ms)
+ POST /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 108ms (next.js: 24ms, proxy.ts: 5ms, application-code: 80ms)
+  └─ ƒ fetchDesignDetail("eb9d9e5d-1b86-4beb-be01-114886787ebf") in 62ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/eb9d9e5d-1b86-4beb-be01-114886787ebf 200 in 550ms (next.js: 21ms, proxy.ts: 5ms, application-code: 524ms)
+ GET /api/auth/jwks 200 in 72ms (next.js: 11ms, application-code: 60ms)
+ GET /dashboard/decor/designs 200 in 235ms (next.js: 22ms, proxy.ts: 7ms, application-code: 205ms)
+ POST /dashboard/decor/designs 200 in 1495ms (next.js: 19ms, proxy.ts: 383ms, application-code: 1093ms)
+  └─ ƒ uploadDesign("decor", {}) in 247ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/37619496-5dbc-42d4-8e11-0ae219916903 200 in 1165ms (next.js: 149ms, proxy.ts: 14ms, application-code: 1003ms)
+ GET /dashboard/decor/designs/37619496-5dbc-42d4-8e11-0ae219916903 200 in 914ms (next.js: 132ms, proxy.ts: 15ms, application-code: 767ms)
+ POST /dashboard/decor/designs/37619496-5dbc-42d4-8e11-0ae219916903 200 in 88ms (next.js: 21ms, proxy.ts: 5ms, application-code: 63ms)
+  └─ ƒ fetchDesignDetail("37619496-5dbc-42d4-8e11-0ae219916903") in 45ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/37619496-5dbc-42d4-8e11-0ae219916903 200 in 364ms (next.js: 14ms, proxy.ts: 5ms, application-code: 346ms)
+ POST /dashboard/decor/designs/37619496-5dbc-42d4-8e11-0ae219916903 200 in 92ms (next.js: 21ms, proxy.ts: 5ms, application-code: 67ms)
+  └─ ƒ fetchDesignDetail("37619496-5dbc-42d4-8e11-0ae219916903") in 53ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/37619496-5dbc-42d4-8e11-0ae219916903 200 in 350ms (next.js: 12ms, proxy.ts: 4ms, application-code: 334ms)
+ GET /dashboard/decor/designs/606f717f-fc1d-4fbb-9ae1-3ff708b9b7c3 200 in 206ms (next.js: 21ms, proxy.ts: 4ms, application-code: 181ms)
+ GET /dashboard/decor 200 in 95ms (next.js: 38ms, proxy.ts: 5ms, application-code: 53ms)
+[browser] Image with src "/auth/auth-stone.jpg" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+ GET /dashboard/decor/designs 200 in 233ms (next.js: 21ms, proxy.ts: 4ms, application-code: 208ms)
+ POST /dashboard/decor/designs 200 in 1513ms (next.js: 22ms, proxy.ts: 468ms, application-code: 1022ms)
+  └─ ƒ uploadDesign("decor", {}) in 255ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/e9ad313a-1712-4398-bca5-ba24cc6857b4 200 in 1038ms (next.js: 146ms, proxy.ts: 11ms, application-code: 881ms)
+ GET /dashboard/decor/designs/e9ad313a-1712-4398-bca5-ba24cc6857b4 200 in 781ms (next.js: 116ms, proxy.ts: 18ms, application-code: 647ms)
+ POST /dashboard/decor/designs/e9ad313a-1712-4398-bca5-ba24cc6857b4 200 in 113ms (next.js: 25ms, proxy.ts: 8ms, application-code: 80ms)
+  └─ ƒ fetchDesignDetail("e9ad313a-1712-4398-bca5-ba24cc6857b4") in 59ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/e9ad313a-1712-4398-bca5-ba24cc6857b4 200 in 460ms (next.js: 16ms, proxy.ts: 4ms, application-code: 439ms)
+ POST /dashboard/decor/designs/e9ad313a-1712-4398-bca5-ba24cc6857b4 200 in 109ms (next.js: 24ms, proxy.ts: 5ms, application-code: 80ms)
+  └─ ƒ fetchDesignDetail("e9ad313a-1712-4398-bca5-ba24cc6857b4") in 57ms app/dashboard/[brand]/designs/actions.ts
+ GET /dashboard/decor/designs/e9ad313a-1712-4398-bca5-ba24cc6857b4 200 in 417ms (next.js: 14ms, proxy.ts: 5ms, application-code: 398ms)
+ GET /api/auth/jwks 200 in 85ms (next.js: 13ms, application-code: 72ms)

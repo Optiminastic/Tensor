@@ -2,11 +2,23 @@
 
 /*
  * ─────────────────────────────────────────────────────────────
- *  TENSOR — Design language: "Graphite Precision"
- *  A near-monochrome, instrument-grade system. Saturated colour
- *  is reserved strictly for semantic status (success / warning /
- *  danger) and a single restrained blue signal accent.
- *  Numeric data uses a tabular monospace so figures always align.
+ *  TENSOR - Design language: "Editorial Ink"
+ *  Swiss-editorial minimalism: an ivory paper ground, charcoal
+ *  ink, and a single royal blue signal. Saturated colour is
+ *  reserved strictly for that signal and for semantic status
+ *  (success / warning / danger) - never for decoration.
+ *
+ *  Three fonts, one job each:
+ *    display (Mona Sans)  - display only. Page titles and editorial
+ *      moments. Never a label, header, or body copy.
+ *    sans    (Geist Sans) - the entire interface.
+ *    mono    (Geist Mono) - every figure, always tabular.
+ *
+ *  Hierarchy comes from type and space, not from washed-out
+ *  contrast. Every text token below meets WCAG AA (4.5:1) on
+ *  the worst surface it renders on, and every value is verified
+ *  in-gamut for sRGB. Anchor colours, in sRGB terms:
+ *    ivory #F7F5F2 · charcoal #2B2B2B · azure blue #0F56A1
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -16,60 +28,107 @@
 :root {
   color-scheme: light;
 
-  /* Neutrals — cool graphite */
-  --background: oklch(0.985 0.002 265);
-  --surface: oklch(1 0 0);
-  --surface-muted: oklch(0.968 0.003 265);
-  --foreground: oklch(0.205 0.007 265);
-  --muted-foreground: oklch(0.435 0.006 265);
-  --subtle-foreground: oklch(0.615 0.006 265);
-  --border: oklch(0.915 0.004 265);
-  --border-strong: oklch(0.855 0.005 265);
+  /* Neutrals - ivory paper. All neutrals share hue 78. */
+  --background: oklch(0.971 0.005 78);
+  --surface: oklch(0.99 0.003 78);
+  --surface-muted: oklch(0.945 0.006 78);
+  --foreground: oklch(0.289 0.003 78);
+  --muted-foreground: oklch(0.5 0.006 78);
+  /*
+   * Carries uppercase labels, table headers and the unit in
+   * DataValue ("62 g", "25.0 %"). Those are load-bearing at 12px,
+   * so this tier holds AA - it is quiet by size and tracking,
+   * not by low contrast.
+   */
+  --subtle-foreground: oklch(0.52 0.005 78);
+  /* Decorative hairline between surfaces. Not a control edge. */
+  --border: oklch(0.9 0.005 78);
+  /* The edge of an interactive control. Holds 3:1 for WCAG 1.4.11. */
+  --border-strong: oklch(0.625 0.006 78);
 
-  /* Signal accent — restrained blue, used sparingly */
-  --accent: oklch(0.535 0.17 262);
-  --accent-hover: oklch(0.485 0.17 262);
+  /* Signal accent - azure blue (#0F56A1), used sparingly */
+  --accent: oklch(0.456 0.138 255);
+  --accent-hover: oklch(0.405 0.132 255);
+  /* Label colour for text sitting on an --accent fill */
+  --accent-foreground: oklch(1 0 0);
 
   /* Semantic status */
-  --success: oklch(0.585 0.14 150);
-  --warning: oklch(0.6 0.13 62);
-  --danger: oklch(0.575 0.215 25);
+  --success: oklch(0.51 0.14 150);
+  /* Amber runs out of sRGB gamut before it reaches AA at full
+   * chroma, so this tier trades a little chroma for legibility. */
+  --warning: oklch(0.53 0.115 62);
+  --danger: oklch(0.52 0.2 25);
 
   /* Focus ring */
   --ring: var(--accent);
 
+  /*
+   * The ground greyscale artwork is printed on. Artwork arrives on white
+   * paper; multiplying it onto this makes it read as ink on the page rather
+   * than a pasted rectangle. Transparent here, because in light mode the page
+   * already IS the paper.
+   */
+  --plate-paper: transparent;
+
   /* Tint strength for translucent status/accent fills */
   --tint: 10%;
 
-  /* Geometry */
-  --radius: 0.5rem;
+  /* Geometry - Swiss-crisp, not soft */
+  --radius: 0.25rem;
 
-  /* Elevation — soft, low, never glossy */
-  --shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 265 / 0.05);
-  --shadow-sm: 0 1px 2px 0 oklch(0.2 0.02 265 / 0.06), 0 1px 3px 0 oklch(0.2 0.02 265 / 0.05);
+  /* Elevation - editorial flatness; structure comes from rules */
+  --shadow-xs: 0 1px 2px 0 oklch(0.289 0.01 78 / 0.05);
+  --shadow-sm: 0 1px 2px 0 oklch(0.289 0.01 78 / 0.06), 0 1px 3px 0 oklch(0.289 0.01 78 / 0.05);
   --shadow-md:
-    0 2px 4px -1px oklch(0.2 0.02 265 / 0.06), 0 8px 16px -4px oklch(0.2 0.02 265 / 0.08);
+    0 2px 4px -1px oklch(0.289 0.01 78 / 0.06), 0 8px 16px -4px oklch(0.289 0.01 78 / 0.08);
 }
 
 /* ── Dark ─────────────────────────────────────────────────────── */
+/*
+ * A soft neutral charcoal, not a black. The ramp mirrors the greys
+ * Supabase uses (#1c1c1c ground, #232323 panel, #282828 well), which
+ * read as calm rather than heavy. Chroma drops to 0.003 so the greys
+ * look neutral, but stays on hue 78 rather than going to 0 - it keeps
+ * dark and the ivory light mode recognisably one family.
+ */
 .dark {
   color-scheme: dark;
 
-  --background: oklch(0.185 0.004 265);
-  --surface: oklch(0.215 0.005 265);
-  --surface-muted: oklch(0.255 0.005 265);
-  --foreground: oklch(0.955 0.002 265);
-  --muted-foreground: oklch(0.715 0.005 265);
-  --subtle-foreground: oklch(0.545 0.006 265);
-  --border: oklch(0.3 0.006 265);
-  --border-strong: oklch(0.375 0.007 265);
+  --background: oklch(0.226 0.003 78);
+  --surface: oklch(0.256 0.003 78);
+  --surface-muted: oklch(0.277 0.003 78);
+  --foreground: oklch(0.946 0.003 78);
+  --muted-foreground: oklch(0.735 0.004 78);
+  --subtle-foreground: oklch(0.665 0.004 78);
+  --border: oklch(0.325 0.004 78);
+  --border-strong: oklch(0.555 0.005 78);
 
-  --accent: oklch(0.62 0.16 262);
-  --accent-hover: oklch(0.68 0.16 262);
+  /*
+   * In dark the page is no longer paper, so artwork is given its own: a
+   * mounted print on a dark wall. Inverting instead would be wrong — it
+   * flatters line art but turns a photograph into a negative, and these
+   * plates are one of each. Dimmed well below white so a lit plate reads as
+   * paper rather than a glaring panel.
+   */
+  --plate-paper: oklch(0.86 0.008 78);
 
-  --success: oklch(0.7 0.15 152);
-  --warning: oklch(0.76 0.13 72);
-  --danger: oklch(0.68 0.18 25);
+  /*
+   * Lifted so the blue stays legible as text on a dark surface
+   * (link / badge). At this lightness a white label on an --accent
+   * fill would fail AA, so --accent-foreground flips to ink here.
+   */
+  --accent: oklch(0.67 0.13 255);
+  --accent-hover: oklch(0.73 0.115 255);
+  --accent-foreground: oklch(0.19 0.003 78);
+
+  /*
+   * All lifted a step from their light-mode counterparts: the ground
+   * is a lighter charcoal than a true black, so status colours need
+   * the extra lightness to clear AA against it.
+   */
+  --success: oklch(0.74 0.15 152);
+  --warning: oklch(0.8 0.13 72);
+  --danger: oklch(0.7 0.17 25);
 
   --tint: 20%;
 
@@ -79,7 +138,7 @@
 }
 
 /*
- * Translucent tints derived from the base colours. Declared once —
+ * Translucent tints derived from the base colours. Declared once -
  * var() re-resolves per element, so these adapt automatically to
  * dark mode via the redefined --accent/--success/… and --tint.
  */
@@ -93,8 +152,10 @@
 /* ── Tailwind theme mapping ───────────────────────────────────── */
 @theme inline {
   --font-sans:
-    var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display:
+    var(--font-mona-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   --color-background: var(--background);
   --color-surface: var(--surface);
@@ -104,10 +165,12 @@
   --color-subtle-foreground: var(--subtle-foreground);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-plate-paper: var(--plate-paper);
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-subtle: var(--accent-subtle);
+  --color-accent-foreground: var(--accent-foreground);
 
   --color-success: var(--success);
   --color-success-subtle: var(--success-subtle);
@@ -118,11 +181,11 @@
 
   --color-ring: var(--ring);
 
-  --radius-sm: calc(var(--radius) - 3px);
-  --radius-md: calc(var(--radius) - 1px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 10px);
+  --radius-sm: calc(var(--radius) - 1px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 12px);
 
   --shadow-xs: var(--shadow-xs);
   --shadow-sm: var(--shadow-sm);
@@ -163,7 +226,7 @@
     outline-offset: 2px;
   }
 
-  /* Numeric data — always tabular so columns of figures align */
+  /* Numeric data - always tabular so columns of figures align */
   :is(code, kbd, samp, pre),
   .font-mono {
     font-variant-numeric: tabular-nums;
@@ -175,6 +238,23 @@
 
 /* ── Utilities ────────────────────────────────────────────────── */
 @layer utilities {
+  /*
+   * The one editorial gesture. Mona Sans and Geist Sans are both
+   * grotesques, so the display signal cannot come from the letterforms
+   * the way it did from a serif - it comes from weight and the optical
+   * size axis, which `auto` drives from font-size (display cuts above
+   * ~28px, where this is meant to be used). Tight leading and tracking
+   * are part of the treatment, so they ship with the family rather than
+   * being re-specified (and drifted) at every call site.
+   */
+  .text-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-optical-sizing: auto;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }

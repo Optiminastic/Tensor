@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import type { JSX } from 'react'
 
+import { AUTH_PLATES, AuthSplit } from '@/components/auth/auth-split'
 import { LoginForm } from '@/components/auth/login-form'
 import { Logo } from '@/components/logo'
 
@@ -10,16 +12,12 @@ export const metadata: Metadata = {
 
 export default function LoginPage(): JSX.Element {
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        <Link href="/" className="mx-auto">
-          <Logo />
-        </Link>
-        <LoginForm />
-        <p className="text-subtle-foreground text-center text-xs">
-          Access is provisioned by your admin.
-        </p>
-      </div>
-    </main>
+    <AuthSplit plate={AUTH_PLATES.stone}>
+      <Link href="/" className="w-fit">
+        <Logo />
+      </Link>
+      <LoginForm />
+      <p className="text-subtle-foreground text-xs">Access is provisioned by your admin.</p>
+    </AuthSplit>
   )
 }

@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, type JSX } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
@@ -32,8 +32,11 @@ export function LoginForm(): JSX.Element {
       setFormError(result.error ?? 'Something went wrong. Please try again.')
       return
     }
+    // Honour where they were headed if middleware bounced them here; otherwise
+    // land on the dashboard, not the marketing page, so a fresh sign-in visibly
+    // lands somewhere signed-in.
     const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl')
-    router.push(callbackUrl ?? '/')
+    router.push(callbackUrl ?? '/dashboard')
     router.refresh()
   }
 

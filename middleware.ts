@@ -5,6 +5,19 @@ import { NextResponse } from 'next/server'
 const protectedRoutes = ['/dashboard']
 const authRoutes = ['/login']
 
+// Static dashboard segments that are not brand slugs (kept in sync with
+// nav-config's RESERVED_SEGMENTS; inlined so the edge bundle stays light).
+const reservedSegments = ['users', 'settings', 'brands', 'projects']
+
+// Remembers the brand the admin is viewing so bare /dashboard can return to it.
+function rememberBrand(request: NextRequest, response: NextResponse): void {
+  const segments = request.nextUrl.pathname.split('/').filter(Boolean)
+  if (segments[0] !== 'dashboard') return
+  const brand = segments[1]
+  if (!brand || reservedSegments.includes(brand)) return
+  response.cookies.set('last_brand', brand, { path: '/', httpOnly: true, sameSite: 'lax' })
+}
+
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const sessionCookie = getSessionCookie(request)
   const { pathname } = request.nextUrl
@@ -22,7 +35,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  return NextResponse.next()
+  const response = NextResponse.next()
+  rememberBrand(request, response)
+  return response
 }
 
 export const config = {

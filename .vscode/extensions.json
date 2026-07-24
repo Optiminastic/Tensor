@@ -3,7 +3,6 @@
     "esbenp.prettier-vscode",
     "dbaeumer.vscode-eslint",
     "bradlc.vscode-tailwindcss",
-    "prisma.prisma",
     "ms-playwright.playwright",
     "vitest.explorer",
     "ms-vscode.vscode-typescript-next",

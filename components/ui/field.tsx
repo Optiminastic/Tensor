@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, JSX } from 'react'
 
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'

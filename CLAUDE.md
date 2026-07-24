@@ -61,22 +61,47 @@ features/                 # Feature modules — self-contained
     ├── types.ts          # Types + Zod schemas for this feature
     └── index.ts          # Public API — only export what other features need
 hooks/                    # Shared hooks used across multiple features
-lib/                      # Shared utilities (logger, prisma, auth, env...)
+lib/                      # Shared utilities (logger, db, auth, env...)
 ├── env.ts                # Type-safe env vars (t3-oss/env-nextjs)
-├── auth.ts               # Better Auth server config
+├── auth.ts               # Better Auth server config (+ JWT/JWKS plugin)
 ├── auth-client.ts        # Better Auth React client
-├── prisma.ts             # Prisma singleton
+├── db.ts                 # pg Pool — Better Auth's tables ONLY
 ├── logger.ts             # Pino logger
 ├── query-client.ts       # TanStack Query client factory
 └── validators/           # Zod schemas shared across features
 services/                 # All external API / data-access calls — typed
 stores/                   # Zustand stores
-prisma/                   # Prisma schema and migrations
 middleware.ts             # Next.js edge middleware (auth gating)
 ```
 
 - Features cannot import from other features. Only from `shared/`, `lib/`, `components/`.
 - If two features need the same thing, it moves to `lib/` or `components/`.
+
+---
+
+## The database is not yours
+
+There is **no ORM** in this repo, and that is deliberate. `lib/db.ts` is a `pg` Pool that exists for one reason: Better Auth has to persist its own five tables (`user`, `session`, `account`, `verification`, `jwks`).
+
+- **Never add an application query to `lib/db.ts`.** If the frontend needs domain data (designs, costing, pricing, roles, audit), that is a Tensor-Core endpoint called through `services/` — not SQL.
+- **Never `import { authPool }` outside `lib/auth.ts`.** It is not a general-purpose database handle.
+- **Never add Prisma, Drizzle, or another ORM back.** The backend owns the domain and is the source of truth; an ORM here invites a second, competing data layer.
+- Better Auth's tables are created with `pnpm auth:migrate`. Everything else is Alembic's, in Tensor-Core.
+
+### Server actions are a public API
+
+A server action's arguments are **client-controlled**. The POST behind a form can be replayed with any payload, so a `readOnly` input, a disabled select, or a value handed down through props is a UI affordance — never a constraint.
+
+- **Never trust an identity-bearing argument.** Re-resolve it server-side from something the caller cannot choose. This was a real bug: `acceptInviteAndSetPassword` took `email` from the form, so anyone holding an invite link could register under **any** address and collect the invited role — while the admin's list showed they had invited someone else. It now re-fetches the invite and uses _its_ email.
+- Ask of every action argument: "if an attacker sets this to anything they like, what do they get?" If the answer is "someone else's access", it must not come from the client.
+- Zod proves the **shape**, not the **right** to submit it. `z.string().email()` happily accepts `attacker@evil.com`.
+
+### Authorization
+
+- **The backend owns roles and permissions.** The frontend never reads or writes them directly.
+- `services/authz.service.ts` fetches them from Tensor-Core when Better Auth mints an access token, and `lib/auth.ts` stamps them into the JWT. That runs about every 15 minutes per user, never per request.
+- It **fails closed**: if the backend is unreachable, the token is minted with no roles, so every backend guard rejects. Never "helpfully" default to a role on error.
+- **The frontend does not enforce authorization.** Hiding a button is UX, not security. Every real check happens in Tensor-Core against the verified token.
 
 ---
 
@@ -130,17 +155,36 @@ middleware.ts             # Next.js edge middleware (auth gating)
 
 ---
 
+## Typography — three fonts, one job each
+
+The design language is "Editorial Ink" (tokens in `app/globals.css`). Its premium feel comes from restraint and hierarchy, not decoration. Respect the font split exactly:
+
+| Font       | Token / class            | Used for                                                   | Never used for                                                  |
+| ---------- | ------------------------ | ---------------------------------------------------------- | --------------------------------------------------------------- |
+| Mona Sans  | `.text-display`          | Page titles and display moments, roughly 28px and up       | Labels, table headers, buttons, body copy, anything under ~28px |
+| Geist Sans | `font-sans` (default)    | The whole interface: labels, controls, body, table headers | Figures                                                         |
+| Geist Mono | `font-mono tabular-nums` | Every figure (₹, g, h, %)                                  | Prose                                                           |
+
+- **The display face is a signal, not a texture.** At most one `.text-display` per screen, at the top of the hierarchy. If you find yourself reaching for it a second time, the hierarchy is wrong.
+- **Never set the display face below ~28px.** Mona Sans and Geist Sans are both grotesques, so at UI sizes the display face stops reading as a signal and just looks like heavy body text. Its distinction comes from weight (700) and the optical-size axis, which `font-optical-sizing: auto` drives from font-size — that only pays off at display sizes.
+- **Mona Sans is self-hosted** from `app/fonts/MonaSans-VF.woff2` (one variable file, weight axis 200-900) via `next/font/local`. It is not on Google Fonts. Its OFL licence sits beside it and must stay there.
+- **Never add an unlicensed font.** Helvetica Neue and friends need a paid Monotype webfont licence; a bare `.otf`/`.ttf` bundle with no EULA is not licensed for web embedding. Geist is the free, OFL, Helvetica-lineage grotesque already in the stack.
+- **De-emphasis comes from size, weight and tracking — never from lowering contrast.** Every text token in the palette meets WCAG AA (4.5:1) on the worst surface it renders on, including `--subtle-foreground`. Do not introduce a lighter grey to make something look quieter.
+- **Use `.text-display`, not `font-serif` plus ad-hoc tracking.** The leading and optical tracking are part of the treatment and ship with the utility.
+
+---
+
 ## Data visualization — must be distinctive, never generic
 
 Tensor is a costing/pricing tool: charts and metrics ARE the product. Every visualization must look considered and bespoke — never a default library chart dropped in as-is.
 
 - **No off-the-shelf defaults.** Never ship a chart with library default colors, gridlines, tooltips, or legends. Always restyle to the Tensor design language (tokens in `app/globals.css`).
-- **Use the design tokens, not raw hex.** Pull series/status colors from the theme (`--accent`, `--success`, `--warning`, `--danger`, graphite neutrals). Saturated color carries meaning (status, thresholds) — never decoration. Must work in both light and dark.
+- **Use the design tokens, not raw hex.** Pull series/status colors from the theme (`--accent`, `--success`, `--warning`, `--danger`, ivory/ink neutrals). Saturated color carries meaning (status, thresholds) — never decoration. Must work in both light and dark.
 - **Numbers are tabular mono.** All figures (₹, grams, hours, %) use the mono/tabular treatment (`font-mono tabular-nums`) so columns and axes align. Reuse `DataValue`/`Stat` where they fit.
 - **Pick the right form for the question.** Match chart type to the decision being made (e.g. Design CP vs SP ladder, CP-%-of-SP thresholds, machine-time distributions, batch efficiency). Don't force everything into a bar chart. Show the threshold/target line when one exists (the ≤25% / ≤30% CP rules, the 2-hour machine-time target).
 - **Craft the details.** Deliberate axes, spacing, and typographic hierarchy; direct labels over legends when possible; meaningful empty/loading/zero states; accessible contrast and non-color-only encoding (shape/label as well as hue).
 - **Before writing ANY chart code, load the `dataviz` skill** and follow it. `recharts` is already a dependency — prefer it; ask before adding a new charting lib.
-- **No AI-generic look.** No gradient fills for their own sake, no glassmorphism, no rainbow categorical palettes. Restrained, precise, instrument-grade — consistent with "Graphite Precision".
+- **No AI-generic look.** No gradient fills for their own sake, no glassmorphism, no rainbow categorical palettes. Restrained, precise, instrument-grade — consistent with "Editorial Ink" (the design language defined in `app/globals.css`).
 
 ---
 
