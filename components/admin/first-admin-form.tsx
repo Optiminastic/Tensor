@@ -47,8 +47,9 @@ export function FirstAdminForm(): JSX.Element {
     // set the session cookie, and a client-side transition can render the
     // destination before that cookie is readable server-side — which bounces
     // the brand-new admin back to /admin. A full load guarantees the cookie
-    // rides along, so their first landing is the dashboard, every time.
-    window.location.assign('/dashboard/users')
+    // rides along. A fresh admin's first job is to set up a brand, so land them
+    // straight in the create-brand flow rather than the invite screen.
+    window.location.assign('/create-brand')
   }
 
   return (

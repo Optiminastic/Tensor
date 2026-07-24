@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
-/** The two Shopify brands. Mirrors the backend Brand enum. */
-export const BrandSchema = z.enum(['gifting', 'decor'])
+/**
+ * A project's brand is a free-form brand slug (brands are user-created), not a
+ * fixed enum. The backend validates that the slug references a real brand.
+ */
+export const BrandSlugSchema = z.string().min(1, 'Choose a brand').max(120)
 
 /** A project's lifecycle. Archived projects are hidden, not deleted. */
 export const ProjectStatusSchema = z.enum(['active', 'archived'])
@@ -9,14 +12,14 @@ export const ProjectStatusSchema = z.enum(['active', 'archived'])
 /** What an admin submits to create a project. */
 export const ProjectCreateSchema = z.object({
   name: z.string().min(1, 'Give the project a name').max(120),
-  brand: BrandSchema,
+  brand: BrandSlugSchema,
   description: z.string().max(500).optional(),
 })
 
 /** A partial update — rename, re-brand, edit the note, or archive. */
 export const ProjectUpdateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
-  brand: BrandSchema.optional(),
+  brand: BrandSlugSchema.optional(),
   description: z.string().max(500).nullable().optional(),
   status: ProjectStatusSchema.optional(),
 })
@@ -25,7 +28,7 @@ export const ProjectUpdateSchema = z.object({
 export const ProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
-  brand: BrandSchema,
+  brand: BrandSlugSchema,
   description: z.string().nullable(),
   status: ProjectStatusSchema,
   created_by: z.string(),
@@ -33,7 +36,7 @@ export const ProjectSchema = z.object({
   updated_at: z.string(),
 })
 
-export type Brand = z.infer<typeof BrandSchema>
+export type Brand = z.infer<typeof BrandSlugSchema>
 export type ProjectStatus = z.infer<typeof ProjectStatusSchema>
 export type ProjectCreateInput = z.infer<typeof ProjectCreateSchema>
 export type ProjectUpdateInput = z.infer<typeof ProjectUpdateSchema>

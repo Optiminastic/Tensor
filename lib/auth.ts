@@ -73,7 +73,9 @@ export const auth = betterAuth({
       },
     }),
   ],
-  trustedOrigins: [env.NEXT_PUBLIC_APP_URL],
+  // Both the public ngrok origin and local dev are trusted, so sign-in works
+  // whether the app is opened at the ngrok URL or http://localhost:3001.
+  trustedOrigins: [env.NEXT_PUBLIC_APP_URL, 'http://localhost:3001'],
 })
 
 export type Session = typeof auth.$Infer.Session

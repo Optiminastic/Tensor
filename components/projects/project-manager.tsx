@@ -19,18 +19,30 @@ import {
   type ProjectCreateInput,
 } from '@/lib/validators/projects'
 
+/** The brand options a project can belong to, keyed by slug. */
+export interface BrandOption {
+  slug: string
+  name: string
+}
+
 interface ProjectManagerProps {
   initialProjects: Project[]
+  brands: BrandOption[]
   loadError: string | null
 }
 
-export function ProjectManager({ initialProjects, loadError }: ProjectManagerProps): JSX.Element {
+export function ProjectManager({
+  initialProjects,
+  brands,
+  loadError,
+}: ProjectManagerProps): JSX.Element {
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   // Seeded from the server, updated locally so a new project appears at once;
   // router.refresh() reconciles with the server.
   const [projects, setProjects] = useState<Project[]>(initialProjects)
+  const hasBrands = brands.length > 0
 
   const {
     register,
@@ -39,7 +51,7 @@ export function ProjectManager({ initialProjects, loadError }: ProjectManagerPro
     formState: { errors, isSubmitting },
   } = useForm<ProjectCreateInput>({
     resolver: zodResolver(ProjectCreateSchema),
-    defaultValues: { name: '', brand: 'gifting', description: '' },
+    defaultValues: { name: '', brand: brands[0]?.slug ?? '', description: '' },
   })
 
   async function onSubmit(values: ProjectCreateInput): Promise<void> {
@@ -78,47 +90,59 @@ export function ProjectManager({ initialProjects, loadError }: ProjectManagerPro
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-            {formError ? (
-              <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
-                {formError}
-              </p>
-            ) : null}
+          {hasBrands ? (
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+              {formError ? (
+                <p
+                  role="alert"
+                  className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm"
+                >
+                  {formError}
+                </p>
+              ) : null}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Name" htmlFor="project-name" error={errors.name?.message}>
-                <Input
-                  id="project-name"
-                  autoComplete="off"
-                  placeholder="Diwali Gifting 2026"
-                  {...register('name')}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Name" htmlFor="project-name" error={errors.name?.message}>
+                  <Input
+                    id="project-name"
+                    autoComplete="off"
+                    placeholder="Diwali Gifting 2026"
+                    {...register('name')}
+                  />
+                </Field>
+                <Field label="Brand" htmlFor="project-brand" error={errors.brand?.message}>
+                  <Select id="project-brand" {...register('brand')}>
+                    {brands.map(brand => (
+                      <option key={brand.slug} value={brand.slug}>
+                        {brand.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+
+              <Field
+                label="Description"
+                htmlFor="project-description"
+                hint="Optional"
+                error={errors.description?.message}
+              >
+                <Textarea
+                  id="project-description"
+                  placeholder="What this project is for…"
+                  {...register('description')}
                 />
               </Field>
-              <Field label="Brand" htmlFor="project-brand" error={errors.brand?.message}>
-                <Select id="project-brand" {...register('brand')}>
-                  <option value="gifting">Gifting</option>
-                  <option value="decor">Decor</option>
-                </Select>
-              </Field>
-            </div>
 
-            <Field
-              label="Description"
-              htmlFor="project-description"
-              hint="Optional"
-              error={errors.description?.message}
-            >
-              <Textarea
-                id="project-description"
-                placeholder="What this project is for…"
-                {...register('description')}
-              />
-            </Field>
-
-            <Button type="submit" disabled={isSubmitting} className="self-start">
-              {isSubmitting ? 'Creating…' : 'Create project'}
-            </Button>
-          </form>
+              <Button type="submit" disabled={isSubmitting} className="self-start">
+                {isSubmitting ? 'Creating…' : 'Create project'}
+              </Button>
+            </form>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Create a brand first — a project has to belong to one.
+            </p>
+          )}
         </CardContent>
       </Card>
 

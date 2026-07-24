@@ -7,6 +7,7 @@ import { useFieldArray, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { updateBrand } from '@/app/dashboard/brands/actions'
+import { LogoUpload } from '@/components/brands/logo-upload'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field } from '@/components/ui/field'
@@ -48,6 +49,7 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(brand.logo_url)
 
   const {
     register,
@@ -77,8 +79,9 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
   async function onSubmit(values: FormValues): Promise<void> {
     setFormError(null)
     setSaved(false)
-    const result = await updateBrand(brand.key, {
+    const result = await updateBrand(brand.slug, {
       name: values.name,
+      logo_url: logoUrl,
       starting_price: values.starting_price,
       shopify_url: values.shopify_url.trim() || null,
       description: values.description.trim() || null,
@@ -110,8 +113,10 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="capitalize">{brand.key}</CardTitle>
+        <CardTitle>{brand.name}</CardTitle>
         <CardDescription>
+          <span className="text-subtle-foreground font-mono text-xs">{brand.slug}</span>
+          <span className="mx-2">·</span>
           Identity, pricing ladder and the CP thresholds the engine uses.
         </CardDescription>
       </CardHeader>
@@ -131,45 +136,53 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name" htmlFor={`${brand.key}-name`} error={errors.name?.message}>
-              <Input id={`${brand.key}-name`} {...register('name')} />
+            <Field label="Name" htmlFor={`${brand.slug}-name`} error={errors.name?.message}>
+              <Input id={`${brand.slug}-name`} {...register('name')} />
             </Field>
             <Field
               label="Starting price (₹)"
-              htmlFor={`${brand.key}-start`}
+              htmlFor={`${brand.slug}-start`}
               error={errors.starting_price?.message}
             >
               <Input
-                id={`${brand.key}-start`}
+                id={`${brand.slug}-start`}
                 type="number"
                 data-numeric="true"
                 {...register('starting_price', { valueAsNumber: true })}
               />
             </Field>
-            <Field label="Shopify URL" htmlFor={`${brand.key}-url`} hint="Optional">
-              <Input id={`${brand.key}-url`} placeholder="https://…" {...register('shopify_url')} />
+            <Field label="Shopify URL" htmlFor={`${brand.slug}-url`} hint="Optional">
+              <Input
+                id={`${brand.slug}-url`}
+                placeholder="https://…"
+                {...register('shopify_url')}
+              />
             </Field>
-            <Field label="Active" htmlFor={`${brand.key}-active`}>
-              <Select id={`${brand.key}-active`} {...register('is_active')}>
+            <Field label="Active" htmlFor={`${brand.slug}-active`}>
+              <Select id={`${brand.slug}-active`} {...register('is_active')}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </Select>
             </Field>
           </div>
 
-          <Field label="Description" htmlFor={`${brand.key}-desc`} hint="Optional">
-            <Textarea id={`${brand.key}-desc`} {...register('description')} />
+          <Field label="Description" htmlFor={`${brand.slug}-desc`} hint="Optional">
+            <Textarea id={`${brand.slug}-desc`} {...register('description')} />
+          </Field>
+
+          <Field label="Logo" hint="Optional">
+            <LogoUpload value={logoUrl} onChange={setLogoUrl} idPrefix={brand.slug} />
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               label="Green threshold"
-              htmlFor={`${brand.key}-green`}
+              htmlFor={`${brand.slug}-green`}
               hint="Share of price, e.g. 0.25 = 25%"
               error={errors.cp_green_max?.message}
             >
               <Input
-                id={`${brand.key}-green`}
+                id={`${brand.slug}-green`}
                 type="number"
                 step="0.01"
                 data-numeric="true"
@@ -178,12 +191,12 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
             </Field>
             <Field
               label="Yellow threshold"
-              htmlFor={`${brand.key}-yellow`}
+              htmlFor={`${brand.slug}-yellow`}
               hint="Must be ≥ green"
               error={errors.cp_yellow_max?.message}
             >
               <Input
-                id={`${brand.key}-yellow`}
+                id={`${brand.slug}-yellow`}
                 type="number"
                 step="0.01"
                 data-numeric="true"
@@ -192,11 +205,11 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
             </Field>
             <Field
               label="Entry machine-hours"
-              htmlFor={`${brand.key}-emh`}
+              htmlFor={`${brand.slug}-emh`}
               hint="Optional — target for the entry rung"
             >
               <Input
-                id={`${brand.key}-emh`}
+                id={`${brand.slug}-emh`}
                 type="number"
                 step="0.1"
                 data-numeric="true"
@@ -205,11 +218,11 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
             </Field>
             <Field
               label="Entry rung (₹)"
-              htmlFor={`${brand.key}-erung`}
+              htmlFor={`${brand.slug}-erung`}
               hint="Optional — price the rule applies at"
             >
               <Input
-                id={`${brand.key}-erung`}
+                id={`${brand.slug}-erung`}
                 type="number"
                 data-numeric="true"
                 {...register('entry_rung')}

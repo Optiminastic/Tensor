@@ -27,6 +27,18 @@ export const env = createEnv({
     // an invite that grants a role must not arrive branded as recruiting.
     TENSOR_FROM_NAME: z.string().min(1).default('Optiminastic Tensor'),
     SMTP_REPLY_TO: z.string().email().optional(),
+
+    // --- Shopify OAuth ----------------------------------------------------
+    // Optional as a group: with the key/secret unset, "Connect with Shopify"
+    // shows as not configured and brands are created by entering details by
+    // hand. Set both (from one Partner Dashboard app) to enable the OAuth flow.
+    SHOPIFY_API_KEY: z.string().min(1).optional(),
+    SHOPIFY_API_SECRET: z.string().min(1).optional(),
+    SHOPIFY_SCOPES: z.string().min(1).default('read_products'),
+    // For a custom-distribution app: Shopify's pre-signed install link (from the
+    // Partner Dashboard). When set, Connect redirects here (with our state)
+    // instead of building the standard /admin/oauth/authorize URL.
+    SHOPIFY_CUSTOM_APP_INSTALL_URL: z.string().url().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -45,6 +57,10 @@ export const env = createEnv({
     SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL,
     TENSOR_FROM_NAME: process.env.TENSOR_FROM_NAME,
     SMTP_REPLY_TO: process.env.SMTP_REPLY_TO,
+    SHOPIFY_API_KEY: process.env.SHOPIFY_API_KEY,
+    SHOPIFY_API_SECRET: process.env.SHOPIFY_API_SECRET,
+    SHOPIFY_SCOPES: process.env.SHOPIFY_SCOPES,
+    SHOPIFY_CUSTOM_APP_INSTALL_URL: process.env.SHOPIFY_CUSTOM_APP_INSTALL_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

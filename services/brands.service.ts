@@ -1,6 +1,7 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
+  type BrandCreateInput,
   type BrandProfile,
   BrandProfileSchema,
   type BrandUpdateInput,
@@ -45,6 +46,7 @@ async function request<T>(
     throw new BrandServiceError(detail ?? `Request failed (${response.status})`)
   }
 
+  if (response.status === 204) return parse(undefined)
   return parse(await response.json())
 }
 
@@ -62,14 +64,33 @@ export async function listBrands(accessToken: string): Promise<BrandProfile[]> {
   )
 }
 
+export async function createBrand(
+  accessToken: string,
+  input: BrandCreateInput,
+): Promise<BrandProfile> {
+  return request(
+    '/brands',
+    { method: 'POST', headers: bearer(accessToken), body: JSON.stringify(input) },
+    data => BrandProfileSchema.parse(data),
+  )
+}
+
 export async function updateBrand(
   accessToken: string,
-  key: string,
+  slug: string,
   input: BrandUpdateInput,
 ): Promise<BrandProfile> {
   return request(
-    `/brands/${encodeURIComponent(key)}`,
+    `/brands/${encodeURIComponent(slug)}`,
     { method: 'PATCH', headers: bearer(accessToken), body: JSON.stringify(input) },
     data => BrandProfileSchema.parse(data),
+  )
+}
+
+export async function deleteBrand(accessToken: string, slug: string): Promise<void> {
+  await request(
+    `/brands/${encodeURIComponent(slug)}`,
+    { method: 'DELETE', headers: bearer(accessToken) },
+    () => undefined,
   )
 }
