@@ -25,7 +25,11 @@ const NAV_LINKS = [
  * check happens in Tensor-Core.
  */
 export async function SiteHeader(): Promise<JSX.Element> {
-  const session = await auth.api.getSession({ headers: await headers() })
+  // The landing page is public and must render even when auth is unreachable
+  // (no database provisioned, backend down, cold start timeout). A failed
+  // session lookup means "treat the visitor as signed out", never a 500 on the
+  // marketing homepage. This is UX only; every real check happens in Tensor-Core.
+  const session = await auth.api.getSession({ headers: await headers() }).catch(() => null)
   const action = session
     ? { href: '/dashboard', label: 'Dashboard' }
     : { href: '/login', label: 'Sign in' }
