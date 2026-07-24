@@ -1,10 +1,11 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { Box, FileCode, Loader2 } from 'lucide-react'
 import type { JSX } from 'react'
 
 import { fetchDesignDetail } from '@/app/dashboard/[brand]/designs/actions'
+import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { type DesignDetail, type DesignSpecs, DesignSpecsSchema } from '@/lib/validators/designs'
 
@@ -54,6 +55,7 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
   })
 
   const isProcessing = design.status === 'queued' || design.status === 'slicing'
+  const gcodeAvailable = Boolean(design.metrics?.gcode_key)
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,7 +67,30 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
             {design.infill_pct}% infill
           </p>
         </div>
-        <DesignStatusBadge status={design.status} />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Same-origin links: the route handler mints the backend token from
+              the session, so no token is exposed to the browser. The model is the
+              file to open in a slicer; the G-code is the H2S costing slice. */}
+          <a
+            href={`/api/designs/${design.id}/model`}
+            download
+            className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+          >
+            <Box aria-hidden />
+            Model
+          </a>
+          {gcodeAvailable ? (
+            <a
+              href={`/api/designs/${design.id}/gcode`}
+              download
+              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            >
+              <FileCode aria-hidden />
+              G-code
+            </a>
+          ) : null}
+          <DesignStatusBadge status={design.status} />
+        </div>
       </div>
 
       {isProcessing ? (

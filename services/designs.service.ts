@@ -15,6 +15,14 @@ const log = createLogger('DesignService')
 // small, so a short timeout is right. The slice itself runs in the worker.
 const TIMEOUT_MS = 15_000
 
+// Downloadable files stream through this process to the browser, so they get a
+// longer ceiling than the small JSON calls.
+const FILE_TIMEOUT_MS = 60_000
+
+// The downloadable artifacts of a design: the original uploaded model, and the
+// G-code archive from its latest slice. These map to Tensor-Core sub-paths.
+export type DesignFileKind = 'model' | 'gcode'
+
 /**
  * Typed client for Tensor-Core's /designs endpoints. Server-only. Every call
  * carries the caller's bearer token; the backend enforces design:* against it.
@@ -93,6 +101,45 @@ export async function createDesign(token: string, input: CreateDesignInput): Pro
   return call('/designs', { method: 'POST', headers: authHeader(token), body: form }, data =>
     DesignSchema.parse(data),
   )
+}
+
+/**
+ * Fetches one of a design's downloadable files (original model or sliced G-code)
+ * as a raw streaming Response. Unlike the JSON calls it returns the Response
+ * untouched so a route handler can pipe the bytes straight to the browser.
+ * Throws DesignServiceError on a network failure or a non-OK status (the
+ * backend's `detail` message is preserved).
+ */
+export async function fetchDesignFile(
+  token: string,
+  id: string,
+  kind: DesignFileKind,
+): Promise<Response> {
+  let response: Response
+  try {
+    response = await fetch(`${env.TENSOR_CORE_URL}/designs/${encodeURIComponent(id)}/${kind}`, {
+      headers: authHeader(token),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
+    })
+  } catch (error) {
+    log.error({ id, kind, err: error }, 'Tensor-Core is unreachable')
+    throw new DesignServiceError('Tensor-Core is unreachable. Is the backend running?')
+  }
+
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((body: { detail?: string }) => body.detail)
+      .catch(() => undefined)
+    log.warn(
+      { id, kind, status: response.status, detail },
+      'Tensor-Core rejected the file download',
+    )
+    throw new DesignServiceError(detail ?? `Request failed (${response.status})`)
+  }
+
+  return response
 }
 
 export async function resubmitDesign(
