@@ -8,7 +8,6 @@ import { z } from 'zod'
 
 import { uploadDesign } from '@/app/dashboard/[brand]/designs/actions'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -52,10 +51,11 @@ const DEFAULTS: FormValues = {
 
 interface DesignUploadFormProps {
   brand: string
+  onDone?: () => void
 }
 
 /** Upload an STL and its answers; the backend slices it and returns the pre-check. */
-export function DesignUploadForm({ brand }: DesignUploadFormProps): JSX.Element {
+export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.Element {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -95,98 +95,88 @@ export function DesignUploadForm({ brand }: DesignUploadFormProps): JSX.Element 
       setError(outcome.error ?? 'Could not upload this design.')
       return
     }
+    onDone?.()
     router.push(`/dashboard/${brand}/designs/${outcome.data.id}`)
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Upload a design</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-          <Field label="Name" htmlFor="name" required error={errors.name?.message}>
-            <Input id="name" placeholder="e.g. Hexagon planter" {...register('name')} />
-          </Field>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+      <Field label="Name" htmlFor="name" required error={errors.name?.message}>
+        <Input id="name" placeholder="e.g. Hexagon planter" {...register('name')} />
+      </Field>
 
-          <Field
-            label="Model file"
-            htmlFor="file"
-            hint={`STL, 3MF or STEP, up to ${MAX_FILE_MB} MB`}
-          >
-            <Input id="file" type="file" accept={ACCEPT} onChange={onFileChange} />
-          </Field>
+      <Field label="Model file" htmlFor="file" hint={`STL, 3MF or STEP, up to ${MAX_FILE_MB} MB`}>
+        <Input id="file" type="file" accept={ACCEPT} onChange={onFileChange} />
+      </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Material" htmlFor="material" error={errors.material?.message}>
-              <Select id="material" {...register('material')}>
-                {MATERIALS.map(m => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Quality" htmlFor="quality" error={errors.quality?.message}>
-              <Select id="quality" {...register('quality')}>
-                {QUALITIES.map(q => (
-                  <option key={q.value} value={q.value}>
-                    {q.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Finish" htmlFor="finish" error={errors.finish?.message}>
-              <Select id="finish" {...register('finish')}>
-                {FINISHES.map(f => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Colour" htmlFor="colour" hint="Optional">
-              <Input id="colour" placeholder="e.g. Matte black" {...register('colour')} />
-            </Field>
-            <Field
-              label="Units per bed"
-              htmlFor="units_per_bed"
-              error={(errors.units_per_bed as FieldError | undefined)?.message}
-            >
-              <Input
-                id="units_per_bed"
-                type="number"
-                step="1"
-                data-numeric="true"
-                {...register('units_per_bed', { valueAsNumber: true })}
-              />
-            </Field>
-            <Field
-              label="Infill %"
-              htmlFor="infill_pct"
-              error={(errors.infill_pct as FieldError | undefined)?.message}
-            >
-              <Input
-                id="infill_pct"
-                type="number"
-                step="1"
-                data-numeric="true"
-                {...register('infill_pct', { valueAsNumber: true })}
-              />
-            </Field>
-          </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Material" htmlFor="material" error={errors.material?.message}>
+          <Select id="material" {...register('material')}>
+            {MATERIALS.map(m => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Quality" htmlFor="quality" error={errors.quality?.message}>
+          <Select id="quality" {...register('quality')}>
+            {QUALITIES.map(q => (
+              <option key={q.value} value={q.value}>
+                {q.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Finish" htmlFor="finish" error={errors.finish?.message}>
+          <Select id="finish" {...register('finish')}>
+            {FINISHES.map(f => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Colour" htmlFor="colour" hint="Optional">
+          <Input id="colour" placeholder="e.g. Matte black" {...register('colour')} />
+        </Field>
+        <Field
+          label="Units per bed"
+          htmlFor="units_per_bed"
+          error={(errors.units_per_bed as FieldError | undefined)?.message}
+        >
+          <Input
+            id="units_per_bed"
+            type="number"
+            step="1"
+            data-numeric="true"
+            {...register('units_per_bed', { valueAsNumber: true })}
+          />
+        </Field>
+        <Field
+          label="Infill %"
+          htmlFor="infill_pct"
+          error={(errors.infill_pct as FieldError | undefined)?.message}
+        >
+          <Input
+            id="infill_pct"
+            type="number"
+            step="1"
+            data-numeric="true"
+            {...register('infill_pct', { valueAsNumber: true })}
+          />
+        </Field>
+      </div>
 
-          {error ? (
-            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
-              {error}
-            </p>
-          ) : null}
+      {error ? (
+        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+          {error}
+        </p>
+      ) : null}
 
-          <Button type="submit" disabled={isSubmitting} className="self-start">
-            {isSubmitting ? 'Uploading…' : 'Upload and slice'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <Button type="submit" disabled={isSubmitting} className="self-start">
+        {isSubmitting ? 'Uploading…' : 'Upload and slice'}
+      </Button>
+    </form>
   )
 }

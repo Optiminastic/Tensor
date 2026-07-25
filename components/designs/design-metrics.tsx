@@ -34,7 +34,18 @@ export function DesignMetricsPanel({ metrics }: DesignMetricsPanelProps): JSX.El
             hint={`${metrics.wall_loops} walls`}
           />
           <Stat label="Units per bed" value={String(metrics.units_per_bed)} />
-          <Stat label="Supports" value={metrics.support_used ? 'Yes' : 'No'} />
+          <Stat
+            label="Support"
+            value={`${metrics.support_g.toFixed(1)} g`}
+            hint={metrics.support_used ? 'Auto-generated' : 'None needed'}
+          />
+          <Stat
+            label="Purge / waste"
+            value={`${metrics.purge_g.toFixed(1)} g`}
+            hint={`${metrics.colour_changes} colour change${
+              metrics.colour_changes === 1 ? '' : 's'
+            }`}
+          />
         </div>
       </CardContent>
     </Card>

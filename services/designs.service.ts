@@ -5,8 +5,11 @@ import {
   type Design,
   type DesignDetail,
   type DesignSpecs,
+  type PublishInput,
+  type PublishResult,
   DesignDetailSchema,
   DesignSchema,
+  PublishResultSchema,
 } from '@/lib/validators/designs'
 
 const log = createLogger('DesignService')
@@ -140,6 +143,19 @@ export async function fetchDesignFile(
   }
 
   return response
+}
+
+// Approves a priced design and creates its Shopify draft product in one call.
+export async function publishToShopify(
+  token: string,
+  id: string,
+  input: PublishInput,
+): Promise<PublishResult> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/publish-shopify`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => PublishResultSchema.parse(data),
+  )
 }
 
 export async function resubmitDesign(

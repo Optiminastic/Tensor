@@ -16,7 +16,14 @@ export const DesignSpecsSchema = z.object({
 })
 export type DesignSpecs = z.infer<typeof DesignSpecsSchema>
 
-export const DesignLifecycleSchema = z.enum(['queued', 'slicing', 'priced', 'failed'])
+export const DesignLifecycleSchema = z.enum([
+  'queued',
+  'slicing',
+  'priced',
+  'failed',
+  'approved',
+  'published',
+])
 export type DesignLifecycle = z.infer<typeof DesignLifecycleSchema>
 
 export const VerdictSchema = z.enum(['green', 'yellow', 'red'])
@@ -76,10 +83,23 @@ export const DesignPricingSchema = z.object({
   verdict: VerdictSchema,
   cp_pct: z.number(),
   recommended_sp: z.number().nullable(),
+  raw_sp: z.number(),
+  cp_pct_at_recommended: z.number().nullable(),
+  passes_normal: z.boolean(),
+  survives_stress: z.boolean(),
+  sp_warnings: z.string().array(),
+  approved_sp: z.number().nullable(),
   reasons: z.string().array(),
   suggestions: z.string().array(),
 })
 export type DesignPricing = z.infer<typeof DesignPricingSchema>
+
+export const ShopifyProductSchema = z.object({
+  status: z.string(),
+  handle: z.string(),
+  admin_url: z.string(),
+})
+export type ShopifyProduct = z.infer<typeof ShopifyProductSchema>
 
 export const SliceJobSchema = z.object({
   status: z.string(),
@@ -92,5 +112,25 @@ export const DesignDetailSchema = DesignSchema.extend({
   job: SliceJobSchema.nullable(),
   metrics: DesignMetricsSchema.nullable(),
   pricing: DesignPricingSchema.nullable(),
+  shopify: ShopifyProductSchema.nullable(),
 })
 export type DesignDetail = z.infer<typeof DesignDetailSchema>
+
+// The "few details" a Project Lead confirms when approving + publishing. Price
+// defaults to the recommended SP; the rest is completed in Shopify.
+export const PublishInputSchema = z.object({
+  title: z.string().min(1, 'Give the product a title').max(255),
+  price: z.number().int().positive(),
+  product_type: z.string().max(255).optional(),
+  tags: z.string().array().optional(),
+  vendor: z.string().max(255).optional(),
+})
+export type PublishInput = z.infer<typeof PublishInputSchema>
+
+export const PublishResultSchema = z.object({
+  status: z.string(),
+  admin_url: z.string(),
+  handle: z.string(),
+  product_gid: z.string(),
+})
+export type PublishResult = z.infer<typeof PublishResultSchema>

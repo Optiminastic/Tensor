@@ -6,7 +6,7 @@ import { useState, type JSX } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-import { updateBrand } from '@/app/dashboard/brands/actions'
+import { deleteBrand, updateBrand } from '@/app/dashboard/brands/actions'
 import { LogoUpload } from '@/components/brands/logo-upload'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,6 +50,9 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
   const [formError, setFormError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(brand.logo_url)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const {
     register,
@@ -106,6 +109,19 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
     const current = getValues('rungs')
     const last = current.length ? current[current.length - 1].value : 999
     append({ value: (Number.isFinite(last) ? last : 999) + 100 })
+  }
+
+  async function onDelete(): Promise<void> {
+    setDeleteError(null)
+    setDeleting(true)
+    const result = await deleteBrand(brand.slug)
+    setDeleting(false)
+    if (!result.ok) {
+      setDeleteError(result.error ?? 'Could not delete the brand.')
+      return
+    }
+    router.push('/dashboard/brands')
+    router.refresh()
   }
 
   const rungError = errors.rungs?.message ?? errors.rungs?.root?.message
@@ -267,6 +283,53 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
             {isSubmitting ? 'Saving…' : 'Save brand'}
           </Button>
         </form>
+
+        <div className="border-border mt-6 flex flex-col gap-3 border-t pt-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-foreground text-sm font-medium">Delete this brand</p>
+            <p className="text-muted-foreground text-sm">
+              Removes {brand.name} and all its designs, pricing and connections. This cannot be
+              undone.
+            </p>
+          </div>
+          {deleteError ? (
+            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+              {deleteError}
+            </p>
+          ) : null}
+          {confirmingDelete ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={onDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting…' : `Delete ${brand.name}`}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="self-start"
+              onClick={() => setConfirmingDelete(true)}
+            >
+              Delete brand
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

@@ -9,6 +9,13 @@ import { calculatePrice, type CalculationResult } from '@/app/dashboard/[brand]/
 import { PriceResult } from '@/components/costing/price-result'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 
@@ -134,6 +141,7 @@ interface PriceCalculatorProps {
 export function PriceCalculator({ brand }: PriceCalculatorProps): JSX.Element {
   const [result, setResult] = useState<CalculationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
 
   const {
     register,
@@ -179,46 +187,57 @@ export function PriceCalculator({ brand }: PriceCalculatorProps): JSX.Element {
       return
     }
     setResult(outcome.data)
+    setOpen(false)
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6" noValidate>
-        {GROUPS.map(group => (
-          <Card key={group.title}>
-            <CardHeader>
-              <CardTitle>{group.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {group.fields.map(f => (
-                  <Field
-                    key={f.name}
-                    label={f.label}
-                    htmlFor={f.name}
-                    hint={f.hint}
-                    error={(errors[f.name] as FieldError | undefined)?.message}
-                  >
-                    <Input
-                      id={f.name}
-                      type="number"
-                      step={f.step}
-                      data-numeric="true"
-                      {...register(f.name, { valueAsNumber: true })}
-                    />
-                  </Field>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="flex flex-col gap-6">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="self-start">Calculate a price</Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Calculate a price</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6" noValidate>
+            {GROUPS.map(group => (
+              <Card key={group.title}>
+                <CardHeader>
+                  <CardTitle>{group.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.fields.map(f => (
+                      <Field
+                        key={f.name}
+                        label={f.label}
+                        htmlFor={f.name}
+                        hint={f.hint}
+                        error={(errors[f.name] as FieldError | undefined)?.message}
+                      >
+                        <Input
+                          id={f.name}
+                          type="number"
+                          step={f.step}
+                          data-numeric="true"
+                          {...register(f.name, { valueAsNumber: true })}
+                        />
+                      </Field>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
 
-        <Button type="submit" disabled={isSubmitting} className="self-start">
-          {isSubmitting ? 'Calculating…' : 'Calculate price'}
-        </Button>
-      </form>
+            <Button type="submit" disabled={isSubmitting} className="self-start">
+              {isSubmitting ? 'Calculating…' : 'Calculate price'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      <div className="lg:sticky lg:top-6 lg:h-fit">
+      <div>
         {error ? (
           <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
             {error}
@@ -229,7 +248,7 @@ export function PriceCalculator({ brand }: PriceCalculatorProps): JSX.Element {
           <Card>
             <CardContent>
               <p className="text-muted-foreground text-sm">
-                Enter a design and calculate to see its cost, price and pre-check.
+                Click “Calculate a price” to enter a design and see its cost, price and pre-check.
               </p>
             </CardContent>
           </Card>

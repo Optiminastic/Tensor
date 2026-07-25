@@ -8,12 +8,15 @@ import {
   type Design,
   type DesignDetail,
   type DesignSpecs,
+  type PublishResult,
   DesignSpecsSchema,
+  PublishInputSchema,
 } from '@/lib/validators/designs'
 import {
   DesignServiceError,
   createDesign,
   getDesign,
+  publishToShopify,
   resubmitDesign as resubmitRequest,
 } from '@/services/designs.service'
 
@@ -107,6 +110,33 @@ export async function resubmitDesign(
     const design = await resubmitRequest(token, id, specs.data)
     revalidatePath(`/dashboard/${brand}/designs/${id}`)
     return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// approveAndPublish approves a priced design and creates its Shopify draft in one
+// step. The backend enforces shopify:publish; a not-connected brand returns a
+// friendly error and leaves the design approved (retryable).
+export async function approveAndPublish(
+  brand: string,
+  id: string,
+  input: unknown,
+): Promise<ActionResult<PublishResult>> {
+  const parsed = PublishInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Check the details and try again.',
+    }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+
+  try {
+    const result = await publishToShopify(token, id, parsed.data)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true, data: result }
   } catch (err) {
     return { ok: false, error: describe(err) }
   }
