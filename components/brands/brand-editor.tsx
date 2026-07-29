@@ -114,14 +114,19 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
   async function onDelete(): Promise<void> {
     setDeleteError(null)
     setDeleting(true)
-    const result = await deleteBrand(brand.slug)
-    setDeleting(false)
-    if (!result.ok) {
-      setDeleteError(result.error ?? 'Could not delete the brand.')
-      return
+    try {
+      const result = await deleteBrand(brand.slug)
+      if (!result.ok) {
+        setDeleteError(result.error ?? 'Could not delete the brand.')
+        return
+      }
+      router.push('/dashboard/brands')
+      router.refresh()
+    } catch {
+      setDeleteError('Could not delete the brand.')
+    } finally {
+      setDeleting(false)
     }
-    router.push('/dashboard/brands')
-    router.refresh()
   }
 
   const rungError = errors.rungs?.message ?? errors.rungs?.root?.message

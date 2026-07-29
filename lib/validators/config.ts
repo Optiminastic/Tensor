@@ -4,21 +4,23 @@ import { z } from 'zod'
 // 30%). fixed_costs and margins are the inputs the selling price is built from -
 // making them editable here is what stops the price being hardcoded.
 
+// Fixed costs are money amounts, so never negative.
 export const FixedCostsSchema = z.object({
-  packaging: z.number(),
-  shipping: z.number(),
-  rto_cod: z.number(),
-  payment_gateway: z.number(),
-  tech_allocation: z.number(),
-  other: z.number(),
+  packaging: z.number().min(0),
+  shipping: z.number().min(0),
+  rto_cod: z.number().min(0),
+  payment_gateway: z.number().min(0),
+  tech_allocation: z.number().min(0),
+  other: z.number().min(0),
 })
 export type FixedCosts = z.infer<typeof FixedCostsSchema>
 
+// Each margin is a fraction between 0 and 1 (their sum is bounded < 1 below).
 export const MarginsSchema = z.object({
-  ad_spend_pct: z.number(),
-  team_pct: z.number(),
-  overhead_pct: z.number(),
-  target_profit_pct: z.number(),
+  ad_spend_pct: z.number().min(0).max(1),
+  team_pct: z.number().min(0).max(1),
+  overhead_pct: z.number().min(0).max(1),
+  target_profit_pct: z.number().min(0).max(1),
 })
 export type Margins = z.infer<typeof MarginsSchema>
 

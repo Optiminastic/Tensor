@@ -49,8 +49,9 @@ export default async function DesignsPage({ params }: DesignsPageProps): Promise
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
           {error}
         </p>
-      ) : null}
-      <DesignList brand={brand} designs={designs} />
+      ) : (
+        <DesignList brand={brand} designs={designs} />
+      )}
     </main>
   )
 }

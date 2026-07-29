@@ -118,8 +118,10 @@ export async function resubmitDesign(
 // approveAndPublish approves a priced design and creates its Shopify draft in one
 // step. The backend enforces shopify:publish; a not-connected brand returns a
 // friendly error and leaves the design approved (retryable).
-const MAX_PUBLISH_IMAGES = 8
-const MAX_PUBLISH_IMAGE_BYTES = 20 * 1024 * 1024
+// Kept under next.config's serverActions.bodySizeLimit (64mb): 6 x 8MB = 48MB
+// leaves headroom for the other form fields.
+const MAX_PUBLISH_IMAGES = 6
+const MAX_PUBLISH_IMAGE_BYTES = 8 * 1024 * 1024
 
 interface ApprovePublishArgs {
   input: unknown
@@ -142,16 +144,25 @@ export async function approveAndPublish(
   const imageError = validateImages(images)
   if (imageError) return { ok: false, error: imageError }
 
-  const { token, error } = await resolveBackendToken()
-  if (!token) return { ok: false, error }
-
+  // Token resolution is inside the boundary: its auth calls can reject, and the
+  // caller only handles ActionResult, not a thrown error.
+  let result: PublishResult
   try {
-    const result = await publishToShopify(token, { id, input: parsed.data, images })
-    revalidatePath(`/dashboard/${brand}/designs/${id}`)
-    return { ok: true, data: result }
+    const { token, error } = await resolveBackendToken()
+    if (!token) return { ok: false, error }
+    result = await publishToShopify(token, { id, input: parsed.data, images })
   } catch (err) {
     return { ok: false, error: describe(err) }
   }
+
+  // The Shopify draft is created; a cache-revalidation failure must not report
+  // the publish as failed and invite a duplicate retry.
+  try {
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+  } catch {
+    // Best effort; the write already succeeded.
+  }
+  return { ok: true, data: result }
 }
 
 // validateImages re-checks the files server-side (a client is not trusted): the

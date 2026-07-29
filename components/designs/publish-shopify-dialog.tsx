@@ -19,7 +19,7 @@ import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
-const MAX_IMAGES = 8
+const MAX_IMAGES = 6
 
 // weight_grams is optional; an empty number input reads as NaN, which we map to
 // undefined so the field can be left blank.
