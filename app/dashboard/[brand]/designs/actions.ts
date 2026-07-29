@@ -118,28 +118,53 @@ export async function resubmitDesign(
 // approveAndPublish approves a priced design and creates its Shopify draft in one
 // step. The backend enforces shopify:publish; a not-connected brand returns a
 // friendly error and leaves the design approved (retryable).
+const MAX_PUBLISH_IMAGES = 8
+const MAX_PUBLISH_IMAGE_BYTES = 20 * 1024 * 1024
+
+interface ApprovePublishArgs {
+  input: unknown
+  images?: File[]
+}
+
 export async function approveAndPublish(
   brand: string,
   id: string,
-  input: unknown,
+  args: ApprovePublishArgs,
 ): Promise<ActionResult<PublishResult>> {
-  const parsed = PublishInputSchema.safeParse(input)
+  const parsed = PublishInputSchema.safeParse(args.input)
   if (!parsed.success) {
     return {
       ok: false,
       error: parsed.error.issues[0]?.message ?? 'Check the details and try again.',
     }
   }
+  const images = args.images ?? []
+  const imageError = validateImages(images)
+  if (imageError) return { ok: false, error: imageError }
+
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error }
 
   try {
-    const result = await publishToShopify(token, id, parsed.data)
+    const result = await publishToShopify(token, { id, input: parsed.data, images })
     revalidatePath(`/dashboard/${brand}/designs/${id}`)
     return { ok: true, data: result }
   } catch (err) {
     return { ok: false, error: describe(err) }
   }
+}
+
+// validateImages re-checks the files server-side (a client is not trusted): the
+// count, per-file size, and that each is an image. Returns an error message or null.
+function validateImages(images: File[]): string | null {
+  if (images.length > MAX_PUBLISH_IMAGES) {
+    return `At most ${MAX_PUBLISH_IMAGES} images can be attached.`
+  }
+  for (const image of images) {
+    if (!image.type.startsWith('image/')) return 'Only image files can be attached.'
+    if (image.size > MAX_PUBLISH_IMAGE_BYTES) return 'Each image must be under 20 MB.'
+  }
+  return null
 }
 
 // fetchDesignDetail backs the detail page's client-side polling through the

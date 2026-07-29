@@ -46,6 +46,19 @@ export const DesignSchema = z.object({
 })
 export type Design = z.infer<typeof DesignSchema>
 
+// The least-support resting orientation computed from the model mesh. Advisory:
+// it never changes the costed price. est_reduction_pct is a fraction (0..1).
+export const OrientationSchema = z.object({
+  rotation_axis: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+  rotation_degrees: z.number(),
+  overhang_area_baseline: z.number(),
+  overhang_area_recommended: z.number(),
+  est_reduction_pct: z.number(),
+  description: z.string(),
+  already_optimal: z.boolean(),
+})
+export type Orientation = z.infer<typeof OrientationSchema>
+
 export const DesignMetricsSchema = z.object({
   print_time_hr: z.number(),
   effective_machine_time_hr: z.number(),
@@ -61,6 +74,7 @@ export const DesignMetricsSchema = z.object({
   support_used: z.boolean(),
   filament_length_mm: z.number(),
   gcode_key: z.string(),
+  orientation: OrientationSchema.nullable(),
 })
 export type DesignMetrics = z.infer<typeof DesignMetricsSchema>
 
@@ -124,6 +138,11 @@ export const PublishInputSchema = z.object({
   product_type: z.string().max(255).optional(),
   tags: z.string().array().optional(),
   vendor: z.string().max(255).optional(),
+  description: z.string().max(50_000).optional(),
+  seo_title: z.string().max(255).optional(),
+  seo_description: z.string().max(320).optional(),
+  sku: z.string().max(255).optional(),
+  weight_grams: z.number().min(0).max(1_000_000).optional(),
 })
 export type PublishInput = z.infer<typeof PublishInputSchema>
 

@@ -4,19 +4,24 @@ import { ConnectionRow } from '@/components/brands/connection-row'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type Connection, type ConnectionProvider } from '@/lib/validators/connections'
 
-const PROVIDERS: ConnectionProvider[] = ['google_ads', 'meta_ads', 'shopify']
+const PROVIDERS: ConnectionProvider[] = ['google_ads', 'google_analytics', 'meta_ads', 'shopify']
 
 interface BrandConnectionsProps {
   brandSlug: string
   connections: Connection[]
+  googleOAuthConfigured: boolean
 }
 
 /**
- * The integrations panel for a brand: one row per provider (Google Ads, Meta
- * Ads, Shopify) showing whether it is connected and letting an admin link or
- * disconnect it.
+ * The integrations panel for a brand: one row per provider (Google Ads, Google
+ * Analytics, Meta Ads, Shopify) showing whether it is connected and letting an
+ * admin link or disconnect it.
  */
-export function BrandConnections({ brandSlug, connections }: BrandConnectionsProps): JSX.Element {
+export function BrandConnections({
+  brandSlug,
+  connections,
+  googleOAuthConfigured,
+}: BrandConnectionsProps): JSX.Element {
   const byProvider = new Map(connections.map(c => [c.provider, c]))
 
   return (
@@ -32,6 +37,7 @@ export function BrandConnections({ brandSlug, connections }: BrandConnectionsPro
             brandSlug={brandSlug}
             provider={provider}
             connection={byProvider.get(provider) ?? null}
+            googleOAuthConfigured={googleOAuthConfigured}
           />
         ))}
       </CardContent>

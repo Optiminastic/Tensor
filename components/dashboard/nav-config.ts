@@ -70,12 +70,7 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'Production',
     icon: Factory,
     segment: 'production',
-    items: [
-      { label: 'Live', href: '/production' },
-      { label: 'Machines', href: '/production?view=machines' },
-      { label: 'Material Inventory', href: '/production?view=inventory' },
-      { label: 'Production Jobs', href: '/production?view=jobs' },
-    ],
+    items: [{ label: 'Live', href: '/production' }],
   },
   {
     label: 'Commerce',

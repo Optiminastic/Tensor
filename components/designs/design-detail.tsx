@@ -11,6 +11,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { type DesignDetail, type DesignSpecs, DesignSpecsSchema } from '@/lib/validators/designs'
 
 import { DesignMetricsPanel } from './design-metrics'
+import { DesignModelPreview } from './design-model-preview'
+import { DesignOrientation } from './design-orientation'
 import { DesignResubmitForm } from './design-resubmit-form'
 import { DesignStatusBadge } from './design-status-badge'
 import { DesignVerdict } from './design-verdict'
@@ -128,7 +130,16 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
         </Card>
       ) : null}
 
+      {!isProcessing ? (
+        <DesignModelPreview
+          designId={design.id}
+          orientation={design.metrics?.orientation ?? null}
+        />
+      ) : null}
       {design.metrics ? <DesignMetricsPanel metrics={design.metrics} /> : null}
+      {design.metrics?.orientation ? (
+        <DesignOrientation orientation={design.metrics.orientation} />
+      ) : null}
       {design.pricing ? <DesignVerdict pricing={design.pricing} /> : null}
 
       {design.shopify ? (
