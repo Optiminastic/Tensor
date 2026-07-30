@@ -9,10 +9,10 @@ import { cn } from '@/lib/utils'
 
 import { type BrandOption, BrandSwitcher } from './brand-switcher'
 import {
-  isLeafActive,
   type NavLeaf,
   PRIMARY_SECTIONS,
   primarySegment,
+  resolveActiveHref,
   WORKSPACE_SECTIONS,
 } from './nav-config'
 
@@ -50,6 +50,13 @@ export function NavPanel({ base, brands, activeSlug, email }: NavPanelProps): JS
   const pathname = usePathname()
   const currentView = useSearchParams().get('view')
   const section = resolveActiveSection(pathname)
+  const activeHref = section.items
+    ? resolveActiveHref(
+        pathname,
+        currentView,
+        section.items.map(item => `${base}${item.href}`),
+      )
+    : null
 
   return (
     <aside className="border-border bg-surface sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r lg:flex">
@@ -67,7 +74,7 @@ export function NavPanel({ base, brands, activeSlug, email }: NavPanelProps): JS
         {section.items ? (
           section.items.map(item => {
             const href = `${base}${item.href}`
-            const active = isLeafActive(pathname, currentView, href)
+            const active = href === activeHref
             return (
               <Link
                 key={item.href}

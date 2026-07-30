@@ -24,7 +24,7 @@ export default async function ProductionJobPage({
     <main className="flex w-full flex-col gap-6 px-6 py-10 md:px-8">
       <div className="flex flex-col gap-3">
         <Link
-          href={`/dashboard/${brand}/production?view=jobs`}
+          href={`/dashboard/${brand}/production/jobs`}
           className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1.5 text-sm"
         >
           <ArrowLeft className="size-4" aria-hidden />

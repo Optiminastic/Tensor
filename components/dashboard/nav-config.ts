@@ -72,10 +72,10 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     segment: 'production',
     items: [
       { label: 'Overview', href: '/production' },
-      { label: 'Production Jobs', href: '/production?view=jobs' },
-      { label: 'Batch Management', href: '/production?view=batches' },
-      { label: 'Machine Management', href: '/production?view=machines' },
-      { label: 'Filament Inventory', href: '/production?view=inventory' },
+      { label: 'Production Jobs', href: '/production/jobs' },
+      { label: 'Batch Management', href: '/production/batches' },
+      { label: 'Machine Management', href: '/production/machines' },
+      { label: 'Filament Inventory', href: '/production/inventory' },
     ],
   },
   {
@@ -139,18 +139,37 @@ export function parseNavHref(href: string): { path: string; view: string | null 
 }
 
 /**
- * Whether a nav leaf is active for the current pathname. Most leaves share one
- * page and switch on a `?view=` query (e.g. `/production?view=jobs`), but a
- * leaf's view can also own real nested routes (e.g. `/production/jobs/<id>`
- * for a job's detail page) - that first path segment past the leaf's base path
- * counts as the view too, so the sidebar stays on "Production Jobs" there.
+ * The nav leaf href that should read as active for the current pathname, or
+ * null if none match. Two leaf shapes coexist:
+ * - query-based (e.g. `/designs?view=upload`): active only on an exact path +
+ *   matching `?view=` query.
+ * - path-based (e.g. `/production/jobs`): active on that path OR anything
+ *   nested under it (e.g. `/production/jobs/<id>`, a job's detail page).
+ *
+ * Path-based leaves can nest inside one another (`/production` is a prefix of
+ * `/production/jobs`), so among every leaf that matches, the one with the
+ * longest path wins - the most specific route stays highlighted instead of
+ * its parent.
  */
-export function isLeafActive(pathname: string, currentView: string | null, href: string): boolean {
-  const { path, view } = parseNavHref(href)
-  if (pathname === path) return currentView === view
-  if (!pathname.startsWith(`${path}/`)) return false
-  const nestedSegment = pathname.slice(path.length + 1).split('/')[0]
-  return nestedSegment === view
+export function resolveActiveHref(
+  pathname: string,
+  currentView: string | null,
+  hrefs: string[],
+): string | null {
+  let best: string | null = null
+  let bestPathLength = -1
+  for (const href of hrefs) {
+    const { path, view } = parseNavHref(href)
+    const matches =
+      view !== null
+        ? pathname === path && currentView === view
+        : pathname === path || pathname.startsWith(`${path}/`)
+    if (matches && path.length > bestPathLength) {
+      best = href
+      bestPathLength = path.length
+    }
+  }
+  return best
 }
 
 /** The active brand slug from a dashboard pathname, or null on a workspace/root route. */
