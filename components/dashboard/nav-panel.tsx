@@ -9,8 +9,8 @@ import { cn } from '@/lib/utils'
 
 import { type BrandOption, BrandSwitcher } from './brand-switcher'
 import {
+  isLeafActive,
   type NavLeaf,
-  parseNavHref,
   PRIMARY_SECTIONS,
   primarySegment,
   WORKSPACE_SECTIONS,
@@ -67,8 +67,7 @@ export function NavPanel({ base, brands, activeSlug, email }: NavPanelProps): JS
         {section.items ? (
           section.items.map(item => {
             const href = `${base}${item.href}`
-            const { path, view } = parseNavHref(href)
-            const active = pathname === path && currentView === view
+            const active = isLeafActive(pathname, currentView, href)
             return (
               <Link
                 key={item.href}

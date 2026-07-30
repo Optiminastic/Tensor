@@ -138,6 +138,21 @@ export function parseNavHref(href: string): { path: string; view: string | null 
   return { path, view }
 }
 
+/**
+ * Whether a nav leaf is active for the current pathname. Most leaves share one
+ * page and switch on a `?view=` query (e.g. `/production?view=jobs`), but a
+ * leaf's view can also own real nested routes (e.g. `/production/jobs/<id>`
+ * for a job's detail page) - that first path segment past the leaf's base path
+ * counts as the view too, so the sidebar stays on "Production Jobs" there.
+ */
+export function isLeafActive(pathname: string, currentView: string | null, href: string): boolean {
+  const { path, view } = parseNavHref(href)
+  if (pathname === path) return currentView === view
+  if (!pathname.startsWith(`${path}/`)) return false
+  const nestedSegment = pathname.slice(path.length + 1).split('/')[0]
+  return nestedSegment === view
+}
+
 /** The active brand slug from a dashboard pathname, or null on a workspace/root route. */
 export function brandFromPathname(pathname: string): string | null {
   const segments = pathname.split('/').filter(Boolean) // ['dashboard', '<seg>', ...]
