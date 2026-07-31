@@ -72,6 +72,7 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     segment: 'production',
     items: [
       { label: 'Overview', href: '/production' },
+      { label: 'Orders', href: '/production/orders' },
       { label: 'Production Jobs', href: '/production/jobs' },
       { label: 'Batch Management', href: '/production/batches' },
       { label: 'Machine Management', href: '/production/machines' },
@@ -84,7 +85,6 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     segment: 'commerce',
     items: [
       { label: 'Shopify Products', href: '/commerce' },
-      { label: 'Orders', href: '/commerce?view=orders' },
       { label: 'Collections', href: '/commerce?view=collections' },
     ],
   },

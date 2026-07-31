@@ -5,6 +5,7 @@ import type {
   MachineDetail,
   MachineRecord,
   MachineSummary,
+  OrderRecord,
   ProductionJob,
   ProductionJobDetail,
   ProductionJobQueueItem,
@@ -97,7 +98,7 @@ export const MACHINE_RECORDS: MachineRecord[] = [
 
 // All three H2C units are the same model, so they share one product photo and
 // nozzle/filament spec - only the id, IP and live status differ per unit.
-const MACHINE_IMAGE_SRC = '/production/h2c-printer.png'
+export const MACHINE_IMAGE_SRC = '/production/h2c-printer.png'
 const MACHINE_FILAMENTS = ['White', 'Blue', 'Green', 'Red']
 
 export const MACHINE_DETAILS: MachineDetail[] = MACHINE_RECORDS.map((machine, index) => ({
@@ -292,3 +293,89 @@ export const INITIAL_FILAMENTS: FilamentRecord[] = [
     price: 3200,
   },
 ]
+
+export const ORDERS: OrderRecord[] = [
+  {
+    id: 'order-1042',
+    orderNumber: '#1042',
+    store: 'tensor-decor.myshopify.com',
+    customer: 'Ravi Shah',
+    submittedAt: 'Jul 31, 2026',
+    total: 720,
+    status: 'pending',
+    lineItems: [{ name: 'Cable Clip — 6mm', quantity: 4 }],
+  },
+  {
+    id: 'order-1041',
+    orderNumber: '#1041',
+    store: 'tensor-decor.myshopify.com',
+    customer: 'Ravi Shah',
+    submittedAt: 'Jul 30, 2026',
+    total: 1840,
+    status: 'pending',
+    lineItems: [
+      { name: 'Wall Planter — Ribbed', quantity: 2 },
+      { name: 'Desk Organizer — Modular', quantity: 1 },
+    ],
+  },
+  {
+    id: 'order-1040',
+    orderNumber: '#1040',
+    store: 'tensor-decor.myshopify.com',
+    customer: 'Meera Nair',
+    submittedAt: 'Jul 30, 2026',
+    total: 640,
+    status: 'paid',
+    lineItems: [{ name: 'Desk Organizer — Modular', quantity: 1 }],
+  },
+  {
+    id: 'order-1039',
+    orderNumber: '#1039',
+    store: 'tensor-gifting.myshopify.com',
+    customer: 'Arjun Kapoor',
+    submittedAt: 'Jul 29, 2026',
+    total: 3120,
+    status: 'paid',
+    lineItems: [
+      { name: 'Pendant Light Shade', quantity: 2 },
+      { name: 'Cable Clip — 6mm', quantity: 2 },
+    ],
+  },
+  {
+    id: 'order-1038',
+    orderNumber: '#1038',
+    store: 'tensor-decor.myshopify.com',
+    customer: 'Priya Menon',
+    submittedAt: 'Jul 29, 2026',
+    total: 260,
+    status: 'paid',
+    lineItems: [{ name: 'Vase — Twist 220mm', quantity: 1 }],
+  },
+  {
+    id: 'order-1037',
+    orderNumber: '#1037',
+    store: 'tensor-gifting.myshopify.com',
+    customer: 'Karan Malhotra',
+    submittedAt: 'Jul 28, 2026',
+    total: 2150,
+    status: 'cancelled',
+    lineItems: [
+      { name: 'Boomerang V2', quantity: 1 },
+      { name: 'Audi Body', quantity: 2 },
+    ],
+  },
+  {
+    id: 'order-1036',
+    orderNumber: '#1036',
+    store: 'tensor-decor.myshopify.com',
+    customer: null,
+    submittedAt: 'Jul 28, 2026',
+    total: 480,
+    status: 'refunded',
+    lineItems: [{ name: 'Modern Chair Of Mine1', quantity: 1 }],
+  },
+]
+
+export function getOrderDetail(id: string): OrderRecord | undefined {
+  return ORDERS.find(order => order.id === id)
+}

@@ -13,10 +13,10 @@ import {
 
 export function ProductionOverview(): JSX.Element {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-2">
       <OverviewStats stats={PRODUCTION_STATS} />
       <ProductionActivityChart data={PRODUCTION_ACTIVITY} />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-2 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <RecentJobsTable jobs={RECENT_JOBS} />
         </div>

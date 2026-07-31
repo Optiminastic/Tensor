@@ -3,6 +3,7 @@ import type {
   JobStatus,
   MachineLiveStatus,
   MachineStatus,
+  OrderStatus,
   PackagingStatus,
   PersonalisationStatus,
   QcStatus,
@@ -55,4 +56,11 @@ export const QC_STATUS_CONFIG: Record<QcStatus, { label: string; tone: PillTone 
 export const PACKAGING_STATUS_CONFIG: Record<PackagingStatus, { label: string; tone: PillTone }> = {
   pending: { label: 'Pending', tone: 'muted' },
   packed: { label: 'Packed', tone: 'success' },
+}
+
+export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; tone: PillTone }> = {
+  paid: { label: 'Paid', tone: 'success' },
+  pending: { label: 'Pending', tone: 'warning' },
+  refunded: { label: 'Refunded', tone: 'muted' },
+  cancelled: { label: 'Cancelled', tone: 'danger' },
 }

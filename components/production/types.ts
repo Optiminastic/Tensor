@@ -73,6 +73,24 @@ export interface FilamentRecord {
   price: number
 }
 
+export type OrderStatus = 'paid' | 'pending' | 'refunded' | 'cancelled'
+
+export interface OrderLineItem {
+  name: string
+  quantity: number
+}
+
+export interface OrderRecord {
+  id: string
+  orderNumber: string
+  store: string
+  customer: string | null
+  submittedAt: string
+  total: number
+  status: OrderStatus
+  lineItems: OrderLineItem[]
+}
+
 export interface ProductionJobDetail extends ProductionJobQueueItem {
   shopifyOrderId: string
   sku: string
