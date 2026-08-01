@@ -8,12 +8,15 @@ import {
   type Design,
   type DesignDetail,
   type DesignSpecs,
+  type PublishResult,
   DesignSpecsSchema,
+  PublishInputSchema,
 } from '@/lib/validators/designs'
 import {
   DesignServiceError,
   createDesign,
   getDesign,
+  publishToShopify,
   resubmitDesign as resubmitRequest,
 } from '@/services/designs.service'
 
@@ -110,6 +113,69 @@ export async function resubmitDesign(
   } catch (err) {
     return { ok: false, error: describe(err) }
   }
+}
+
+// approveAndPublish approves a priced design and creates its Shopify draft in one
+// step. The backend enforces shopify:publish; a not-connected brand returns a
+// friendly error and leaves the design approved (retryable).
+// Kept under next.config's serverActions.bodySizeLimit (64mb): 6 x 8MB = 48MB
+// leaves headroom for the other form fields.
+const MAX_PUBLISH_IMAGES = 6
+const MAX_PUBLISH_IMAGE_BYTES = 8 * 1024 * 1024
+
+interface ApprovePublishArgs {
+  input: unknown
+  images?: File[]
+}
+
+export async function approveAndPublish(
+  brand: string,
+  id: string,
+  args: ApprovePublishArgs,
+): Promise<ActionResult<PublishResult>> {
+  const parsed = PublishInputSchema.safeParse(args.input)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Check the details and try again.',
+    }
+  }
+  const images = args.images ?? []
+  const imageError = validateImages(images)
+  if (imageError) return { ok: false, error: imageError }
+
+  // Token resolution is inside the boundary: its auth calls can reject, and the
+  // caller only handles ActionResult, not a thrown error.
+  let result: PublishResult
+  try {
+    const { token, error } = await resolveBackendToken()
+    if (!token) return { ok: false, error }
+    result = await publishToShopify(token, { id, input: parsed.data, images })
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+
+  // The Shopify draft is created; a cache-revalidation failure must not report
+  // the publish as failed and invite a duplicate retry.
+  try {
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+  } catch {
+    // Best effort; the write already succeeded.
+  }
+  return { ok: true, data: result }
+}
+
+// validateImages re-checks the files server-side (a client is not trusted): the
+// count, per-file size, and that each is an image. Returns an error message or null.
+function validateImages(images: File[]): string | null {
+  if (images.length > MAX_PUBLISH_IMAGES) {
+    return `At most ${MAX_PUBLISH_IMAGES} images can be attached.`
+  }
+  for (const image of images) {
+    if (!image.type.startsWith('image/')) return 'Only image files can be attached.'
+    if (image.size > MAX_PUBLISH_IMAGE_BYTES) return 'Each image must be under 20 MB.'
+  }
+  return null
 }
 
 // fetchDesignDetail backs the detail page's client-side polling through the

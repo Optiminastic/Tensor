@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { Box, FileCode, Loader2 } from 'lucide-react'
+import Link from 'next/link'
 import type { JSX } from 'react'
 
 import { fetchDesignDetail } from '@/app/dashboard/[brand]/designs/actions'
@@ -10,9 +11,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { type DesignDetail, type DesignSpecs, DesignSpecsSchema } from '@/lib/validators/designs'
 
 import { DesignMetricsPanel } from './design-metrics'
+import { DesignModelPreview } from './design-model-preview'
+import { DesignOrientation } from './design-orientation'
 import { DesignResubmitForm } from './design-resubmit-form'
 import { DesignStatusBadge } from './design-status-badge'
 import { DesignVerdict } from './design-verdict'
+import { PublishShopifyDialog } from './publish-shopify-dialog'
 
 const POLL_MS = 2500
 
@@ -56,6 +60,8 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
 
   const isProcessing = design.status === 'queued' || design.status === 'slicing'
   const gcodeAvailable = Boolean(design.metrics?.gcode_key)
+  const canPublish = design.status === 'priced' || design.status === 'approved'
+  const publishPrice = design.pricing?.approved_sp ?? design.pricing?.recommended_sp ?? null
 
   return (
     <div className="flex flex-col gap-6">
@@ -89,6 +95,16 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
               G-code
             </a>
           ) : null}
+          {canPublish ? (
+            <PublishShopifyDialog
+              brand={brand}
+              designId={design.id}
+              defaultTitle={design.name}
+              defaultPrice={publishPrice}
+              isApproved={design.status === 'approved'}
+              onPublished={() => void refetch()}
+            />
+          ) : null}
           <DesignStatusBadge status={design.status} />
         </div>
       </div>
@@ -114,8 +130,55 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
         </Card>
       ) : null}
 
+      {!isProcessing ? (
+        <DesignModelPreview
+          designId={design.id}
+          orientation={design.metrics?.orientation ?? null}
+        />
+      ) : null}
       {design.metrics ? <DesignMetricsPanel metrics={design.metrics} /> : null}
+      {design.metrics?.orientation ? (
+        <DesignOrientation orientation={design.metrics.orientation} />
+      ) : null}
       {design.pricing ? <DesignVerdict pricing={design.pricing} /> : null}
+
+      {design.shopify ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-foreground text-sm font-medium">Published to Shopify (draft)</p>
+              <p className="text-muted-foreground text-sm">
+                Finish images, description and variants in Shopify.
+              </p>
+            </div>
+            <a
+              href={design.shopify.admin_url}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+            >
+              Open in Shopify
+            </a>
+          </CardContent>
+        </Card>
+      ) : design.status === 'approved' ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-foreground text-sm font-medium">Approved - not yet on Shopify</p>
+              <p className="text-muted-foreground text-sm">
+                Connect this brand&apos;s Shopify, then push the product.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/brands"
+              className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+            >
+              Connect Shopify
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {!isProcessing ? (
         <DesignResubmitForm

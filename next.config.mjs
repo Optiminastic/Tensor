@@ -1,6 +1,9 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import dotenv from 'dotenv'
+dotenv.config({ path: './env/local.env' })
+
 /** @type {import('next').NextConfig} */
 
 // This directory, not wherever Next guesses. Next walks up looking for a

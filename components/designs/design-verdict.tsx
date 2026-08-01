@@ -1,9 +1,10 @@
-import { Lightbulb } from 'lucide-react'
+import { AlertTriangle, Check, Lightbulb, X } from 'lucide-react'
 import type { JSX } from 'react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Stat } from '@/components/ui/stat'
 import { StatusPill } from '@/components/ui/status-pill'
+import { cn } from '@/lib/utils'
 import type { CPBreakdown, DesignPricing } from '@/lib/validators/designs'
 
 function inr(value: number, digits = 0): string {
@@ -15,6 +16,27 @@ function inr(value: number, digits = 0): string {
 
 function pct(fraction: number): string {
   return `${(fraction * 100).toFixed(1)}%`
+}
+
+interface MarginCheckProps {
+  ok: boolean
+  label: string
+}
+
+/** A pass/fail pill for a margin scenario (normal 30% ad spend, 40% stress). */
+function MarginCheck({ ok, label }: MarginCheckProps): JSX.Element {
+  const Icon = ok ? Check : X
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium',
+        ok ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger',
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden />
+      {label}
+    </span>
+  )
 }
 
 const BREAKDOWN_ROWS: { key: keyof CPBreakdown; label: string }[] = [
@@ -34,7 +56,7 @@ interface DesignVerdictProps {
 /** The costed result: headline figures, the Green/Yellow/Red pre-check, the fix
  * suggestions, and the itemised Design CP. */
 export function DesignVerdict({ pricing }: DesignVerdictProps): JSX.Element {
-  const { breakdown, recommended_sp, reasons, suggestions } = pricing
+  const { breakdown, recommended_sp, reasons, suggestions, sp_warnings } = pricing
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,6 +69,42 @@ export function DesignVerdict({ pricing }: DesignVerdictProps): JSX.Element {
         />
         <Stat label="CP % of price" value={pct(pricing.cp_pct)} hint="Cost as a share of price" />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Selling price economics</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Stat
+              label="Reverse-economics price"
+              value={inr(pricing.raw_sp, 2)}
+              hint="Before snapping to the ladder"
+            />
+            <Stat
+              label="CP % at recommended"
+              value={
+                pricing.cp_pct_at_recommended !== null ? pct(pricing.cp_pct_at_recommended) : '-'
+              }
+              hint="Cost share at the snapped price"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <MarginCheck ok={pricing.passes_normal} label="Passes at 30% ad spend" />
+            <MarginCheck ok={pricing.survives_stress} label="Survives 40% stress test" />
+          </div>
+          {sp_warnings.length > 0 ? (
+            <ul className="flex flex-col gap-2">
+              {sp_warnings.map(warning => (
+                <li key={warning} className="text-muted-foreground flex items-start gap-2 text-sm">
+                  <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" aria-hidden />
+                  {warning}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -32,8 +32,16 @@ import {
 const AD_PROVIDERS: ConnectionProvider[] = ['google_ads', 'meta_ads']
 const STEP_LABELS = ['Shopify', 'Brand', ...AD_PROVIDERS.map(p => PROVIDER_LABELS[p])]
 
+// Google Analytics connects via OAuth on the brand's Integrations page after
+// creation, so it is not an onboarding step; the empty draft satisfies the
+// per-provider record without adding a manual step here.
 function initialConnections(): ConnectionDrafts {
-  return { google_ads: EMPTY_CONNECTION, meta_ads: EMPTY_CONNECTION, shopify: EMPTY_CONNECTION }
+  return {
+    google_ads: EMPTY_CONNECTION,
+    google_analytics: EMPTY_CONNECTION,
+    meta_ads: EMPTY_CONNECTION,
+    shopify: EMPTY_CONNECTION,
+  }
 }
 
 interface BrandOnboardingProps {

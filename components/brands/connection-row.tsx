@@ -5,18 +5,26 @@ import { useState, type JSX } from 'react'
 
 import { removeConnection, saveConnection } from '@/app/dashboard/brands/actions'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import {
   type Connection,
   type ConnectionProvider,
   PROVIDER_LABELS,
 } from '@/lib/validators/connections'
 
+// Providers whose "Connect" runs the Google OAuth flow rather than manual entry.
+const GOOGLE_PROVIDERS: ReadonlySet<ConnectionProvider> = new Set([
+  'google_ads',
+  'google_analytics',
+])
+
 interface ConnectionRowProps {
   brandSlug: string
   provider: ConnectionProvider
   connection: Connection | null
+  googleOAuthConfigured: boolean
 }
 
 /**
@@ -28,9 +36,15 @@ export function ConnectionRow({
   brandSlug,
   provider,
   connection,
+  googleOAuthConfigured,
 }: ConnectionRowProps): JSX.Element {
   const router = useRouter()
   const connected = connection?.status === 'connected'
+  // Google providers connect via OAuth (a redirect), not the manual token form.
+  const useGoogleOAuth = googleOAuthConfigured && GOOGLE_PROVIDERS.has(provider)
+  const installHref = `/api/google/oauth/install?brand=${encodeURIComponent(
+    brandSlug,
+  )}&provider=${provider}`
   const [editing, setEditing] = useState(false)
   const [accountId, setAccountId] = useState(connection?.external_account_id ?? '')
   const [token, setToken] = useState('')
@@ -85,6 +99,13 @@ export function ConnectionRow({
           <Button type="button" variant="ghost" size="sm" onClick={disconnect} disabled={busy}>
             {busy ? 'Working…' : 'Disconnect'}
           </Button>
+        ) : useGoogleOAuth ? (
+          <a
+            href={installHref}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}
+          >
+            Connect with Google
+          </a>
         ) : (
           <Button
             type="button"

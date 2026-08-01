@@ -5,8 +5,11 @@ import {
   type Design,
   type DesignDetail,
   type DesignSpecs,
+  type PublishInput,
+  type PublishResult,
   DesignDetailSchema,
   DesignSchema,
+  PublishResultSchema,
 } from '@/lib/validators/designs'
 
 const log = createLogger('DesignService')
@@ -140,6 +143,44 @@ export async function fetchDesignFile(
   }
 
   return response
+}
+
+export interface PublishToShopifyParams {
+  id: string
+  input: PublishInput
+  images: File[]
+}
+
+// Approves a priced design and creates its Shopify draft product in one call.
+// Sends multipart/form-data so product images ride along; Content-Type is left
+// unset so fetch adds the boundary itself.
+export async function publishToShopify(
+  token: string,
+  { id, input, images }: PublishToShopifyParams,
+): Promise<PublishResult> {
+  const form = new FormData()
+  form.set('title', input.title)
+  form.set('price', String(input.price))
+  const optional: Record<string, string | undefined> = {
+    product_type: input.product_type,
+    tags: input.tags?.length ? input.tags.join(', ') : undefined,
+    vendor: input.vendor,
+    description: input.description,
+    seo_title: input.seo_title,
+    seo_description: input.seo_description,
+    sku: input.sku,
+    weight_grams: input.weight_grams !== undefined ? String(input.weight_grams) : undefined,
+  }
+  for (const [key, value] of Object.entries(optional)) {
+    if (value !== undefined) form.set(key, value)
+  }
+  for (const image of images) form.append('images', image, image.name)
+
+  return call(
+    `/designs/${encodeURIComponent(id)}/publish-shopify`,
+    { method: 'POST', headers: authHeader(token), body: form },
+    data => PublishResultSchema.parse(data),
+  )
 }
 
 export async function resubmitDesign(

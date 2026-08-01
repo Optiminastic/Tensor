@@ -16,7 +16,14 @@ export const DesignSpecsSchema = z.object({
 })
 export type DesignSpecs = z.infer<typeof DesignSpecsSchema>
 
-export const DesignLifecycleSchema = z.enum(['queued', 'slicing', 'priced', 'failed'])
+export const DesignLifecycleSchema = z.enum([
+  'queued',
+  'slicing',
+  'priced',
+  'failed',
+  'approved',
+  'published',
+])
 export type DesignLifecycle = z.infer<typeof DesignLifecycleSchema>
 
 export const VerdictSchema = z.enum(['green', 'yellow', 'red'])
@@ -39,6 +46,19 @@ export const DesignSchema = z.object({
 })
 export type Design = z.infer<typeof DesignSchema>
 
+// The least-support resting orientation computed from the model mesh. Advisory:
+// it never changes the costed price. est_reduction_pct is a fraction (0..1).
+export const OrientationSchema = z.object({
+  rotation_axis: z.object({ x: z.number(), y: z.number(), z: z.number() }),
+  rotation_degrees: z.number(),
+  overhang_area_baseline: z.number(),
+  overhang_area_recommended: z.number(),
+  est_reduction_pct: z.number(),
+  description: z.string(),
+  already_optimal: z.boolean(),
+})
+export type Orientation = z.infer<typeof OrientationSchema>
+
 export const DesignMetricsSchema = z.object({
   print_time_hr: z.number(),
   effective_machine_time_hr: z.number(),
@@ -54,6 +74,7 @@ export const DesignMetricsSchema = z.object({
   support_used: z.boolean(),
   filament_length_mm: z.number(),
   gcode_key: z.string(),
+  orientation: OrientationSchema.nullable(),
 })
 export type DesignMetrics = z.infer<typeof DesignMetricsSchema>
 
@@ -76,10 +97,23 @@ export const DesignPricingSchema = z.object({
   verdict: VerdictSchema,
   cp_pct: z.number(),
   recommended_sp: z.number().nullable(),
+  raw_sp: z.number(),
+  cp_pct_at_recommended: z.number().nullable(),
+  passes_normal: z.boolean(),
+  survives_stress: z.boolean(),
+  sp_warnings: z.string().array(),
+  approved_sp: z.number().nullable(),
   reasons: z.string().array(),
   suggestions: z.string().array(),
 })
 export type DesignPricing = z.infer<typeof DesignPricingSchema>
+
+export const ShopifyProductSchema = z.object({
+  status: z.string(),
+  handle: z.string(),
+  admin_url: z.string(),
+})
+export type ShopifyProduct = z.infer<typeof ShopifyProductSchema>
 
 export const SliceJobSchema = z.object({
   status: z.string(),
@@ -92,5 +126,30 @@ export const DesignDetailSchema = DesignSchema.extend({
   job: SliceJobSchema.nullable(),
   metrics: DesignMetricsSchema.nullable(),
   pricing: DesignPricingSchema.nullable(),
+  shopify: ShopifyProductSchema.nullable(),
 })
 export type DesignDetail = z.infer<typeof DesignDetailSchema>
+
+// The "few details" a Project Lead confirms when approving + publishing. Price
+// defaults to the recommended SP; the rest is completed in Shopify.
+export const PublishInputSchema = z.object({
+  title: z.string().min(1, 'Give the product a title').max(255),
+  price: z.number().int().positive(),
+  product_type: z.string().max(255).optional(),
+  tags: z.string().array().optional(),
+  vendor: z.string().max(255).optional(),
+  description: z.string().max(50_000).optional(),
+  seo_title: z.string().max(255).optional(),
+  seo_description: z.string().max(320).optional(),
+  sku: z.string().max(255).optional(),
+  weight_grams: z.number().min(0).max(1_000_000).optional(),
+})
+export type PublishInput = z.infer<typeof PublishInputSchema>
+
+export const PublishResultSchema = z.object({
+  status: z.string(),
+  admin_url: z.string(),
+  handle: z.string(),
+  product_gid: z.string(),
+})
+export type PublishResult = z.infer<typeof PublishResultSchema>
