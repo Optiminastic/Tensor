@@ -1,6 +1,7 @@
 import {
   Box,
   Coins,
+  Cpu,
   Factory,
   LayoutDashboard,
   type LucideIcon,
@@ -39,7 +40,7 @@ export interface WorkspaceSection {
 
 // Static dashboard routes that must never be treated as a brand slug (Next
 // resolves these before the dynamic [brand] segment).
-export const RESERVED_SEGMENTS = ['users', 'settings', 'brands', 'projects']
+export const RESERVED_SEGMENTS = ['users', 'settings', 'brands', 'projects', 'machines']
 
 export const PRIMARY_SECTIONS: PrimarySection[] = [
   { label: 'Overview', icon: LayoutDashboard, segment: '', description: 'This brand at a glance.' },
@@ -70,7 +71,14 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'Production',
     icon: Factory,
     segment: 'production',
-    items: [{ label: 'Live', href: '/production' }],
+    items: [
+      { label: 'Overview', href: '/production' },
+      { label: 'Orders', href: '/production/orders' },
+      { label: 'Production Jobs', href: '/production/jobs' },
+      { label: 'Batch Management', href: '/production/batches' },
+      { label: 'Machine Management', href: '/production/machines' },
+      { label: 'Filament Inventory', href: '/production/inventory' },
+    ],
   },
   {
     label: 'Commerce',
@@ -78,7 +86,6 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     segment: 'commerce',
     items: [
       { label: 'Shopify Products', href: '/commerce' },
-      { label: 'Orders', href: '/commerce?view=orders' },
       { label: 'Collections', href: '/commerce?view=collections' },
     ],
   },
@@ -112,6 +119,12 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
 
 export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
   {
+    label: 'Machines',
+    icon: Cpu,
+    href: '/dashboard/machines',
+    description: 'Configure each machine and its slicing profile.',
+  },
+  {
     label: 'Team',
     icon: Users,
     href: '/dashboard/users',
@@ -130,6 +143,40 @@ export function parseNavHref(href: string): { path: string; view: string | null 
   const [path, query] = href.split('?')
   const view = query ? new URLSearchParams(query).get('view') : null
   return { path, view }
+}
+
+/**
+ * The nav leaf href that should read as active for the current pathname, or
+ * null if none match. Two leaf shapes coexist:
+ * - query-based (e.g. `/designs?view=upload`): active only on an exact path +
+ *   matching `?view=` query.
+ * - path-based (e.g. `/production/jobs`): active on that path OR anything
+ *   nested under it (e.g. `/production/jobs/<id>`, a job's detail page).
+ *
+ * Path-based leaves can nest inside one another (`/production` is a prefix of
+ * `/production/jobs`), so among every leaf that matches, the one with the
+ * longest path wins - the most specific route stays highlighted instead of
+ * its parent.
+ */
+export function resolveActiveHref(
+  pathname: string,
+  currentView: string | null,
+  hrefs: string[],
+): string | null {
+  let best: string | null = null
+  let bestPathLength = -1
+  for (const href of hrefs) {
+    const { path, view } = parseNavHref(href)
+    const matches =
+      view !== null
+        ? pathname === path && currentView === view
+        : pathname === path || pathname.startsWith(`${path}/`)
+    if (matches && path.length > bestPathLength) {
+      best = href
+      bestPathLength = path.length
+    }
+  }
+  return best
 }
 
 /** The active brand slug from a dashboard pathname, or null on a workspace/root route. */

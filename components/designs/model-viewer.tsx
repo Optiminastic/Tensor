@@ -2,13 +2,15 @@
 
 import { Bounds, Grid, OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import * as THREE from 'three'
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 import type { Orientation } from '@/lib/validators/designs'
+
+import { type ClipState, ClipController, buildClipPlane } from './clip-plane'
 
 // A face needs support when its normal points downward past the self-support
 // limit (~45deg), matching the backend rule so the shaded faces agree.
@@ -30,6 +32,7 @@ interface ModelViewerProps {
   base: 'uploaded' | 'recommended'
   steps: RotateAxis[]
   onMeasure: (m: OrientationMeasure) => void
+  clip: ClipState | null
 }
 
 /**
@@ -44,6 +47,7 @@ export function ModelViewer({
   base,
   steps,
   onMeasure,
+  clip,
 }: ModelViewerProps): JSX.Element {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null)
   const [failed, setFailed] = useState(false)
@@ -89,13 +93,16 @@ export function ModelViewer({
     <Canvas
       camera={{ up: [0, 0, 1], position: [90, -90, 70], fov: 45, near: 0.1, far: 8000 }}
       dpr={[1, 2]}
+      onCreated={({ gl }) => {
+        gl.localClippingEnabled = true
+      }}
     >
       <color attach="background" args={['#f4f3ef']} />
       <ambientLight intensity={0.75} />
       <directionalLight position={[60, -40, 90]} intensity={1.1} />
       <directionalLight position={[-50, 50, 40]} intensity={0.4} />
       <Bounds fit clip observe margin={1.4}>
-        <ModelMesh geometry={geometry} quaternion={quaternion} onMeasure={onMeasure} />
+        <ModelMesh geometry={geometry} quaternion={quaternion} onMeasure={onMeasure} clip={clip} />
       </Bounds>
       <Grid
         args={[600, 600]}
@@ -119,10 +126,14 @@ interface ModelMeshProps {
   geometry: THREE.BufferGeometry
   quaternion: THREE.Quaternion
   onMeasure: (m: OrientationMeasure) => void
+  clip: ClipState | null
 }
 
-function ModelMesh({ geometry, quaternion, onMeasure }: ModelMeshProps): JSX.Element {
-  const { prepared, measure } = useMemo(() => {
+function ModelMesh({ geometry, quaternion, onMeasure, clip }: ModelMeshProps): JSX.Element {
+  const meshRef = useRef<THREE.Mesh>(null)
+  const worldPlane = useMemo(() => new THREE.Plane(), [])
+
+  const { prepared, measure, boxMin, boxMax } = useMemo(() => {
     const g = geometry.clone()
     g.applyQuaternion(quaternion)
     g.computeBoundingBox()
@@ -130,16 +141,40 @@ function ModelMesh({ geometry, quaternion, onMeasure }: ModelMeshProps): JSX.Ele
     if (bb) {
       g.translate(-(bb.min.x + bb.max.x) / 2, -(bb.min.y + bb.max.y) / 2, -bb.min.z)
     }
-    return { prepared: g, measure: paintAndMeasure(g) }
+    g.computeBoundingBox()
+    const box = g.boundingBox
+    return {
+      prepared: g,
+      measure: paintAndMeasure(g),
+      boxMin: box ? box.min.clone() : new THREE.Vector3(),
+      boxMax: box ? box.max.clone() : new THREE.Vector3(),
+    }
   }, [geometry, quaternion])
+
+  const localPlane = useMemo(
+    () => (clip ? buildClipPlane(clip, boxMin, boxMax) : null),
+    [clip, boxMin, boxMax],
+  )
 
   useEffect(() => () => prepared.dispose(), [prepared])
   useEffect(() => onMeasure(measure), [measure, onMeasure])
 
   return (
-    <mesh geometry={prepared}>
-      <meshStandardMaterial vertexColors flatShading roughness={0.72} metalness={0} />
-    </mesh>
+    <>
+      <mesh ref={meshRef} geometry={prepared}>
+        <meshStandardMaterial
+          vertexColors
+          flatShading
+          roughness={0.72}
+          metalness={0}
+          side={clip ? THREE.DoubleSide : THREE.FrontSide}
+          clippingPlanes={clip && localPlane ? [worldPlane] : null}
+        />
+      </mesh>
+      {clip && localPlane ? (
+        <ClipController target={meshRef} worldPlane={worldPlane} localPlane={localPlane} />
+      ) : null}
+    </>
   )
 }
 

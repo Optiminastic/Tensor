@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
-import { DesignList } from '@/components/designs/design-list'
+import { DesignsView } from '@/components/designs/designs-view'
 import { UploadDesignDialog } from '@/components/designs/upload-design-dialog'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Design } from '@/lib/validators/designs'
@@ -50,7 +50,7 @@ export default async function DesignsPage({ params }: DesignsPageProps): Promise
           {error}
         </p>
       ) : (
-        <DesignList brand={brand} designs={designs} />
+        <DesignsView brand={brand} designs={designs} />
       )}
     </main>
   )

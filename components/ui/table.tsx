@@ -38,7 +38,7 @@ export function TableHeaderCell({
   return (
     <th
       className={cn(
-        'text-subtle-foreground px-3 py-2.5 text-left text-xs font-medium tracking-wide uppercase',
+        'text-subtle-foreground px-4 py-3.5 text-left text-xs font-medium tracking-wide uppercase',
         className,
       )}
       {...props}
@@ -54,7 +54,7 @@ export function TableCell({
   return (
     <td
       className={cn(
-        'text-foreground px-3 py-3',
+        'text-foreground px-4 py-4',
         numeric && 'text-right font-mono tabular-nums',
         className,
       )}

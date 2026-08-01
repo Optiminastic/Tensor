@@ -1,81 +1,62 @@
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
-import { LiveProducts, type LiveProduct } from '@/components/production/live-products'
+import { type OverviewStat } from '@/components/dashboard/overview-stats'
+import { toMachineSummary, toRecentJob } from '@/components/production/adapters'
+import { ProductionOverview } from '@/components/production/production-overview'
+import { ProductionPageHeader } from '@/components/production/production-page-header'
 import { resolveBackendToken } from '@/lib/backend-token'
-import type { DesignDetail } from '@/lib/validators/designs'
-import { DesignServiceError, getDesign, listDesigns } from '@/services/designs.service'
+import type { Machine } from '@/lib/validators/machines'
+import type { ProductionJob } from '@/lib/validators/production'
+import { listMachines } from '@/services/machines.service'
+import { listProductionJobs } from '@/services/production.service'
 
-export const metadata: Metadata = { title: 'Live' }
+export const metadata: Metadata = { title: 'Production' }
 
-export const dynamic = 'force-dynamic'
-
-interface ProductionPageProps {
-  params: Promise<{ brand: string }>
-}
-
-/**
- * Production - Live: the brand's designs that have been published to Shopify.
- * Published designs carry a Shopify product reference, so each row links out to
- * the store as well as back to the design's pre-check.
- */
-export default async function ProductionPage({
-  params,
-}: ProductionPageProps): Promise<JSX.Element> {
-  const { brand } = await params
-
-  let products: LiveProduct[] = []
+export default async function ProductionPage(): Promise<JSX.Element> {
+  let jobs: ProductionJob[] = []
+  let machines: Machine[] = []
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
   } else {
     try {
-      products = await loadLiveProducts(token, brand)
-    } catch (err) {
-      error = err instanceof DesignServiceError ? err.message : 'Could not load live products.'
+      const [j, m] = await Promise.all([listProductionJobs(token), listMachines(token)])
+      jobs = j
+      machines = m
+    } catch {
+      error = 'Could not load production data. Is the backend running?'
     }
   }
 
-  return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-display text-3xl">Live</h1>
-        <p className="text-muted-foreground text-sm">
-          Products published to Shopify for this brand.
-        </p>
-      </div>
+  const stats: OverviewStat[] = [
+    { label: 'Total Jobs', value: String(jobs.length) },
+    { label: 'Completed', value: String(jobs.filter(j => j.status === 'completed').length) },
+    { label: 'Failed', value: String(jobs.filter(j => j.status === 'failed').length) },
+    {
+      label: 'Active Machines',
+      value: String(machines.filter(m => m.status === 'online' || m.status === 'busy').length),
+    },
+  ]
 
+  return (
+    <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+      <ProductionPageHeader
+        title="Production"
+        description="Print queue, machines, and inventory at a glance."
+      />
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
           {error}
         </p>
-      ) : null}
-      <LiveProducts brand={brand} products={products} />
+      ) : (
+        <ProductionOverview
+          stats={stats}
+          recentJobs={jobs.slice(0, 8).map(toRecentJob)}
+          machines={machines.map(toMachineSummary)}
+        />
+      )}
     </main>
   )
-}
-
-// loadLiveProducts lists the brand's designs, keeps the published ones, and
-// enriches each with its Shopify link + price from the design detail. Published
-// products are few, so the per-design fetch is acceptable; a failed detail is
-// skipped rather than failing the whole page.
-async function loadLiveProducts(token: string, brand: string): Promise<LiveProduct[]> {
-  const designs = await listDesigns(token, brand)
-  const published = designs.filter(design => design.status === 'published')
-  const details = await Promise.all(
-    published.map(design => getDesign(token, design.id).catch(() => null)),
-  )
-  return details.filter((detail): detail is DesignDetail => detail !== null).map(toLiveProduct)
-}
-
-function toLiveProduct(detail: DesignDetail): LiveProduct {
-  return {
-    id: detail.id,
-    name: detail.name,
-    material: detail.material,
-    quality: detail.quality,
-    price: detail.pricing?.approved_sp ?? detail.pricing?.recommended_sp ?? null,
-    shopifyUrl: detail.shopify?.admin_url ?? null,
-  }
 }

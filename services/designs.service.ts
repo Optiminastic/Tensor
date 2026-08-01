@@ -4,10 +4,13 @@ import { createLogger } from '@/lib/logger'
 import {
   type Design,
   type DesignDetail,
+  type DesignReview,
   type DesignSpecs,
   type PublishInput,
   type PublishResult,
+  type ResubmitInput,
   DesignDetailSchema,
+  DesignReviewSchema,
   DesignSchema,
   PublishResultSchema,
 } from '@/lib/validators/designs'
@@ -22,9 +25,24 @@ const TIMEOUT_MS = 15_000
 // longer ceiling than the small JSON calls.
 const FILE_TIMEOUT_MS = 60_000
 
-// The downloadable artifacts of a design: the original uploaded model, and the
-// G-code archive from its latest slice. These map to Tensor-Core sub-paths.
-export type DesignFileKind = 'model' | 'gcode'
+// A model upload streams a large file (up to 60 MB) through this process to the
+// backend and on to object storage - far beyond the small-JSON timeout, so it
+// gets a generous ceiling to avoid aborting a legitimate upload mid-stream.
+const UPLOAD_TIMEOUT_MS = 5 * 60_000
+
+// A design's streamable files: the original uploaded model, the G-code archive
+// from its latest slice, the cover preview image, and the extracted plate G-code
+// text the layer preview renders from.
+export type DesignFileKind = 'model' | 'gcode' | 'preview' | 'plate'
+
+// Frontend kind -> Tensor-Core sub-path. Most map one-to-one; the layer preview
+// reads the plate G-code text served at the nested /gcode/plate route.
+const KIND_PATHS: Record<DesignFileKind, string> = {
+  model: 'model',
+  gcode: 'gcode',
+  preview: 'preview',
+  plate: 'gcode/plate',
+}
 
 /**
  * Typed client for Tensor-Core's /designs endpoints. Server-only. Every call
@@ -38,7 +56,9 @@ async function call<T>(path: string, init: RequestInit, parse: (data: unknown) =
     response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
       ...init,
       cache: 'no-store',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      // A caller can pass its own signal (e.g. a longer upload timeout); otherwise
+      // the small-JSON default applies.
+      signal: init.signal ?? AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch (error) {
     log.error({ path, err: error }, 'Tensor-Core is unreachable')
@@ -85,6 +105,8 @@ export interface CreateDesignInput {
   name: string
   specs: DesignSpecs
   file: File
+  preview: File
+  notes?: string
 }
 
 // createDesign sends multipart/form-data: Content-Type is left unset so fetch
@@ -99,10 +121,19 @@ export async function createDesign(token: string, input: CreateDesignInput): Pro
   form.set('units_per_bed', String(input.specs.units_per_bed))
   form.set('quality', input.specs.quality)
   form.set('infill_pct', String(input.specs.infill_pct))
+  if (input.notes) form.set('notes', input.notes)
   form.set('file', input.file, input.file.name)
+  form.set('preview', input.preview, input.preview.name)
 
-  return call('/designs', { method: 'POST', headers: authHeader(token), body: form }, data =>
-    DesignSchema.parse(data),
+  return call(
+    '/designs',
+    {
+      method: 'POST',
+      headers: authHeader(token),
+      body: form,
+      signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
+    },
+    data => DesignSchema.parse(data),
   )
 }
 
@@ -120,11 +151,14 @@ export async function fetchDesignFile(
 ): Promise<Response> {
   let response: Response
   try {
-    response = await fetch(`${env.TENSOR_CORE_URL}/designs/${encodeURIComponent(id)}/${kind}`, {
-      headers: authHeader(token),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
-    })
+    response = await fetch(
+      `${env.TENSOR_CORE_URL}/designs/${encodeURIComponent(id)}/${KIND_PATHS[kind]}`,
+      {
+        headers: authHeader(token),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
+      },
+    )
   } catch (error) {
     log.error({ id, kind, err: error }, 'Tensor-Core is unreachable')
     throw new DesignServiceError('Tensor-Core is unreachable. Is the backend running?')
@@ -186,11 +220,59 @@ export async function publishToShopify(
 export async function resubmitDesign(
   token: string,
   id: string,
-  specs: DesignSpecs,
+  input: ResubmitInput,
 ): Promise<Design> {
   return call(
     `/designs/${encodeURIComponent(id)}/resubmit`,
-    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(specs) },
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
     data => DesignSchema.parse(data),
+  )
+}
+
+// --- Review workflow: submit -> review (comment / reject) -> approve ----------
+
+// Sends a POST with a JSON body to a /designs/:id/<action> route and parses the
+// returned design (the backend echoes the design with its new status).
+function designAction(token: string, path: string, body: unknown): Promise<Design> {
+  return call(
+    path,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(body) },
+    data => DesignSchema.parse(data),
+  )
+}
+
+export async function submitDesign(token: string, id: string, message?: string): Promise<Design> {
+  return designAction(token, `/designs/${encodeURIComponent(id)}/submit`, { message })
+}
+
+export async function approveDesign(
+  token: string,
+  id: string,
+  approvedSp?: number,
+): Promise<Design> {
+  return designAction(token, `/designs/${encodeURIComponent(id)}/approve`, {
+    approved_sp: approvedSp,
+  })
+}
+
+export async function rejectDesign(token: string, id: string, comment: string): Promise<Design> {
+  return designAction(token, `/designs/${encodeURIComponent(id)}/reject`, { comment })
+}
+
+export async function commentOnDesign(
+  token: string,
+  id: string,
+  body: string,
+): Promise<DesignReview> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/comments`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify({ body }) },
+    data => DesignReviewSchema.parse(data),
+  )
+}
+
+export async function listDesignReviews(token: string, id: string): Promise<DesignReview[]> {
+  return call(`/designs/${encodeURIComponent(id)}/reviews`, { headers: jsonHeaders(token) }, data =>
+    DesignReviewSchema.array().parse(data),
   )
 }
