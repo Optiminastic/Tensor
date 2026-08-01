@@ -54,7 +54,7 @@ export function AddFilamentForm({ onAdd }: AddFilamentFormProps): JSX.Element {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 px-5 py-4" noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Material" htmlFor="material" error={errors.material?.message}>
           <Select id="material" {...register('material')}>
