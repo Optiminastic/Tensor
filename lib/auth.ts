@@ -79,3 +79,31 @@ export const auth = betterAuth({
 })
 
 export type Session = typeof auth.$Infer.Session
+
+/** A user's display identity, for rendering "who did what" in activity views. */
+export interface UserDisplay {
+  id: string
+  name: string | null
+  email: string
+}
+
+/**
+ * Resolves Better Auth user ids to their display identity (name + email).
+ *
+ * Identity belongs to the frontend: Better Auth owns the `user` table, while
+ * Tensor-Core stores these ids only as opaque author references on the review
+ * thread. This reads that one table (the sanctioned use of `authPool`) so the
+ * timeline can show a name instead of a raw id. Ids with no matching user are
+ * simply absent from the map, so callers can fall back gracefully.
+ */
+export async function getUserDirectory(ids: string[]): Promise<Map<string, UserDisplay>> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  if (unique.length === 0) return new Map()
+
+  const { rows } = await authPool.query(
+    'SELECT id, name, email FROM "user" WHERE id = ANY($1::text[])',
+    [unique],
+  )
+  const displays = rows as UserDisplay[]
+  return new Map(displays.map(row => [row.id, row]))
+}

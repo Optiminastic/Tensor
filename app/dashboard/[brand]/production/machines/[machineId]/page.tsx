@@ -4,8 +4,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { toMachineDetail } from '@/components/production/adapters'
 import { MachineDetailView } from '@/components/production/machine-detail-view'
-import { getMachineDetail } from '@/components/production/sample-data'
+import type { MachineDetail } from '@/components/production/types'
+import { resolveBackendToken } from '@/lib/backend-token'
+import { getMachine } from '@/services/machines.service'
 
 export const metadata: Metadata = { title: 'Machine' }
 
@@ -15,8 +18,15 @@ interface MachinePageProps {
 
 export default async function MachinePage({ params }: MachinePageProps): Promise<JSX.Element> {
   const { brand, machineId } = await params
-  const machine = getMachineDetail(machineId)
-  if (!machine) notFound()
+  const { token } = await resolveBackendToken()
+  if (!token) notFound()
+
+  let machine: MachineDetail
+  try {
+    machine = toMachineDetail(await getMachine(token, machineId))
+  } catch {
+    notFound()
+  }
 
   return (
     <main className="flex w-full flex-col gap-6 px-6 py-10 md:px-8">
@@ -33,7 +43,7 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
           <p className="text-muted-foreground text-sm">Printer detail and live status.</p>
         </div>
       </div>
-      <MachineDetailView machine={machine} />
+      <MachineDetailView brand={brand} machine={machine} />
     </main>
   )
 }

@@ -8,15 +8,16 @@ import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
 interface MachineDetailViewProps {
+  brand: string
   machine: MachineDetail
 }
 
-export function MachineDetailView({ machine }: MachineDetailViewProps): JSX.Element {
+export function MachineDetailView({ brand, machine }: MachineDetailViewProps): JSX.Element {
   return (
     <div className="grid gap-6 md:grid-cols-[320px_1fr]">
       <MachinePhotoCard src={machine.imageSrc} alt={`${machine.name} printer`} />
       <Card>
-        <MachineStatusPanel machine={machine} />
+        <MachineStatusPanel brand={brand} machine={machine} />
         <Separator />
         <MachineSpecsGrid machine={machine} />
       </Card>

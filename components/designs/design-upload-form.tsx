@@ -1,17 +1,20 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, type ChangeEvent, type JSX } from 'react'
+import { useEffect, useState, type ChangeEvent, type JSX } from 'react'
 import { type FieldError, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-import { uploadDesign } from '@/app/dashboard/[brand]/designs/actions'
+import { fetchMachines, uploadDesign } from '@/app/dashboard/[brand]/designs/actions'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { FinishSchema, MaterialSchema, QualitySchema } from '@/lib/validators/designs'
+import type { Machine } from '@/lib/validators/machines'
 
 const MAX_FILE_MB = 60
 const ACCEPT = '.stl,.3mf,.step,.stp'
@@ -36,6 +39,7 @@ const FormSchema = z.object({
   units_per_bed: z.number().int().min(1).max(100),
   quality: QualitySchema,
   infill_pct: z.number().min(0).max(100),
+  notes: z.string().max(2000).optional(),
 })
 type FormValues = z.infer<typeof FormSchema>
 
@@ -47,6 +51,7 @@ const DEFAULTS: FormValues = {
   units_per_bed: 1,
   quality: 'standard',
   infill_pct: 15,
+  notes: '',
 }
 
 interface DesignUploadFormProps {
@@ -55,10 +60,28 @@ interface DesignUploadFormProps {
 }
 
 /** Upload an STL and its answers; the backend slices it and returns the pre-check. */
+const MAX_PREVIEW_MB = 10
+
 export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.Element {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [machines, setMachines] = useState<Machine[]>([])
+  const [machineId, setMachineId] = useState('')
+  const [filamentPreset, setFilamentPreset] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchMachines().then(res => {
+      if (!cancelled && res.ok && res.data) setMachines(res.data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const machine = machines.find(m => m.id === machineId)
 
   const {
     register,
@@ -68,6 +91,10 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>): void {
     setFile(event.target.files?.[0] ?? null)
+  }
+
+  function onPreviewChange(event: ChangeEvent<HTMLInputElement>): void {
+    setPreview(event.target.files?.[0] ?? null)
   }
 
   async function onSubmit(values: FormValues): Promise<void> {
@@ -80,6 +107,14 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
       setError(`The model is larger than the ${MAX_FILE_MB} MB limit.`)
       return
     }
+    if (!preview) {
+      setError('Upload a preview image for the design.')
+      return
+    }
+    if (preview.size > MAX_PREVIEW_MB * 1024 * 1024) {
+      setError(`The preview image is larger than the ${MAX_PREVIEW_MB} MB limit.`)
+      return
+    }
     const form = new FormData()
     form.set('name', values.name)
     form.set('material', values.material)
@@ -88,7 +123,11 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
     form.set('units_per_bed', String(values.units_per_bed))
     form.set('quality', values.quality)
     form.set('infill_pct', String(values.infill_pct))
+    if (values.notes) form.set('notes', values.notes)
+    if (machineId) form.set('machine_id', machineId)
+    if (filamentPreset) form.set('filament_preset', filamentPreset)
     form.set('file', file)
+    form.set('preview', preview)
 
     const outcome = await uploadDesign(brand, form)
     if (!outcome.ok || !outcome.data) {
@@ -107,6 +146,14 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
 
       <Field label="Model file" htmlFor="file" hint={`STL, 3MF or STEP, up to ${MAX_FILE_MB} MB`}>
         <Input id="file" type="file" accept={ACCEPT} onChange={onFileChange} />
+      </Field>
+
+      <Field
+        label="Preview image"
+        htmlFor="preview"
+        hint={`PNG, JPG, WEBP or GIF, up to ${MAX_PREVIEW_MB} MB - shown as the cover`}
+      >
+        <Input id="preview" type="file" accept="image/*" onChange={onPreviewChange} />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -166,7 +213,64 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
             {...register('infill_pct', { valueAsNumber: true })}
           />
         </Field>
+        {machines.length > 0 ? (
+          <Field label="Machine" htmlFor="machine" hint="Slice on this machine">
+            <Select
+              id="machine"
+              value={machineId}
+              onChange={e => {
+                setMachineId(e.target.value)
+                setFilamentPreset('')
+              }}
+            >
+              <option value="">Default profile</option>
+              {machines.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.nozzle_mm.toFixed(1)}mm)
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : (
+          <div className="sm:col-span-2">
+            <p className="text-muted-foreground text-sm">
+              No machines configured yet.{' '}
+              <Link
+                href="/dashboard/machines"
+                className="text-accent underline-offset-2 hover:underline"
+              >
+                Add one in Machine Settings
+              </Link>{' '}
+              to slice on a specific printer. Until then this uses the default profile.
+            </p>
+          </div>
+        )}
+        {machine ? (
+          <Field label="Filament" htmlFor="filament">
+            <Select
+              id="filament"
+              value={filamentPreset}
+              onChange={e => setFilamentPreset(e.target.value)}
+            >
+              <option value="">Auto (by material)</option>
+              {machine.supported_filaments.map(f => (
+                <option key={f.filament_preset} value={f.filament_preset}>
+                  {f.material}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
       </div>
+
+      <Field label="Notes for Project Lead" htmlFor="notes" hint="Optional">
+        <Textarea
+          id="notes"
+          rows={3}
+          placeholder="Anything the reviewer should know about this design"
+          {...register('notes')}
+        />
+      </Field>
 
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">

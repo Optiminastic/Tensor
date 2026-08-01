@@ -16,11 +16,48 @@ export const DesignSpecsSchema = z.object({
 })
 export type DesignSpecs = z.infer<typeof DesignSpecsSchema>
 
+// Bambu sparse-infill patterns we expose (a curated subset of the slicer's set).
+export const InfillPatternSchema = z.enum([
+  'grid',
+  'gyroid',
+  'honeycomb',
+  'cubic',
+  'triangles',
+  'line',
+  'concentric',
+  'tri-hexagon',
+  'lightning',
+])
+export type InfillPattern = z.infer<typeof InfillPatternSchema>
+
+// Advanced slice overrides, mirroring the backend allowlist. Every field is
+// optional; these bounds are UX only - Tensor-Core re-clamps and re-allowlists
+// server-side before anything reaches the slicer CLI.
+export const SliceSettingsSchema = z.object({
+  layer_height_mm: z.number().min(0.08).max(0.28).optional(),
+  wall_loops: z.number().int().min(1).max(8).optional(),
+  infill_pattern: InfillPatternSchema.optional(),
+  support: z.boolean().optional(),
+  support_threshold_deg: z.number().int().min(0).max(90).optional(),
+})
+export type SliceSettings = z.infer<typeof SliceSettingsSchema>
+
+// The re-slice request body: the spec answers plus optional advanced overrides
+// and an optional machine to slice on, sent flat (the backend's resubmit endpoint
+// reads them all).
+export const ResubmitInputSchema = DesignSpecsSchema.extend(SliceSettingsSchema.shape).extend({
+  machine_id: z.string().uuid().optional(),
+  filament_preset: z.string().optional(),
+})
+export type ResubmitInput = z.infer<typeof ResubmitInputSchema>
+
 export const DesignLifecycleSchema = z.enum([
   'queued',
   'slicing',
   'priced',
   'failed',
+  'submitted',
+  'changes_requested',
   'approved',
   'published',
 ])
@@ -28,6 +65,27 @@ export type DesignLifecycle = z.infer<typeof DesignLifecycleSchema>
 
 export const VerdictSchema = z.enum(['green', 'yellow', 'red'])
 export type Verdict = z.infer<typeof VerdictSchema>
+
+// One entry on a design's review thread: a lifecycle event or a freeform comment.
+export const ReviewKindSchema = z.enum(['comment', 'submit', 'approve', 'reject'])
+export type ReviewKind = z.infer<typeof ReviewKindSchema>
+
+export const DesignReviewSchema = z.object({
+  id: z.string(),
+  author_id: z.string(),
+  kind: ReviewKindSchema,
+  body: z.string().nullable(),
+  created_at: z.string(),
+})
+export type DesignReview = z.infer<typeof DesignReviewSchema>
+
+// A review event enriched with its author's display identity, resolved on the
+// server from Better Auth's user table. author_name/email are null when the
+// author id no longer resolves to a user.
+export interface DesignTimelineEntry extends DesignReview {
+  author_name: string | null
+  author_email: string | null
+}
 
 export const DesignSchema = z.object({
   id: z.string(),
@@ -41,6 +99,9 @@ export const DesignSchema = z.object({
   units_per_bed: z.number(),
   quality: z.string(),
   infill_pct: z.number(),
+  // Whether a cover image was uploaded. Defaulted so a backend that predates the
+  // preview field doesn't break the list.
+  has_preview: z.boolean().optional().default(false),
   created_at: z.string(),
   updated_at: z.string(),
 })
@@ -123,6 +184,9 @@ export const SliceJobSchema = z.object({
 export type SliceJob = z.infer<typeof SliceJobSchema>
 
 export const DesignDetailSchema = DesignSchema.extend({
+  // nullish (not just nullable): tolerate a backend that predates the notes field,
+  // so the detail page never crashes if the two repos are briefly out of step.
+  notes: z.string().nullish(),
   job: SliceJobSchema.nullable(),
   metrics: DesignMetricsSchema.nullable(),
   pricing: DesignPricingSchema.nullable(),

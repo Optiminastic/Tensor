@@ -36,6 +36,7 @@ export const QUEUE_STATUS_CONFIG: Record<QueueStatus, { label: string; tone: Pil
   in_progress: { label: 'In Progress', tone: 'accent' },
   on_hold: { label: 'On Hold', tone: 'warning' },
   completed: { label: 'Completed', tone: 'success' },
+  failed: { label: 'Failed', tone: 'danger' },
 }
 
 export const PERSONALISATION_STATUS_CONFIG: Record<

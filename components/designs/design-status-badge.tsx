@@ -17,6 +17,8 @@ const CONFIG: Record<DesignLifecycle, StatusConfig> = {
   slicing: { label: 'Slicing', className: 'bg-accent-subtle text-accent', spin: true },
   priced: { label: 'Priced', className: 'bg-accent-subtle text-accent' },
   failed: { label: 'Failed', className: 'bg-danger-subtle text-danger' },
+  submitted: { label: 'In review', className: 'bg-warning-subtle text-warning' },
+  changes_requested: { label: 'Changes requested', className: 'bg-danger-subtle text-danger' },
   approved: { label: 'Approved', className: 'bg-accent-subtle text-accent' },
   published: { label: 'Published', className: 'bg-success-subtle text-success' },
 }

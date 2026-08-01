@@ -11,6 +11,7 @@ export const RoleSchema = z.enum([
   'PROJECT_LEAD',
   'PERFORMANCE_MARKETER',
   'OPERATOR',
+  'PACKAGING_QC',
 ])
 
 export type Role = z.infer<typeof RoleSchema>

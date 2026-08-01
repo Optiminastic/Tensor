@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Image from 'next/image'
 import { useState, type JSX } from 'react'
 
-import { MACHINE_IMAGE_SRC } from '@/components/production/sample-data'
 import { MACHINE_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { MachineSummary } from '@/components/production/types'
@@ -37,9 +36,21 @@ function CarouselArrow({ direction, onClick }: CarouselArrowProps): JSX.Element 
   )
 }
 
+// The printer photo shown in the carousel (a single stock image for now).
+const MACHINE_IMAGE_SRC = '/production/h2c-printer.png'
+
 export function MachinesPanel({ machines }: MachinesPanelProps): JSX.Element {
   const [index, setIndex] = useState(0)
-  const machine = machines[index]
+
+  if (machines.length === 0) {
+    return (
+      <Card className="flex aspect-square items-center justify-center">
+        <p className="text-muted-foreground text-sm">No machines configured.</p>
+      </Card>
+    )
+  }
+
+  const machine = machines[index % machines.length]
   const status = MACHINE_STATUS_CONFIG[machine.status]
 
   const goPrev = (): void => setIndex(i => (i - 1 + machines.length) % machines.length)

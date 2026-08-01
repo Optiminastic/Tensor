@@ -4,8 +4,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { toOrderDetailRecord } from '@/components/production/adapters'
 import { OrderDetailView } from '@/components/production/order-detail-view'
-import { getOrderDetail } from '@/components/production/sample-data'
+import type { OrderRecord } from '@/components/production/types'
+import { resolveBackendToken } from '@/lib/backend-token'
+import { getOrder } from '@/services/production.service'
 
 export const metadata: Metadata = { title: 'Order' }
 
@@ -15,8 +18,15 @@ interface OrderPageProps {
 
 export default async function OrderPage({ params }: OrderPageProps): Promise<JSX.Element> {
   const { brand, orderId } = await params
-  const order = getOrderDetail(orderId)
-  if (!order) notFound()
+  const { token } = await resolveBackendToken()
+  if (!token) notFound()
+
+  let order: OrderRecord
+  try {
+    order = toOrderDetailRecord(await getOrder(token, orderId))
+  } catch {
+    notFound()
+  }
 
   return (
     <main className="flex w-full flex-col gap-6 px-6 py-10 md:px-8">

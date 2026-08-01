@@ -2,23 +2,34 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { getUserDirectory } from '@/lib/auth'
 import { resolveBackendToken } from '@/lib/backend-token'
 import { createLogger } from '@/lib/logger'
 import {
   type Design,
   type DesignDetail,
+  type DesignReview,
   type DesignSpecs,
+  type DesignTimelineEntry,
   type PublishResult,
   DesignSpecsSchema,
   PublishInputSchema,
+  ResubmitInputSchema,
 } from '@/lib/validators/designs'
+import type { Machine } from '@/lib/validators/machines'
 import {
   DesignServiceError,
+  approveDesign as approveRequest,
+  commentOnDesign as commentRequest,
   createDesign,
   getDesign,
+  listDesignReviews as listReviewsRequest,
   publishToShopify,
+  rejectDesign as rejectRequest,
   resubmitDesign as resubmitRequest,
+  submitDesign as submitRequest,
 } from '@/services/designs.service'
+import { MachineServiceError, listMachines } from '@/services/machines.service'
 
 const log = createLogger('DesignActions')
 
@@ -40,15 +51,29 @@ interface ParsedUpload {
   name: string
   specs: DesignSpecs
   file: File
+  preview: File
+  notes?: string
 }
 
-// parseUploadForm pulls the model file and answers out of the multipart form and
-// validates them, keeping uploadDesign's own branching small.
-function parseUploadForm(formData: FormData): { value?: ParsedUpload; error?: string } {
+// readUploadFiles validates the two required uploads (model + preview image).
+function readUploadFiles(formData: FormData): { file?: File; preview?: File; error?: string } {
   const file = formData.get('file')
   if (!(file instanceof File) || file.size === 0) {
     return { error: 'Choose an STL, 3MF or STEP file.' }
   }
+  const preview = formData.get('preview')
+  if (!(preview instanceof File) || preview.size === 0) {
+    return { error: 'Upload a preview image for the design.' }
+  }
+  return { file, preview }
+}
+
+// parseUploadForm pulls the model file, preview image and answers out of the
+// multipart form and validates them, keeping uploadDesign's own branching small.
+function parseUploadForm(formData: FormData): { value?: ParsedUpload; error?: string } {
+  const files = readUploadFiles(formData)
+  if (!files.file || !files.preview) return { error: files.error }
+
   const name = String(formData.get('name') ?? '').trim()
   if (!name) return { error: 'Give the design a name.' }
 
@@ -63,7 +88,22 @@ function parseUploadForm(formData: FormData): { value?: ParsedUpload; error?: st
   if (!specs.success) {
     return { error: specs.error.issues[0]?.message ?? 'Check the answers and try again.' }
   }
-  return { value: { name, specs: specs.data, file } }
+  return {
+    value: {
+      name,
+      specs: specs.data,
+      file: files.file,
+      preview: files.preview,
+      notes: readNotes(formData),
+    },
+  }
+}
+
+// readNotes pulls the optional "Notes for Project Lead" off the form. The length
+// is bounded by the upload form (Zod) and re-enforced by the backend (422).
+function readNotes(formData: FormData): string | undefined {
+  const notes = String(formData.get('notes') ?? '').trim()
+  return notes || undefined
 }
 
 // uploadDesign receives the multipart form: the answers plus the model file. The
@@ -108,6 +148,47 @@ export async function resubmitDesign(
 
   try {
     const design = await resubmitRequest(token, id, specs.data)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// fetchMachines lists the machines a design can be sliced on (name + slicing
+// config, no cost). Designers have machine:read for exactly this picker.
+export async function fetchMachines(): Promise<ActionResult<Machine[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const machines = await listMachines(token)
+    return { ok: true, data: machines }
+  } catch (err) {
+    const message = err instanceof MachineServiceError ? err.message : 'Could not load machines.'
+    return { ok: false, error: message }
+  }
+}
+
+// resliceWithSettings re-slices a design with the studio's advanced overrides
+// (layer height, walls, infill pattern, supports) alongside its spec answers. The
+// backend re-clamps every value; the frontend bounds are UX only.
+export async function resliceWithSettings(
+  brand: string,
+  id: string,
+  input: unknown,
+): Promise<ActionResult<Design>> {
+  const parsed = ResubmitInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Check the settings and try again.',
+    }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+
+  try {
+    const design = await resubmitRequest(token, id, parsed.data)
     revalidatePath(`/dashboard/${brand}/designs/${id}`)
     return { ok: true, data: design }
   } catch (err) {
@@ -187,6 +268,97 @@ export async function fetchDesignDetail(id: string): Promise<ActionResult<Design
   try {
     const design = await getDesign(token, id)
     return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// --- Review workflow ----------------------------------------------------------
+
+// submitForReview sends a priced Green/Yellow design to the Project Lead. The
+// backend enforces design:submit and the Green/Yellow gate.
+export async function submitForReview(
+  brand: string,
+  id: string,
+  message?: string,
+): Promise<ActionResult<Design>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const design = await submitRequest(token, id, message)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// approveDesignForBrand locks the SP and approves a submitted design (design:approve).
+export async function approveDesignForBrand(
+  brand: string,
+  id: string,
+): Promise<ActionResult<Design>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const design = await approveRequest(token, id)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// rejectDesignForBrand sends a submitted design back with a required comment
+// (design:reject).
+export async function rejectDesignForBrand(
+  brand: string,
+  id: string,
+  comment: string,
+): Promise<ActionResult<Design>> {
+  if (comment.trim().length === 0)
+    return { ok: false, error: 'A comment is required to send back.' }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const design = await rejectRequest(token, id, comment)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// addDesignComment posts a freeform comment to the review thread (design:read).
+export async function addDesignComment(
+  id: string,
+  body: string,
+): Promise<ActionResult<DesignReview>> {
+  if (body.trim().length === 0) return { ok: false, error: 'Write a comment first.' }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const review = await commentRequest(token, id, body)
+    return { ok: true, data: review }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// fetchDesignReviews backs the timeline's client-side query. It enriches each
+// backend review with its author's display identity (name + email), resolved
+// here from Better Auth's user table so the timeline can show "who did what".
+export async function fetchDesignReviews(id: string): Promise<ActionResult<DesignTimelineEntry[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const reviews = await listReviewsRequest(token, id)
+    const directory = await getUserDirectory(reviews.map(review => review.author_id))
+    const entries = reviews.map<DesignTimelineEntry>(review => {
+      const author = directory.get(review.author_id)
+      return { ...review, author_name: author?.name ?? null, author_email: author?.email ?? null }
+    })
+    return { ok: true, data: entries }
   } catch (err) {
     return { ok: false, error: describe(err) }
   }
