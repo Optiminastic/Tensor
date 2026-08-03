@@ -46,6 +46,11 @@ export function DesignGrid({ brand, designs }: DesignGridProps): JSX.Element {
               <p className="text-muted-foreground truncate font-mono text-xs tabular-nums">
                 {design.material} / {design.quality} / {design.infill_pct}% infill
               </p>
+              {design.sku ? (
+                <p className="text-subtle-foreground truncate font-mono text-xs tabular-nums">
+                  SKU {design.sku}
+                </p>
+              ) : null}
             </div>
           </Link>
         </li>

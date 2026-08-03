@@ -12,6 +12,7 @@ import {
   type DesignSpecs,
   type DesignTimelineEntry,
   type PublishResult,
+  DesignSkuInputSchema,
   DesignSpecsSchema,
   PublishInputSchema,
   ResubmitInputSchema,
@@ -27,6 +28,7 @@ import {
   publishToShopify,
   rejectDesign as rejectRequest,
   resubmitDesign as resubmitRequest,
+  setDesignSku as setSkuRequest,
   submitDesign as submitRequest,
 } from '@/services/designs.service'
 import { MachineServiceError, listMachines } from '@/services/machines.service'
@@ -302,6 +304,29 @@ export async function approveDesignForBrand(
   if (!token) return { ok: false, error }
   try {
     const design = await approveRequest(token, id)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// setDesignSkuForBrand assigns (or clears) the design's catalog SKU. Guarded by
+// shopify:publish in the backend; the frontend only hides the control. An empty
+// string clears the SKU.
+export async function setDesignSkuForBrand(
+  brand: string,
+  id: string,
+  input: unknown,
+): Promise<ActionResult<Design>> {
+  const parsed = DesignSkuInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Enter a valid SKU.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const design = await setSkuRequest(token, id, parsed.data.sku)
     revalidatePath(`/dashboard/${brand}/designs/${id}`)
     return { ok: true, data: design }
   } catch (err) {

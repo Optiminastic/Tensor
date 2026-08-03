@@ -51,6 +51,20 @@ export const ResubmitInputSchema = DesignSpecsSchema.extend(SliceSettingsSchema.
 })
 export type ResubmitInput = z.infer<typeof ResubmitInputSchema>
 
+// The SKU assign form. Empty string clears the SKU; a non-empty value must match
+// the backend's accepted shape (letters, digits, and - . _ / , up to 64 chars).
+// The backend re-validates and owns uniqueness, so this is UX, not the constraint.
+export const DesignSkuInputSchema = z.object({
+  sku: z
+    .string()
+    .trim()
+    .max(64, 'A SKU is at most 64 characters.')
+    .refine(v => v === '' || /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(v), {
+      message: 'Use letters, digits and - . _ / (start with a letter or digit).',
+    }),
+})
+export type DesignSkuInput = z.infer<typeof DesignSkuInputSchema>
+
 export const DesignLifecycleSchema = z.enum([
   'queued',
   'slicing',
@@ -99,6 +113,9 @@ export const DesignSchema = z.object({
   units_per_bed: z.number(),
   quality: z.string(),
   infill_pct: z.number(),
+  // The catalog SKU. nullish so a backend that predates the field, and a design
+  // that has not been assigned one yet, both parse cleanly.
+  sku: z.string().nullish(),
   // Whether a cover image was uploaded. Defaulted so a backend that predates the
   // preview field doesn't break the list.
   has_preview: z.boolean().optional().default(false),

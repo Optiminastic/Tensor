@@ -37,7 +37,6 @@ const FormSchema = z.object({
   description: z.string().max(50_000),
   seo_title: z.string().max(255),
   seo_description: z.string().max(320),
-  sku: z.string().max(255),
   weight_grams: optionalWeight,
 })
 type FormValues = z.infer<typeof FormSchema>
@@ -60,6 +59,7 @@ interface PublishShopifyDialogProps {
   designId: string
   defaultTitle: string
   defaultPrice: number | null
+  defaultSku?: string
   isApproved: boolean
   onPublished: () => void
 }
@@ -71,6 +71,7 @@ export function PublishShopifyDialog({
   designId,
   defaultTitle,
   defaultPrice,
+  defaultSku,
   isApproved,
   onPublished,
 }: PublishShopifyDialogProps): JSX.Element {
@@ -93,7 +94,6 @@ export function PublishShopifyDialog({
       description: '',
       seo_title: '',
       seo_description: '',
-      sku: '',
       weight_grams: undefined,
     },
   })
@@ -130,7 +130,8 @@ export function PublishShopifyDialog({
         description: values.description || undefined,
         seo_title: values.seo_title || undefined,
         seo_description: values.seo_description || undefined,
-        sku: values.sku || undefined,
+        // SKU is system-generated and stored on the design; the backend stamps it
+        // on the Shopify variant automatically, so it is not sent (or edited) here.
         weight_grams: values.weight_grams,
       },
       images,
@@ -228,8 +229,13 @@ export function PublishShopifyDialog({
             <Field label="Vendor" htmlFor="vendor" hint="Defaults to the brand">
               <Input id="vendor" {...register('vendor')} />
             </Field>
-            <Field label="SKU" htmlFor="sku" hint="Stock keeping unit">
-              <Input id="sku" {...register('sku')} />
+            <Field label="SKU" htmlFor="sku" hint="Auto-generated; pushed to Shopify">
+              <Input
+                id="sku"
+                value={defaultSku ?? 'auto'}
+                readOnly
+                className="text-muted-foreground font-mono tabular-nums"
+              />
             </Field>
             <Field
               label="Weight (g)"

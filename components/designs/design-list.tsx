@@ -48,6 +48,11 @@ export function DesignList({ brand, designs }: DesignListProps): JSX.Element {
                     {design.material} / {design.quality} / {design.units_per_bed} per bed /{' '}
                     {design.infill_pct}% infill
                   </p>
+                  {design.sku ? (
+                    <p className="text-subtle-foreground truncate font-mono text-xs tabular-nums">
+                      SKU {design.sku}
+                    </p>
+                  ) : null}
                 </div>
                 <DesignStatusBadge status={design.status} className="shrink-0" />
               </Link>
