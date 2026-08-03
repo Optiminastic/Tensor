@@ -1,7 +1,6 @@
 import type { PillTone } from '@/components/production/tone-pill'
 import type {
   JobStatus,
-  MachineLiveStatus,
   MachineStatus,
   OrderStatus,
   PackagingStatus,
@@ -9,6 +8,7 @@ import type {
   QcStatus,
   QueueStatus,
 } from '@/components/production/types'
+import type { FleetMachineStatus } from '@/lib/validators/machine-fleet'
 
 export const JOB_STATUS_CONFIG: Record<JobStatus, { label: string; tone: PillTone }> = {
   completed: { label: 'Completed', tone: 'success' },
@@ -21,14 +21,6 @@ export const MACHINE_STATUS_CONFIG: Record<MachineStatus, { label: string; tone:
   printing: { label: 'Printing', tone: 'accent' },
   idle: { label: 'Idle', tone: 'success' },
   offline: { label: 'Offline', tone: 'danger' },
-}
-
-export const MACHINE_LIVE_STATUS_CONFIG: Record<
-  MachineLiveStatus,
-  { label: string; tone: PillTone }
-> = {
-  online: { label: 'Online', tone: 'success' },
-  offline: { label: 'Offline', tone: 'muted' },
 }
 
 export const QUEUE_STATUS_CONFIG: Record<QueueStatus, { label: string; tone: PillTone }> = {
@@ -64,4 +56,13 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; tone: Pil
   pending: { label: 'Pending', tone: 'warning' },
   refunded: { label: 'Refunded', tone: 'muted' },
   cancelled: { label: 'Cancelled', tone: 'danger' },
+}
+
+export const FLEET_MACHINE_STATUS_CONFIG: Record<
+  FleetMachineStatus,
+  { label: string; tone: PillTone }
+> = {
+  idle: { label: 'Idle', tone: 'success' },
+  running: { label: 'Running', tone: 'accent' },
+  off: { label: 'Off', tone: 'muted' },
 }

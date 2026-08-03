@@ -14,3 +14,13 @@ export function inr(value: number, digits = 0): string {
 export function pct(fraction: number): string {
   return `${(fraction * 100).toFixed(1)}%`
 }
+
+/** Formats a countdown in seconds as "1h 24m" (or "<1m" once under a minute). */
+export function countdown(seconds: number): string {
+  const totalMinutes = Math.floor(seconds / 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours > 0) return `${hours}h ${minutes}m`
+  if (minutes > 0) return `${minutes}m`
+  return '<1m'
+}
