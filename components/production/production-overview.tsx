@@ -19,9 +19,9 @@ export function ProductionOverview({
   machines,
 }: ProductionOverviewProps): JSX.Element {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <OverviewStats stats={stats} />
-      <div className="grid gap-2 lg:grid-cols-3">
+      <div className="grid gap-1.5 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <RecentJobsTable jobs={recentJobs} />
         </div>

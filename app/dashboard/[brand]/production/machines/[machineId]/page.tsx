@@ -4,11 +4,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
-import { toMachineDetail } from '@/components/production/adapters'
-import { MachineDetailView } from '@/components/production/machine-detail-view'
-import type { MachineDetail } from '@/components/production/types'
+import { FleetMachineDetailView } from '@/components/production/fleet-machine-detail-view'
 import { resolveBackendToken } from '@/lib/backend-token'
-import { getMachine } from '@/services/machines.service'
+import type { FleetMachine } from '@/lib/validators/machine-fleet'
+import { getFleetMachine } from '@/services/machine-fleet.service'
 
 export const metadata: Metadata = { title: 'Machine' }
 
@@ -21,9 +20,9 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
   const { token } = await resolveBackendToken()
   if (!token) notFound()
 
-  let machine: MachineDetail
+  let machine: FleetMachine
   try {
-    machine = toMachineDetail(await getMachine(token, machineId))
+    machine = await getFleetMachine(token, machineId)
   } catch {
     notFound()
   }
@@ -43,7 +42,7 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
           <p className="text-muted-foreground text-sm">Printer detail and live status.</p>
         </div>
       </div>
-      <MachineDetailView brand={brand} machine={machine} />
+      <FleetMachineDetailView machine={machine} />
     </main>
   )
 }

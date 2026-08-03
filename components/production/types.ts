@@ -41,24 +41,6 @@ export interface ProductionJobQueueItem {
   createdAt: string
 }
 
-export type MachineLiveStatus = 'online' | 'offline'
-
-export interface MachineRecord {
-  id: string
-  name: string
-  status: MachineLiveStatus
-  addedAt: string
-}
-
-export interface MachineDetail extends MachineRecord {
-  machineNumber: string
-  ipAddress: string
-  leftNozzleMm: number
-  rightNozzleMm: number
-  availableFilaments: string[]
-  imageSrc: string
-}
-
 export type FilamentQuantityUnit = 'kg' | 'count'
 
 export interface FilamentRecord {

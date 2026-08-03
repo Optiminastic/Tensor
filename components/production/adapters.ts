@@ -7,9 +7,6 @@ import type { Order, OrderDetail, ProductionJob } from '@/lib/validators/product
 
 import type {
   JobStatus,
-  MachineDetail,
-  MachineLiveStatus,
-  MachineRecord,
   MachineStatus,
   MachineSummary,
   OrderRecord,
@@ -60,19 +57,6 @@ export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
     packaging: toPackaging(job.packaging_status),
     priority: job.priority,
     createdAt: job.created_at,
-  }
-}
-
-function toMachineLive(status: string): MachineLiveStatus {
-  return status === 'online' ? 'online' : 'offline'
-}
-
-export function toMachineRecord(machine: Machine): MachineRecord {
-  return {
-    id: machine.id,
-    name: machine.name,
-    status: toMachineLive(machine.status),
-    addedAt: '',
   }
 }
 
@@ -149,20 +133,6 @@ export function toJobDetail(job: ProductionJob): ProductionJobDetail {
     dueDate: job.due_date ?? '',
     printFileAvailable: job.print_file_id !== null && job.print_file_id !== undefined,
     personalisationNote: job.personalisation_notes ?? '',
-  }
-}
-
-// The backend machine has a single nozzle and no IP / photo / machine number, so
-// those detail fields fall back to placeholders.
-export function toMachineDetail(machine: Machine): MachineDetail {
-  return {
-    ...toMachineRecord(machine),
-    machineNumber: PLACEHOLDER,
-    ipAddress: PLACEHOLDER,
-    leftNozzleMm: machine.nozzle_mm,
-    rightNozzleMm: machine.nozzle_mm,
-    availableFilaments: machine.supported_filaments.map(f => f.material),
-    imageSrc: '/production/h2c-printer.png',
   }
 }
 
