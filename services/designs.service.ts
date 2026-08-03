@@ -229,6 +229,17 @@ export async function resubmitDesign(
   )
 }
 
+// Assigns (or clears, with an empty string) the design's catalog SKU. The backend
+// owns uniqueness and returns a 409 (surfaced as the thrown error's message) when
+// the SKU is already used by another design.
+export async function setDesignSku(token: string, id: string, sku: string): Promise<Design> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/sku`,
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ sku }) },
+    data => DesignSchema.parse(data),
+  )
+}
+
 // --- Review workflow: submit -> review (comment / reject) -> approve ----------
 
 // Sends a POST with a JSON body to a /designs/:id/<action> route and parses the

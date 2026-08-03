@@ -11,6 +11,7 @@ import { type DesignDetail, type DesignSpecs, DesignSpecsSchema } from '@/lib/va
 
 import { DesignDetailTabs } from './design-detail-tabs'
 import { type ReviewCaps, DesignReviewActions } from './design-review-actions'
+import { DesignSkuDialog } from './design-sku-dialog'
 import { DesignStatusBadge } from './design-status-badge'
 import { PublishShopifyDialog } from './publish-shopify-dialog'
 
@@ -20,6 +21,7 @@ interface DesignDetailViewProps {
   brand: string
   initial: DesignDetail
   caps: ReviewCaps
+  canManageSku: boolean
 }
 
 function currentSpecs(design: DesignDetail): DesignSpecs {
@@ -38,7 +40,12 @@ function currentSpecs(design: DesignDetail): DesignSpecs {
 
 /** Polls the design through the slice -> price loop, then shows metrics, the
  * verdict, and the re-slice form. */
-export function DesignDetailView({ brand, initial, caps }: DesignDetailViewProps): JSX.Element {
+export function DesignDetailView({
+  brand,
+  initial,
+  caps,
+  canManageSku,
+}: DesignDetailViewProps): JSX.Element {
   const { data: design, refetch } = useQuery({
     queryKey: ['design', initial.id],
     initialData: initial,
@@ -71,6 +78,14 @@ export function DesignDetailView({ brand, initial, caps }: DesignDetailViewProps
             {design.material} / {design.quality} / {design.units_per_bed} per bed /{' '}
             {design.infill_pct}% infill
           </p>
+          <p className="text-muted-foreground mt-1 font-mono text-xs tabular-nums">
+            SKU{' '}
+            {design.sku ? (
+              <span className="text-foreground">{design.sku}</span>
+            ) : (
+              <span className="italic">not assigned</span>
+            )}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* Same-origin links: the route handler mints the backend token from
@@ -94,12 +109,21 @@ export function DesignDetailView({ brand, initial, caps }: DesignDetailViewProps
               G-code
             </a>
           ) : null}
+          {canManageSku ? (
+            <DesignSkuDialog
+              brand={brand}
+              designId={design.id}
+              currentSku={design.sku ?? null}
+              onSaved={() => void refetch()}
+            />
+          ) : null}
           {canPublish ? (
             <PublishShopifyDialog
               brand={brand}
               designId={design.id}
               defaultTitle={design.name}
               defaultPrice={publishPrice}
+              defaultSku={design.sku ?? undefined}
               isApproved={design.status === 'approved'}
               onPublished={() => void refetch()}
             />
