@@ -4,8 +4,10 @@ import { createLogger } from '@/lib/logger'
 import {
   type Filament,
   type FilamentInput,
+  type JobPatchInput,
   type Order,
   type OrderDetail,
+  type PersonalisationValidateInput,
   type ProductionJob,
   FilamentSchema,
   OrderDetailSchema,
@@ -69,8 +71,74 @@ export async function getProductionJob(token: string, id: string): Promise<Produ
   )
 }
 
-export async function listOrders(token: string): Promise<Order[]> {
-  return call('/orders', { headers: jsonHeaders(token) }, data => OrderSchema.array().parse(data))
+export async function listProductionJobsForOrder(
+  token: string,
+  orderId: string,
+): Promise<ProductionJob[]> {
+  return call(
+    `/production-jobs?order_id=${encodeURIComponent(orderId)}`,
+    { headers: jsonHeaders(token) },
+    data => ProductionJobSchema.array().parse(data),
+  )
+}
+
+export async function patchProductionJob(
+  token: string,
+  id: string,
+  input: JobPatchInput,
+): Promise<ProductionJob> {
+  return call(
+    `/production-jobs/${encodeURIComponent(id)}`,
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => ProductionJobSchema.parse(data),
+  )
+}
+
+// createJobsFromOrder is the manual backfill path (POST
+// /production-jobs/from-order/:order_id) - order sync/Stage 2 normally creates
+// jobs automatically via the River worker, this is for an order that predates
+// that wiring or needs a retry. Idempotent: a second call for an order that
+// already has jobs returns 409, surfaced as a ProductionServiceError.
+export async function createJobsFromOrder(
+  token: string,
+  orderId: string,
+): Promise<ProductionJob[]> {
+  return call(
+    `/production-jobs/from-order/${encodeURIComponent(orderId)}`,
+    { method: 'POST', headers: jsonHeaders(token) },
+    data => ProductionJobSchema.array().parse(data),
+  )
+}
+
+export async function listProductionJobsForBatch(
+  token: string,
+  batchId: string,
+): Promise<ProductionJob[]> {
+  return call(
+    `/production-jobs?batch_id=${encodeURIComponent(batchId)}`,
+    { headers: jsonHeaders(token) },
+    data => ProductionJobSchema.array().parse(data),
+  )
+}
+
+export async function validateJobPersonalisation(
+  token: string,
+  id: string,
+  input: PersonalisationValidateInput,
+): Promise<ProductionJob> {
+  return call(
+    `/production-jobs/${encodeURIComponent(id)}/personalisation`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => ProductionJobSchema.parse(data),
+  )
+}
+
+export type OrderSource = 'live' | 'dummy'
+
+export async function listOrders(token: string, source: OrderSource): Promise<Order[]> {
+  return call(`/orders?source=${source}`, { headers: jsonHeaders(token) }, data =>
+    OrderSchema.array().parse(data),
+  )
 }
 
 export async function getOrder(token: string, id: string): Promise<OrderDetail> {

@@ -277,7 +277,9 @@ function paintAndMeasure(g: THREE.BufferGeometry): OrientationMeasure {
 
 // parseModel sniffs the format (3MF is a zip, "PK.."; otherwise STL) and returns
 // a single non-indexed geometry so overhang colouring can work per triangle.
-function parseModel(buf: ArrayBuffer): THREE.BufferGeometry {
+// Exported for reuse by any other plain-model viewer (see
+// components/production/job-model-viewer.tsx).
+export function parseModel(buf: ArrayBuffer): THREE.BufferGeometry {
   const head = new Uint8Array(buf, 0, Math.min(2, buf.byteLength))
   const isZip = head[0] === 0x50 && head[1] === 0x4b // "PK" => 3MF
   let geo = isZip ? merge3MF(new ThreeMFLoader().parse(buf)) : new STLLoader().parse(buf)

@@ -1,9 +1,10 @@
 'use client'
 
-import { Pause } from 'lucide-react'
+import { Pause, Play } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import type { JSX, KeyboardEvent, MouseEvent } from 'react'
+import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
+import { updateProductionJob } from '@/app/dashboard/[brand]/production/actions'
 import {
   PACKAGING_STATUS_CONFIG,
   PERSONALISATION_STATUS_CONFIG,
@@ -27,11 +28,31 @@ function stopRowClick(event: MouseEvent): void {
 
 export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
   const router = useRouter()
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const href = `/dashboard/${brand}/production/jobs/${job.id}`
+  const onHold = job.status === 'on_hold'
+  const canStart = job.status === 'queued'
 
   const openDetail = (): void => router.push(href)
   const onKeyDown = (event: KeyboardEvent<HTMLTableRowElement>): void => {
     if (event.key === 'Enter') openDetail()
+  }
+
+  async function update(
+    event: MouseEvent,
+    input: { held?: boolean; status?: 'in_production' },
+  ): Promise<void> {
+    stopRowClick(event)
+    setPending(true)
+    setError(null)
+    const res = await updateProductionJob(brand, job.id, input)
+    setPending(false)
+    if (!res.ok) {
+      setError(res.error ?? 'Could not update the job.')
+      return
+    }
+    router.refresh()
   }
 
   return (
@@ -69,14 +90,39 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
       </TableCell>
       <TableCell className="text-muted-foreground">{job.createdAt}</TableCell>
       <TableCell className="text-right">
-        <div className="flex justify-end gap-2" onClick={stopRowClick}>
-          <Button type="button" variant="secondary" size="sm">
-            <Pause className="size-3.5" aria-hidden />
-            Hold
-          </Button>
-          <Button type="button" variant="primary" size="sm">
-            Start Production
-          </Button>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex justify-end gap-2" onClick={stopRowClick}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={pending}
+              onClick={event => void update(event, { held: !onHold })}
+            >
+              {onHold ? (
+                <Play className="size-3.5" aria-hidden />
+              ) : (
+                <Pause className="size-3.5" aria-hidden />
+              )}
+              {onHold ? 'Resume' : 'Hold'}
+            </Button>
+            {canStart ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={pending}
+                onClick={event => void update(event, { status: 'in_production' })}
+              >
+                Start Production
+              </Button>
+            ) : null}
+          </div>
+          {error ? (
+            <p role="alert" className="text-danger text-xs">
+              {error}
+            </p>
+          ) : null}
         </div>
       </TableCell>
     </TableRow>

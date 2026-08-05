@@ -8,10 +8,12 @@ import { createLogger } from '@/lib/logger'
 import {
   type Design,
   type DesignDetail,
+  type DesignMachineSpec,
   type DesignReview,
   type DesignSpecs,
   type DesignTimelineEntry,
   type PublishResult,
+  DesignMachineSpecSchema,
   DesignSkuInputSchema,
   DesignSpecsSchema,
   PublishInputSchema,
@@ -52,6 +54,7 @@ function describe(error: unknown): string {
 interface ParsedUpload {
   name: string
   specs: DesignSpecs
+  machine: DesignMachineSpec
   file: File
   preview: File
   notes?: string
@@ -68,6 +71,24 @@ function readUploadFiles(formData: FormData): { file?: File; preview?: File; err
     return { error: 'Upload a preview image for the design.' }
   }
   return { file, preview }
+}
+
+// parseMachineSpec pulls the dual-nozzle slicing config off the multipart
+// form (auto-linked to a machine_profiles row server-side - see
+// internal/httpapi/design_machine_link.go).
+function parseMachineSpec(formData: FormData): { value?: DesignMachineSpec; error?: string } {
+  const machine = DesignMachineSpecSchema.safeParse({
+    left_nozzle_mm: Number(formData.get('left_nozzle_mm')),
+    right_nozzle_mm: Number(formData.get('right_nozzle_mm')),
+    left_flow: formData.get('left_flow'),
+    right_flow: formData.get('right_flow'),
+  })
+  if (!machine.success) {
+    return {
+      error: machine.error.issues[0]?.message ?? 'Check the nozzle/flow answers and try again.',
+    }
+  }
+  return { value: machine.data }
 }
 
 // parseUploadForm pulls the model file, preview image and answers out of the
@@ -90,10 +111,14 @@ function parseUploadForm(formData: FormData): { value?: ParsedUpload; error?: st
   if (!specs.success) {
     return { error: specs.error.issues[0]?.message ?? 'Check the answers and try again.' }
   }
+  const machine = parseMachineSpec(formData)
+  if (!machine.value) return { error: machine.error }
+
   return {
     value: {
       name,
       specs: specs.data,
+      machine: machine.value,
       file: files.file,
       preview: files.preview,
       notes: readNotes(formData),

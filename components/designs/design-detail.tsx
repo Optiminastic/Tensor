@@ -35,7 +35,13 @@ function currentSpecs(design: DesignDetail): DesignSpecs {
   })
   return parsed.success
     ? parsed.data
-    : { material: 'PLA', finish: 'none', units_per_bed: 1, quality: 'standard', infill_pct: 15 }
+    : {
+        material: 'PLA Basics',
+        finish: 'none',
+        units_per_bed: 1,
+        quality: '0.20-standard',
+        infill_pct: 15,
+      }
 }
 
 /** Polls the design through the slice -> price loop, then shows metrics, the
@@ -64,9 +70,10 @@ export function DesignDetailView({
 
   const isProcessing = design.status === 'queued' || design.status === 'slicing'
   const gcodeAvailable = Boolean(design.metrics?.gcode_key)
-  // Publishing is now decoupled from approval: only an approved design is offered
-  // the Shopify draft push.
-  const canPublish = design.status === 'approved'
+  // The submit/approve review workflow isn't wired to any backend route, so
+  // priced designs have no other way to reach Shopify - offer the push as
+  // soon as pricing exists, not only after the unreachable "approved" step.
+  const canPublish = design.status === 'priced' || design.status === 'approved'
   const publishPrice = design.pricing?.approved_sp ?? design.pricing?.recommended_sp ?? null
 
   return (

@@ -4,9 +4,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { toBatchRecord } from '@/components/production/adapters'
 import { FleetMachineDetailView } from '@/components/production/fleet-machine-detail-view'
+import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
+import { getFleetMachineQueue } from '@/services/batches.service'
 import { getFleetMachine } from '@/services/machine-fleet.service'
 
 export const metadata: Metadata = { title: 'Machine' }
@@ -21,8 +24,10 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
   if (!token) notFound()
 
   let machine: FleetMachine
+  let queuedBatches: BatchRecord[]
   try {
     machine = await getFleetMachine(token, machineId)
+    queuedBatches = (await getFleetMachineQueue(token, machineId)).map(toBatchRecord)
   } catch {
     notFound()
   }
@@ -42,7 +47,7 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
           <p className="text-muted-foreground text-sm">Printer detail and live status.</p>
         </div>
       </div>
-      <FleetMachineDetailView machine={machine} />
+      <FleetMachineDetailView brand={brand} machine={machine} queuedBatches={queuedBatches} />
     </main>
   )
 }

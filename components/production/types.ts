@@ -62,15 +62,70 @@ export interface OrderLineItem {
   quantity: number
 }
 
+// One product within an order - the commerce-facing shape (SKU, name, image),
+// linked back to the order's Shopify order ID and customer ID.
+export interface OrderProduct {
+  id: string
+  shopifyOrderId: number
+  shopifyCustomerId: number | null
+  sku: string | null
+  productName: string
+  productImageUrl: string | null
+  quantity: number
+}
+
 export interface OrderRecord {
   id: string
   orderNumber: string
   store: string
   customer: string | null
+  customerEmail: string | null
+  customerPhone: string | null
+  shopifyCustomerId: number | null
   submittedAt: string
   total: number
   status: OrderStatus
   lineItems: OrderLineItem[]
+  products: OrderProduct[]
+}
+
+export interface PersonalisationConfirms {
+  name: boolean
+  photo: boolean
+  font: boolean
+  colour: boolean
+  variant: boolean
+  approval: boolean
+}
+
+export interface PersonalisationFields {
+  name: string | null
+  font: string | null
+  colour: string | null
+  variant: string | null
+}
+
+export type BatchStatus = 'pending_approval' | 'open' | 'in_progress' | 'completed'
+
+export interface BatchRecord {
+  id: string
+  batchNumber: string
+  machineId: string | null
+  status: BatchStatus
+  materialShortage: boolean
+  unitsPerBed: number | null
+  totalPrintTimeMinutes: number | null
+  effectiveTimePerUnitMinutes: number | null
+  totalFilamentGrams: number | null
+  bedUtilizationPercent: number | null
+  packingStrategy: string | null
+  jobsCount: number | null
+  createdAt: string
+  // The merged plate's overall combined size (only populated on the
+  // single-batch detail fetch - see toBatchRecord).
+  plateBboxXMm: number | null
+  plateBboxYMm: number | null
+  plateBboxZMm: number | null
 }
 
 export interface ProductionJobDetail extends ProductionJobQueueItem {
@@ -83,5 +138,19 @@ export interface ProductionJobDetail extends ProductionJobQueueItem {
   estimatedPrintTimeMin: number
   dueDate: string
   printFileAvailable: boolean
+  printFileId: string | null
   personalisationNote: string
+  personalisationLog: string[]
+  personalisationConfirms: PersonalisationConfirms
+  personalisationFields: PersonalisationFields
+  personalisationPhotoFileId: string | null
+}
+
+// One job's personalisation state, as shown on the order detail page's log -
+// a lighter-weight view than ProductionJobDetail (no print/machine facts).
+export interface OrderJobPersonalisation {
+  jobId: string
+  description: string
+  personalisation: PersonalisationStatus
+  log: string[]
 }

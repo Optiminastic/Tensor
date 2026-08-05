@@ -4,12 +4,15 @@ import { createLogger } from '@/lib/logger'
 import {
   type Design,
   type DesignDetail,
+  type DesignMachine,
+  type DesignMachineSpec,
   type DesignReview,
   type DesignSpecs,
   type PublishInput,
   type PublishResult,
   type ResubmitInput,
   DesignDetailSchema,
+  DesignMachineSchema,
   DesignReviewSchema,
   DesignSchema,
   PublishResultSchema,
@@ -104,6 +107,7 @@ export interface CreateDesignInput {
   brand: string
   name: string
   specs: DesignSpecs
+  machine: DesignMachineSpec
   file: File
   preview: File
   notes?: string
@@ -121,6 +125,10 @@ export async function createDesign(token: string, input: CreateDesignInput): Pro
   form.set('units_per_bed', String(input.specs.units_per_bed))
   form.set('quality', input.specs.quality)
   form.set('infill_pct', String(input.specs.infill_pct))
+  form.set('left_nozzle_mm', String(input.machine.left_nozzle_mm))
+  form.set('right_nozzle_mm', String(input.machine.right_nozzle_mm))
+  form.set('left_flow', input.machine.left_flow)
+  form.set('right_flow', input.machine.right_flow)
   if (input.notes) form.set('notes', input.notes)
   form.set('file', input.file, input.file.name)
   form.set('preview', input.preview, input.preview.name)
@@ -237,6 +245,21 @@ export async function setDesignSku(token: string, id: string, sku: string): Prom
     `/designs/${encodeURIComponent(id)}/sku`,
     { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ sku }) },
     data => DesignSchema.parse(data),
+  )
+}
+
+// updateDesignMachine relinks a design to whichever machine_profiles row
+// matches the given dual-nozzle config (finding or creating one, same as
+// design creation) - the "Machine" tab's edit form.
+export async function updateDesignMachine(
+  token: string,
+  id: string,
+  input: DesignMachineSpec,
+): Promise<DesignMachine> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/machine`,
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => DesignMachineSchema.parse(data),
   )
 }
 

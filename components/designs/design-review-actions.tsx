@@ -33,9 +33,13 @@ interface DesignReviewActionsProps {
   onDone: () => void
 }
 
-function isSubmittable(status: DesignLifecycle, verdict: Verdict | null): boolean {
-  const readyToSubmit = status === 'priced' || status === 'changes_requested'
-  return readyToSubmit && (verdict === 'green' || verdict === 'yellow')
+function isSubmittable(_status: DesignLifecycle, _verdict: Verdict | null): boolean {
+  // POST /designs/:id/submit was never implemented backend-side (no
+  // design_reviews table, no route) - offering this button 404s. Approval
+  // now happens via the Shopify publish flow directly (see
+  // design-detail.tsx's canPublish), which the 'submitted'/'changes_requested'
+  // statuses below can never reach anyway since nothing sets them.
+  return false
 }
 
 /** The Project Lead / Designer review actions for a design, gated by role and

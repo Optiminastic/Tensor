@@ -1,57 +1,77 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, type ChangeEvent, type JSX } from 'react'
+import { useState, type ChangeEvent, type JSX } from 'react'
 import { type FieldError, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-import { fetchMachines, uploadDesign } from '@/app/dashboard/[brand]/designs/actions'
+import { uploadDesign } from '@/app/dashboard/[brand]/designs/actions'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { FinishSchema, MaterialSchema, QualitySchema } from '@/lib/validators/designs'
-import type { Machine } from '@/lib/validators/machines'
+import {
+  DesignMachineSpecSchema,
+  FinishSchema,
+  MaterialSchema,
+  QualitySchema,
+} from '@/lib/validators/designs'
 
 const MAX_FILE_MB = 60
 const ACCEPT = '.stl,.3mf,.step,.stp'
 
-const MATERIALS = ['PLA', 'PETG', 'ABS'] as const
+const MATERIALS = MaterialSchema.options
 const FINISHES: { value: string; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'sanded', label: 'Sanded' },
   { value: 'painted', label: 'Painted' },
 ]
-const QUALITIES: { value: string; label: string }[] = [
-  { value: 'draft', label: 'Draft (0.24mm)' },
-  { value: 'standard', label: 'Standard (0.20mm)' },
-  { value: 'fine', label: 'Fine (0.12mm)' },
+// Labels are the literal BBL H2C system preset names shown in Bambu Studio -
+// values are the backend's matching slugs (internal/httpapi/designs.go).
+const QUALITIES: { value: (typeof QualitySchema.options)[number]; label: string }[] = [
+  { value: '0.08-high', label: '0.08mm High Quality @BBL H2C' },
+  { value: '0.12-high', label: '0.12mm High Quality @BBL H2C' },
+  { value: '0.16-high', label: '0.16mm High Quality @BBL H2C' },
+  { value: '0.16-standard', label: '0.16mm Standard @BBL H2C' },
+  { value: '0.20-high', label: '0.20mm High Quality @BBL H2C' },
+  { value: '0.20-standard', label: '0.20mm Standard @BBL H2C' },
+  { value: '0.24-standard', label: '0.24mm Standard @BBL H2C' },
+]
+const NOZZLES_MM = [0.2, 0.4, 0.6, 0.8] as const
+const FLOWS: { value: 'standard' | 'high_flow'; label: string }[] = [
+  { value: 'standard', label: 'Standard' },
+  { value: 'high_flow', label: 'High Flow' },
 ]
 
-const FormSchema = z.object({
-  name: z.string().min(1, 'Give the design a name').max(160),
-  material: MaterialSchema,
-  colour: z.string().max(60).optional(),
-  finish: FinishSchema,
-  units_per_bed: z.number().int().min(1).max(100),
-  quality: QualitySchema,
-  infill_pct: z.number().min(0).max(100),
-  notes: z.string().max(2000).optional(),
-})
+const FormSchema = z
+  .object({
+    name: z.string().min(1, 'Give the design a name').max(160),
+    material: MaterialSchema,
+    colour: z.string().max(60).optional(),
+    finish: FinishSchema,
+    units_per_bed: z.number().int().min(1).max(100),
+    quality: QualitySchema,
+    infill_pct: z.number().min(0).max(100),
+    notes: z.string().max(2000).optional(),
+  })
+  .extend(DesignMachineSpecSchema.shape)
 type FormValues = z.infer<typeof FormSchema>
 
 const DEFAULTS: FormValues = {
   name: '',
-  material: 'PLA',
+  material: 'PLA Basics',
   colour: '',
   finish: 'none',
   units_per_bed: 1,
-  quality: 'standard',
+  quality: '0.20-standard',
   infill_pct: 15,
   notes: '',
+  left_nozzle_mm: 0.4,
+  right_nozzle_mm: 0.4,
+  left_flow: 'standard',
+  right_flow: 'standard',
 }
 
 interface DesignUploadFormProps {
@@ -67,21 +87,6 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [machines, setMachines] = useState<Machine[]>([])
-  const [machineId, setMachineId] = useState('')
-  const [filamentPreset, setFilamentPreset] = useState('')
-
-  useEffect(() => {
-    let cancelled = false
-    void fetchMachines().then(res => {
-      if (!cancelled && res.ok && res.data) setMachines(res.data)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const machine = machines.find(m => m.id === machineId)
 
   const {
     register,
@@ -124,8 +129,10 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
     form.set('quality', values.quality)
     form.set('infill_pct', String(values.infill_pct))
     if (values.notes) form.set('notes', values.notes)
-    if (machineId) form.set('machine_id', machineId)
-    if (filamentPreset) form.set('filament_preset', filamentPreset)
+    form.set('left_nozzle_mm', String(values.left_nozzle_mm))
+    form.set('right_nozzle_mm', String(values.right_nozzle_mm))
+    form.set('left_flow', values.left_flow)
+    form.set('right_flow', values.right_flow)
     form.set('file', file)
     form.set('preview', preview)
 
@@ -213,54 +220,63 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
             {...register('infill_pct', { valueAsNumber: true })}
           />
         </Field>
-        {machines.length > 0 ? (
-          <Field label="Machine" htmlFor="machine" hint="Slice on this machine">
-            <Select
-              id="machine"
-              value={machineId}
-              onChange={e => {
-                setMachineId(e.target.value)
-                setFilamentPreset('')
-              }}
-            >
-              <option value="">Default profile</option>
-              {machines.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.nozzle_mm.toFixed(1)}mm)
-                </option>
-              ))}
-            </Select>
-          </Field>
-        ) : (
-          <div className="sm:col-span-2">
-            <p className="text-muted-foreground text-sm">
-              No machines configured yet.{' '}
-              <Link
-                href="/dashboard/machines"
-                className="text-accent underline-offset-2 hover:underline"
-              >
-                Add one in Machine Settings
-              </Link>{' '}
-              to slice on a specific printer. Until then this uses the default profile.
-            </p>
-          </div>
-        )}
-        {machine ? (
-          <Field label="Filament" htmlFor="filament">
-            <Select
-              id="filament"
-              value={filamentPreset}
-              onChange={e => setFilamentPreset(e.target.value)}
-            >
-              <option value="">Auto (by material)</option>
-              {machine.supported_filaments.map(f => (
-                <option key={f.filament_preset} value={f.filament_preset}>
-                  {f.material}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        ) : null}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Left nozzle"
+          htmlFor="left_nozzle_mm"
+          hint="mm"
+          error={(errors.left_nozzle_mm as FieldError | undefined)?.message}
+        >
+          <Select
+            id="left_nozzle_mm"
+            data-numeric="true"
+            {...register('left_nozzle_mm', { valueAsNumber: true })}
+          >
+            {NOZZLES_MM.map(n => (
+              <option key={n} value={n}>
+                {n.toFixed(1)} mm
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Left flow" htmlFor="left_flow" error={errors.left_flow?.message}>
+          <Select id="left_flow" {...register('left_flow')}>
+            {FLOWS.map(f => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field
+          label="Right nozzle"
+          htmlFor="right_nozzle_mm"
+          hint="mm"
+          error={(errors.right_nozzle_mm as FieldError | undefined)?.message}
+        >
+          <Select
+            id="right_nozzle_mm"
+            data-numeric="true"
+            {...register('right_nozzle_mm', { valueAsNumber: true })}
+          >
+            {NOZZLES_MM.map(n => (
+              <option key={n} value={n}>
+                {n.toFixed(1)} mm
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Right flow" htmlFor="right_flow" error={errors.right_flow?.message}>
+          <Select id="right_flow" {...register('right_flow')}>
+            {FLOWS.map(f => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
       </div>
 
       <Field label="Notes for Project Lead" htmlFor="notes" hint="Optional">

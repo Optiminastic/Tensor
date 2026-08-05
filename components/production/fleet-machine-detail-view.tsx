@@ -1,15 +1,22 @@
 import type { JSX } from 'react'
 
-import { FleetMachineFilamentsTable } from '@/components/production/fleet-machine-filaments-table'
 import { FleetMachineSummaryCard } from '@/components/production/fleet-machine-summary-card'
 import { MachinePhotoCard } from '@/components/production/machine-photo-card'
+import { MachineQueueSection } from '@/components/production/machine-queue-section'
+import type { BatchRecord } from '@/components/production/types'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
 
 interface FleetMachineDetailViewProps {
+  brand: string
   machine: FleetMachine
+  queuedBatches: BatchRecord[]
 }
 
-export function FleetMachineDetailView({ machine }: FleetMachineDetailViewProps): JSX.Element {
+export function FleetMachineDetailView({
+  brand,
+  machine,
+  queuedBatches,
+}: FleetMachineDetailViewProps): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-6 md:grid-cols-[320px_1fr]">
@@ -19,7 +26,7 @@ export function FleetMachineDetailView({ machine }: FleetMachineDetailViewProps)
         />
         <FleetMachineSummaryCard machine={machine} />
       </div>
-      <FleetMachineFilamentsTable filaments={machine.filaments} />
+      <MachineQueueSection brand={brand} batches={queuedBatches} />
     </div>
   )
 }

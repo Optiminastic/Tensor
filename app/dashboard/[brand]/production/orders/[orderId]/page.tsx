@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
-import { toOrderDetailRecord } from '@/components/production/adapters'
+import { toOrderDetailRecord, toOrderJobPersonalisation } from '@/components/production/adapters'
 import { OrderDetailView } from '@/components/production/order-detail-view'
-import type { OrderRecord } from '@/components/production/types'
+import type { OrderJobPersonalisation, OrderRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
-import { getOrder } from '@/services/production.service'
+import { getOrder, listProductionJobsForOrder } from '@/services/production.service'
 
 export const metadata: Metadata = { title: 'Order' }
 
@@ -22,8 +22,10 @@ export default async function OrderPage({ params }: OrderPageProps): Promise<JSX
   if (!token) notFound()
 
   let order: OrderRecord
+  let jobs: OrderJobPersonalisation[]
   try {
     order = toOrderDetailRecord(await getOrder(token, orderId))
+    jobs = (await listProductionJobsForOrder(token, orderId)).map(toOrderJobPersonalisation)
   } catch {
     notFound()
   }
@@ -43,7 +45,7 @@ export default async function OrderPage({ params }: OrderPageProps): Promise<JSX
           <p className="text-muted-foreground text-sm">Full order detail.</p>
         </div>
       </div>
-      <OrderDetailView order={order} />
+      <OrderDetailView brand={brand} order={order} jobs={jobs} />
     </main>
   )
 }

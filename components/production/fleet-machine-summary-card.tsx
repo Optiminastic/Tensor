@@ -5,6 +5,14 @@ import { FLEET_MACHINE_STATUS_CONFIG } from '@/components/production/status-conf
 import { TonePill } from '@/components/production/tone-pill'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '@/components/ui/table'
 import { countdown } from '@/lib/format'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
 
@@ -59,6 +67,32 @@ export function FleetMachineSummaryCard({ machine }: FleetMachineSummaryCardProp
           mono
         />
         <DetailField label="Total waste" value={`${machine.total_waste_grams.toFixed(0)} g`} mono />
+      </div>
+      <Separator />
+      <div className="px-5 py-4">
+        <span className="text-muted-foreground text-xs font-semibold">Loaded filaments</span>
+        {machine.filaments.length === 0 ? (
+          <p className="text-muted-foreground mt-2 text-sm">No filament loaded.</p>
+        ) : (
+          <Table className="mt-2">
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Colour</TableHeaderCell>
+                <TableHeaderCell>Type</TableHeaderCell>
+                <TableHeaderCell className="text-right">Remaining</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {machine.filaments.map(filament => (
+                <TableRow key={`${filament.colour}-${filament.type}`}>
+                  <TableCell>{filament.colour}</TableCell>
+                  <TableCell>{filament.type}</TableCell>
+                  <TableCell numeric>{filament.remaining_grams.toFixed(0)} g</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </Card>
   )
