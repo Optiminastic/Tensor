@@ -45,7 +45,7 @@ export default async function ProductionJobPage({
           <p className="text-muted-foreground text-sm">Full production job detail.</p>
         </div>
       </div>
-      <JobDetailView job={job} />
+      <JobDetailView brand={brand} job={job} />
     </main>
   )
 }

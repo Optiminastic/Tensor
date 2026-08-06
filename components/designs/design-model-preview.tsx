@@ -4,7 +4,7 @@ import { Maximize2, Minimize2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useRef, useState, type JSX, type ReactNode } from 'react'
 
-import { estimateDesignPersonalisation } from '@/app/dashboard/[brand]/designs/actions'
+import { estimateDesignPersonalisation } from '@/app/dashboard/[brand]/designs/personalisation-actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'

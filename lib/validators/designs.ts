@@ -1,11 +1,22 @@
 import { z } from 'zod'
 
-import { MachineSchema } from '@/lib/validators/machines'
+import { FlowSchema, NozzleSchema } from '@/lib/validators/machines'
 
-// The slice answers. Materials/qualities must match a worker H2S profile; the
-// backend re-validates these, so the frontend list is UX, not the constraint.
-export const MaterialSchema = z.enum(['PLA', 'PETG', 'ABS'])
-export const QualitySchema = z.enum(['draft', 'standard', 'fine'])
+// The slice answers. Materials/qualities must match a bundled BBL H2C profile
+// (internal/slicing/profiles.go); the backend re-validates these, so the
+// frontend list is UX, not the constraint.
+export const MaterialSchema = z.enum(['PLA Basics', 'PA-CF'])
+// Quality keys match the backend's slugs exactly; QUALITY_LABELS (the upload
+// form) maps them to the literal Bambu Studio preset names they represent.
+export const QualitySchema = z.enum([
+  '0.08-high',
+  '0.12-high',
+  '0.16-high',
+  '0.16-standard',
+  '0.20-high',
+  '0.20-standard',
+  '0.24-standard',
+])
 export const FinishSchema = z.enum(['none', 'sanded', 'painted'])
 
 export const DesignSpecsSchema = z.object({
@@ -17,6 +28,17 @@ export const DesignSpecsSchema = z.object({
   infill_pct: z.number().min(0).max(100),
 })
 export type DesignSpecs = z.infer<typeof DesignSpecsSchema>
+
+// The design form's dual-nozzle slicing config - resolved server-side to a
+// machine_profiles row (design_machine_link.go) rather than requiring the
+// designer to pick one from a separate machine picker.
+export const DesignMachineSpecSchema = z.object({
+  left_nozzle_mm: NozzleSchema,
+  right_nozzle_mm: NozzleSchema,
+  left_flow: FlowSchema,
+  right_flow: FlowSchema,
+})
+export type DesignMachineSpec = z.infer<typeof DesignMachineSpecSchema>
 
 // Bambu sparse-infill patterns we expose (a curated subset of the slicer's set).
 export const InfillPatternSchema = z.enum([
@@ -237,6 +259,21 @@ export const SliceJobSchema = z.object({
 })
 export type SliceJob = z.infer<typeof SliceJobSchema>
 
+// The design's linked slicing config (designMachineResponse, mirroring the
+// same shape machines.ts's Machine uses for nozzle/flow) - the "Machine" tab.
+export const DesignMachineSchema = z.object({
+  id: z.string(),
+  family: z.string(),
+  nozzle_mm: z.number(),
+  // default(null): a single-nozzle backend (or one out of step with this repo)
+  // omits the right-side keys entirely; treat a missing value as "no right side"
+  // so the Machine tab renders "-" instead of crashing on parse.
+  right_nozzle_mm: z.number().nullable().default(null),
+  flow: z.string(),
+  right_flow: z.string().nullable().default(null),
+})
+export type DesignMachine = z.infer<typeof DesignMachineSchema>
+
 export const DesignDetailSchema = DesignSchema.extend({
   // nullish (not just nullable): tolerate a backend that predates the notes field,
   // so the detail page never crashes if the two repos are briefly out of step.
@@ -245,9 +282,10 @@ export const DesignDetailSchema = DesignSchema.extend({
   metrics: DesignMetricsSchema.nullable(),
   pricing: DesignPricingSchema.nullable(),
   shopify: ShopifyProductSchema.nullable(),
-  // The machine profile this design slices on. null = the built-in default
-  // profile. nullish so a backend that predates the field still parses.
-  machine: MachineSchema.nullish(),
+  // nullish for the same reason as notes - a design predating this field, or
+  // one whose machine_id link couldn't be resolved, both render an empty tab
+  // rather than crashing.
+  machine: DesignMachineSchema.nullish(),
   // What personalization this product offers. null = not personalizable.
   personalisation_rules: PersonalisationRulesSchema.nullish(),
 })

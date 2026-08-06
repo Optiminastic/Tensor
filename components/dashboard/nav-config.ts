@@ -84,8 +84,8 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     icon: ShoppingBag,
     segment: 'commerce',
     items: [
-      { label: 'Shopify Products', href: '/commerce' },
-      { label: 'Collections', href: '/commerce?view=collections' },
+      { label: 'Shopify Products', href: '/commerce/products' },
+      { label: 'Collections', href: '/commerce/collections' },
     ],
   },
   {

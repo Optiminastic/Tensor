@@ -2,13 +2,17 @@
 // production components render. Keeping the mapping in one place lets the list and
 // overview pages share it and keeps the components unaware of the wire format.
 
+import type { Batch } from '@/lib/validators/batches'
 import type { Machine } from '@/lib/validators/machines'
 import type { Order, OrderDetail, ProductionJob } from '@/lib/validators/production'
 
 import type {
+  BatchRecord,
+  BatchStatus,
   JobStatus,
   MachineStatus,
   MachineSummary,
+  OrderJobPersonalisation,
   OrderRecord,
   OrderStatus,
   PackagingStatus,
@@ -73,10 +77,14 @@ export function toOrderRecord(order: Order): OrderRecord {
     orderNumber: order.order_number,
     store: '',
     customer: order.customer_name ?? null,
+    customerEmail: order.customer_email ?? null,
+    customerPhone: order.customer_phone ?? null,
+    shopifyCustomerId: order.shopify_customer_id ?? null,
     submittedAt: order.imported_at,
     total: order.total_price,
     status: toOrderStatus(order.financial_status),
     lineItems: [],
+    products: [],
   }
 }
 
@@ -132,8 +140,160 @@ export function toJobDetail(job: ProductionJob): ProductionJobDetail {
     estimatedPrintTimeMin: job.estimated_print_time_minutes ?? 0,
     dueDate: job.due_date ?? '',
     printFileAvailable: job.print_file_id !== null && job.print_file_id !== undefined,
+    printFileId: job.print_file_id ?? null,
     personalisationNote: job.personalisation_notes ?? '',
+    personalisationLog: job.personalisation_log ?? [],
+    personalisationConfirms: {
+      name: job.name_confirmed,
+      photo: job.photo_confirmed,
+      font: job.font_confirmed,
+      colour: job.colour_confirmed,
+      variant: job.variant_confirmed,
+      approval: job.customer_approval_received,
+    },
+    personalisationFields: {
+      name: job.personalisation_name ?? null,
+      font: job.personalisation_font ?? null,
+      colour: job.personalisation_colour ?? null,
+      variant: job.personalisation_variant ?? null,
+    },
+    personalisationPhotoFileId: job.personalisation_photo_file_id ?? null,
   }
+}
+
+// toOrderJobPersonalisation shapes one order's job for the order detail page's
+// personalisation log - what's ready to batch and what's still pending, and why.
+export function toOrderJobPersonalisation(job: ProductionJob): OrderJobPersonalisation {
+  return {
+    jobId: job.id,
+    description: job.product_name ?? job.description,
+    personalisation: toPersonalisation(job.personalisation_status),
+    log: job.personalisation_log ?? [],
+  }
+}
+
+function toBatchStatus(status: string): BatchStatus {
+  if (status === 'open' || status === 'in_progress' || status === 'completed') return status
+  return 'pending_approval'
+}
+
+export function toBatchRecord(batch: Batch): BatchRecord {
+  return {
+    id: batch.id,
+    batchNumber: batch.batch_number,
+    machineId: batch.machine_id ?? null,
+    status: toBatchStatus(batch.status),
+    materialShortage: batch.material_shortage,
+    unitsPerBed: batch.units_per_bed ?? null,
+    totalPrintTimeMinutes: batch.total_print_time_minutes ?? null,
+    effectiveTimePerUnitMinutes: batch.effective_time_per_unit_minutes ?? null,
+    totalFilamentGrams: batch.total_filament_grams ?? null,
+    bedUtilizationPercent: batch.bed_utilization_percent ?? null,
+    packingStrategy: batch.packing_strategy ?? null,
+    jobsCount: batch.jobs_count ?? null,
+    createdAt: batch.created_at,
+    plateBboxXMm: batch.plate_bbox_x_mm ?? null,
+    plateBboxYMm: batch.plate_bbox_y_mm ?? null,
+    plateBboxZMm: batch.plate_bbox_z_mm ?? null,
+  }
+}
+
+// createSampleBatchRecords returns representative dummy batches so the batch
+// management table renders a populated view when the backend has no data yet.
+// Used only as a UI fallback on the list page - never sent to the backend.
+export function createSampleBatchRecords(): BatchRecord[] {
+  return [
+    {
+      id: 'sample-0001',
+      batchNumber: 'B-240801-001',
+      machineId: 'm1',
+      status: 'pending_approval',
+      materialShortage: false,
+      unitsPerBed: 12,
+      totalPrintTimeMinutes: 136,
+      effectiveTimePerUnitMinutes: 11,
+      totalFilamentGrams: 1180,
+      bedUtilizationPercent: 78.4,
+      packingStrategy: 'mixed',
+      jobsCount: 9,
+      createdAt: '2026-08-04T09:12:00Z',
+      plateBboxXMm: null,
+      plateBboxYMm: null,
+      plateBboxZMm: null,
+    },
+    {
+      id: 'sample-0002',
+      batchNumber: 'B-240801-002',
+      machineId: 'm2',
+      status: 'open',
+      materialShortage: true,
+      unitsPerBed: 9,
+      totalPrintTimeMinutes: 118,
+      effectiveTimePerUnitMinutes: 13,
+      totalFilamentGrams: 940,
+      bedUtilizationPercent: 71.2,
+      packingStrategy: 'single_sku',
+      jobsCount: 6,
+      createdAt: '2026-08-04T08:47:00Z',
+      plateBboxXMm: null,
+      plateBboxYMm: null,
+      plateBboxZMm: null,
+    },
+    {
+      id: 'sample-0003',
+      batchNumber: 'B-240731-016',
+      machineId: 'm3',
+      status: 'in_progress',
+      materialShortage: false,
+      unitsPerBed: 14,
+      totalPrintTimeMinutes: 154,
+      effectiveTimePerUnitMinutes: 11,
+      totalFilamentGrams: 1310,
+      bedUtilizationPercent: 84.9,
+      packingStrategy: 'multi_sku',
+      jobsCount: 11,
+      createdAt: '2026-07-31T14:20:00Z',
+      plateBboxXMm: null,
+      plateBboxYMm: null,
+      plateBboxZMm: null,
+    },
+    {
+      id: 'sample-0004',
+      batchNumber: 'B-240731-017',
+      machineId: 'm1',
+      status: 'completed',
+      materialShortage: false,
+      unitsPerBed: 10,
+      totalPrintTimeMinutes: 122,
+      effectiveTimePerUnitMinutes: 12,
+      totalFilamentGrams: 1050,
+      bedUtilizationPercent: 76.3,
+      packingStrategy: 'mixed',
+      jobsCount: 8,
+      createdAt: '2026-07-31T11:05:00Z',
+      plateBboxXMm: null,
+      plateBboxYMm: null,
+      plateBboxZMm: null,
+    },
+    {
+      id: 'sample-0005',
+      batchNumber: 'B-240730-023',
+      machineId: 'm2',
+      status: 'in_progress',
+      materialShortage: false,
+      unitsPerBed: 13,
+      totalPrintTimeMinutes: 149,
+      effectiveTimePerUnitMinutes: 11,
+      totalFilamentGrams: 1245,
+      bedUtilizationPercent: 82.7,
+      packingStrategy: 'single_sku',
+      jobsCount: 10,
+      createdAt: '2026-07-30T16:40:00Z',
+      plateBboxXMm: null,
+      plateBboxYMm: null,
+      plateBboxZMm: null,
+    },
+  ]
 }
 
 export function toOrderDetailRecord(order: OrderDetail): OrderRecord {
@@ -142,6 +302,15 @@ export function toOrderDetailRecord(order: OrderDetail): OrderRecord {
     lineItems: (order.line_items ?? []).map(item => ({
       name: item.title ?? item.name ?? PLACEHOLDER,
       quantity: item.quantity ?? 1,
+    })),
+    products: (order.products ?? []).map(product => ({
+      id: product.id,
+      shopifyOrderId: product.shopify_order_id,
+      shopifyCustomerId: product.shopify_customer_id ?? null,
+      sku: product.sku ?? null,
+      productName: product.product_name,
+      productImageUrl: product.product_image_url ?? null,
+      quantity: product.quantity,
     })),
   }
 }

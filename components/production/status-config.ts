@@ -1,5 +1,6 @@
 import type { PillTone } from '@/components/production/tone-pill'
 import type {
+  BatchStatus,
   JobStatus,
   MachineStatus,
   OrderStatus,
@@ -56,6 +57,13 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; tone: Pil
   pending: { label: 'Pending', tone: 'warning' },
   refunded: { label: 'Refunded', tone: 'muted' },
   cancelled: { label: 'Cancelled', tone: 'danger' },
+}
+
+export const BATCH_STATUS_CONFIG: Record<BatchStatus, { label: string; tone: PillTone }> = {
+  pending_approval: { label: 'Draft', tone: 'warning' },
+  open: { label: 'Locked', tone: 'accent' },
+  in_progress: { label: 'Printing', tone: 'accent' },
+  completed: { label: 'Completed', tone: 'success' },
 }
 
 export const FLEET_MACHINE_STATUS_CONFIG: Record<

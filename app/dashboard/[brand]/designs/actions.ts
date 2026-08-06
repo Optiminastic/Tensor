@@ -8,12 +8,12 @@ import { createLogger } from '@/lib/logger'
 import {
   type Design,
   type DesignDetail,
+  type DesignMachineSpec,
   type DesignReview,
   type DesignSpecs,
   type DesignTimelineEntry,
-  type PersonalisationEstimate,
-  type PersonalisationRules,
   type PublishResult,
+  DesignMachineSpecSchema,
   DesignSkuInputSchema,
   DesignSpecsSchema,
   PublishInputSchema,
@@ -22,17 +22,14 @@ import {
 import type { Machine } from '@/lib/validators/machines'
 import {
   DesignServiceError,
-  type EstimatePersonalisationInput,
   approveDesign as approveRequest,
   commentOnDesign as commentRequest,
   createDesign,
-  estimatePersonalisation as estimateRequest,
   getDesign,
   listDesignReviews as listReviewsRequest,
   publishToShopify,
   rejectDesign as rejectRequest,
   resubmitDesign as resubmitRequest,
-  setDesignPersonalisationRules as setRulesRequest,
   setDesignSku as setSkuRequest,
   submitDesign as submitRequest,
 } from '@/services/designs.service'
@@ -57,6 +54,7 @@ function describe(error: unknown): string {
 interface ParsedUpload {
   name: string
   specs: DesignSpecs
+  machine: DesignMachineSpec
   file: File
   preview: File
   notes?: string
@@ -73,6 +71,24 @@ function readUploadFiles(formData: FormData): { file?: File; preview?: File; err
     return { error: 'Upload a preview image for the design.' }
   }
   return { file, preview }
+}
+
+// parseMachineSpec pulls the dual-nozzle slicing config off the multipart
+// form (auto-linked to a machine_profiles row server-side - see
+// internal/httpapi/design_machine_link.go).
+function parseMachineSpec(formData: FormData): { value?: DesignMachineSpec; error?: string } {
+  const machine = DesignMachineSpecSchema.safeParse({
+    left_nozzle_mm: Number(formData.get('left_nozzle_mm')),
+    right_nozzle_mm: Number(formData.get('right_nozzle_mm')),
+    left_flow: formData.get('left_flow'),
+    right_flow: formData.get('right_flow'),
+  })
+  if (!machine.success) {
+    return {
+      error: machine.error.issues[0]?.message ?? 'Check the nozzle/flow answers and try again.',
+    }
+  }
+  return { value: machine.data }
 }
 
 // parseUploadForm pulls the model file, preview image and answers out of the
@@ -95,10 +111,14 @@ function parseUploadForm(formData: FormData): { value?: ParsedUpload; error?: st
   if (!specs.success) {
     return { error: specs.error.issues[0]?.message ?? 'Check the answers and try again.' }
   }
+  const machine = parseMachineSpec(formData)
+  if (!machine.value) return { error: machine.error }
+
   return {
     value: {
       name,
       specs: specs.data,
+      machine: machine.value,
       file: files.file,
       preview: files.preview,
       notes: readNotes(formData),
@@ -334,41 +354,6 @@ export async function setDesignSkuForBrand(
     const design = await setSkuRequest(token, id, parsed.data.sku)
     revalidatePath(`/dashboard/${brand}/designs/${id}`)
     return { ok: true, data: design }
-  } catch (err) {
-    return { ok: false, error: describe(err) }
-  }
-}
-
-// setDesignPersonalisationRulesForBrand stores what personalization a product
-// offers (null clears it). Guarded by shopify:publish in the backend.
-export async function setDesignPersonalisationRulesForBrand(
-  brand: string,
-  id: string,
-  rules: PersonalisationRules | null,
-): Promise<ActionResult<Design>> {
-  const { token, error } = await resolveBackendToken()
-  if (!token) return { ok: false, error }
-  try {
-    const design = await setRulesRequest(token, id, rules)
-    revalidatePath(`/dashboard/${brand}/designs/${id}`)
-    return { ok: true, data: design }
-  } catch (err) {
-    return { ok: false, error: describe(err) }
-  }
-}
-
-// estimateDesignPersonalisation returns a fast pre-slice estimate of a name's
-// added grams/time/cost. Read-only - no revalidation, safe to call as the user
-// types (debounced by the caller).
-export async function estimateDesignPersonalisation(
-  id: string,
-  input: EstimatePersonalisationInput,
-): Promise<ActionResult<PersonalisationEstimate>> {
-  const { token, error } = await resolveBackendToken()
-  if (!token) return { ok: false, error }
-  try {
-    const data = await estimateRequest(token, id, input)
-    return { ok: true, data }
   } catch (err) {
     return { ok: false, error: describe(err) }
   }

@@ -3,7 +3,7 @@
 import { Settings2 } from 'lucide-react'
 import { useState, type JSX } from 'react'
 
-import { setDesignPersonalisationRulesForBrand } from '@/app/dashboard/[brand]/designs/actions'
+import { setDesignPersonalisationRulesForBrand } from '@/app/dashboard/[brand]/designs/personalisation-actions'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,

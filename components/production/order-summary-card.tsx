@@ -27,8 +27,11 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps): JSX.Element 
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 px-5 py-5 md:grid-cols-4">
         <DetailField label="Store" value={order.store} />
         <DetailField label="Customer" value={order.customer ?? '—'} />
+        <DetailField label="Customer ID" value={order.shopifyCustomerId ?? '—'} mono />
         <DetailField label="Total" value={`₹${order.total.toLocaleString('en-IN')}`} mono />
-        <DetailField label="Items" value={order.lineItems.length} mono />
+        <DetailField label="Email" value={order.customerEmail ?? '—'} />
+        <DetailField label="Phone" value={order.customerPhone ?? '—'} mono />
+        <DetailField label="Items" value={order.products.length || order.lineItems.length} mono />
       </div>
     </Card>
   )

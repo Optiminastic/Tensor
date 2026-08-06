@@ -60,8 +60,8 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
               <TableRow>
                 <TableHeaderCell>Material</TableHeaderCell>
                 <TableHeaderCell>Colour</TableHeaderCell>
-                <TableHeaderCell className="text-right">Available (g)</TableHeaderCell>
-                <TableHeaderCell className="text-right">Reorder at (g)</TableHeaderCell>
+                <TableHeaderCell className="text-right">Available (kg)</TableHeaderCell>
+                <TableHeaderCell className="text-right">Reorder at (kg)</TableHeaderCell>
                 <TableHeaderCell>Status</TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -73,10 +73,14 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
                     <TableCell className="font-medium">{filament.material}</TableCell>
                     <TableCell>{filament.colour ?? '-'}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
-                      {filament.grams_available.toLocaleString()}
+                      {(filament.grams_available / 1000).toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
-                      {filament.reorder_level_grams.toLocaleString()}
+                      {(filament.reorder_level_grams / 1000).toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}
                     </TableCell>
                     <TableCell>
                       <span
@@ -104,8 +108,7 @@ function AddFilamentDialog({ brand }: { brand: string }): JSX.Element {
   const [open, setOpen] = useState(false)
   const [material, setMaterial] = useState('')
   const [colour, setColour] = useState('')
-  const [grams, setGrams] = useState(0)
-  const [reorder, setReorder] = useState(0)
+  const [kg, setKg] = useState(0)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -115,8 +118,8 @@ function AddFilamentDialog({ brand }: { brand: string }): JSX.Element {
     const res = await addFilament(brand, {
       material: material.trim(),
       colour: colour.trim() || undefined,
-      grams_available: grams,
-      reorder_level_grams: reorder,
+      grams_available: kg * 1000,
+      reorder_level_grams: 0,
     })
     setPending(false)
     if (!res.ok) {
@@ -126,8 +129,7 @@ function AddFilamentDialog({ brand }: { brand: string }): JSX.Element {
     setOpen(false)
     setMaterial('')
     setColour('')
-    setGrams(0)
-    setReorder(0)
+    setKg(0)
     router.refresh()
   }
 
@@ -161,26 +163,15 @@ function AddFilamentDialog({ brand }: { brand: string }): JSX.Element {
                 placeholder="e.g. Matte black"
               />
             </Field>
-            <Field label="Available (g)" htmlFor="f-grams">
+            <Field label="Quantity (kg)" htmlFor="f-quantity">
               <Input
-                id="f-grams"
+                id="f-quantity"
                 type="number"
-                step="1"
+                step="0.01"
                 min="0"
                 data-numeric="true"
-                value={grams}
-                onChange={e => setGrams(Number(e.target.value))}
-              />
-            </Field>
-            <Field label="Reorder at (g)" htmlFor="f-reorder">
-              <Input
-                id="f-reorder"
-                type="number"
-                step="1"
-                min="0"
-                data-numeric="true"
-                value={reorder}
-                onChange={e => setReorder(Number(e.target.value))}
+                value={kg}
+                onChange={e => setKg(Number(e.target.value))}
               />
             </Field>
           </div>

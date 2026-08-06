@@ -29,35 +29,95 @@ export const ProductionJobSchema = z.object({
   estimated_print_time_minutes: z.number().nullish(),
   print_file_id: z.string().nullish(),
   shopify_order_id: z.number().nullish(),
+  personalisation_name: z.string().nullish(),
+  personalisation_font: z.string().nullish(),
+  personalisation_colour: z.string().nullish(),
+  personalisation_variant: z.string().nullish(),
   personalisation_notes: z.string().nullish(),
+  personalisation_photo_file_id: z.string().nullish(),
+  personalisation_validated_by: z.string().nullish(),
+  personalisation_validated_at: z.string().nullish(),
+  personalisation_log: z.string().array().nullish(),
+  name_confirmed: z.boolean(),
+  photo_confirmed: z.boolean(),
+  font_confirmed: z.boolean(),
+  colour_confirmed: z.boolean(),
+  variant_confirmed: z.boolean(),
+  customer_approval_received: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
 })
 export type ProductionJob = z.infer<typeof ProductionJobSchema>
 
-// orderResponse (internal/httpapi/orders.go).
+// The subset of patchProductionJobRequest (internal/httpapi/production_jobs.go
+// #applyJobPatch) the queue UI exercises directly - held (Hold/Resume) and
+// status (Start Production limited to the one forward transition it offers).
+// The backend accepts more fields (assembly/qc/packaging status, priority,
+// batch_id); add them here if a UI surface needs them.
+export const JobPatchInputSchema = z.object({
+  status: z.enum(['queued', 'in_production', 'completed']).optional(),
+  held: z.boolean().optional(),
+})
+export type JobPatchInput = z.infer<typeof JobPatchInputSchema>
+
+// personalisationRequest (internal/httpapi/production_jobs.go#validatePersonalisation).
+// POST /production-jobs/:id/personalisation overwrites every field wholesale, so the
+// form must round-trip photo_file_id even when the UI does not let the operator
+// change it directly.
+export const PersonalisationValidateInputSchema = z.object({
+  name_confirmed: z.boolean(),
+  photo_confirmed: z.boolean(),
+  font_confirmed: z.boolean(),
+  colour_confirmed: z.boolean(),
+  variant_confirmed: z.boolean(),
+  customer_approval_received: z.boolean(),
+  notes: z.string().max(2000).nullish(),
+  photo_file_id: z.string().nullish(),
+})
+export type PersonalisationValidateInput = z.infer<typeof PersonalisationValidateInputSchema>
+
+// orderResponse (internal/httpapi/orders.go). source is "shopify_webhook" for a
+// real imported order or "seed" for a dummy one - what the live/dummy toggle
+// filters the /orders?source= request on.
 export const OrderSchema = z.object({
   id: z.string(),
   shopify_order_id: z.number(),
   order_number: z.string(),
   customer_name: z.string().nullish(),
+  shopify_customer_id: z.number().nullish(),
+  customer_email: z.string().nullish(),
+  customer_phone: z.string().nullish(),
   financial_status: z.string(),
   total_price: z.number(),
   currency: z.string(),
   status: z.string(),
+  source: z.string(),
   imported_at: z.string(),
 })
 export type Order = z.infer<typeof OrderSchema>
 
-// orderDetailResponse adds the raw Shopify line items. They vary, so only the
-// fields the UI reads are declared and the rest are ignored.
+// orderDetailResponse adds the raw Shopify line items (only the fields the UI
+// reads are declared, the rest are ignored) plus products - the typed,
+// commerce-facing per-item rows from order_line_items (SKU, name, image).
 export const OrderLineItemSchema = z.object({
   title: z.string().nullish(),
   name: z.string().nullish(),
   quantity: z.number().nullish(),
 })
+export const OrderProductSchema = z.object({
+  id: z.string(),
+  shopify_order_id: z.number(),
+  shopify_customer_id: z.number().nullish(),
+  sku: z.string().nullish(),
+  product_name: z.string(),
+  product_image_url: z.string().nullish(),
+  quantity: z.number(),
+})
+export type OrderProduct = z.infer<typeof OrderProductSchema>
+
 export const OrderDetailSchema = OrderSchema.extend({
   line_items: OrderLineItemSchema.array().nullish(),
+  products: OrderProductSchema.array().nullish(),
 })
 export type OrderDetail = z.infer<typeof OrderDetailSchema>
 
