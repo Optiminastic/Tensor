@@ -6,7 +6,12 @@ import { useEffect, useMemo, useState, type JSX } from 'react'
 import type * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 
-import { fitScaleFor, PrintBedPlate } from '@/components/production/print-bed-plate'
+import {
+  BED_DEPTH_MM,
+  BED_WIDTH_MM,
+  fitScaleFor,
+  PrintBedPlate,
+} from '@/components/production/print-bed-plate'
 
 interface BatchPlateViewerProps {
   modelUrl: string
@@ -74,7 +79,15 @@ export function BatchPlateViewer({ modelUrl }: BatchPlateViewerProps): JSX.Eleme
         <mesh geometry={geometry} scale={fitScale}>
           <meshStandardMaterial color="#9aa4b2" flatShading roughness={0.72} metalness={0} />
         </mesh>
-        <PrintBedPlate />
+        {/* bedpack.Pack places every part with (0,0) at one bed corner,
+            extending to (BED_WIDTH_MM, BED_DEPTH_MM) - but PrintBedPlate's
+            own geometry is centred on the origin. Shift it by half the bed
+            size so its corner lands at world (0,0) too, matching where the
+            merged parts actually are instead of leaving them floating over
+            one quadrant of a mis-aligned plate. */}
+        <group position={[BED_WIDTH_MM / 2, BED_DEPTH_MM / 2, 0]}>
+          <PrintBedPlate />
+        </group>
       </Bounds>
       <OrbitControls makeDefault enableDamping target={[0, 0, 10]} />
     </Canvas>

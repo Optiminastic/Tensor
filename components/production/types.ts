@@ -2,6 +2,7 @@ export type JobStatus = 'completed' | 'failed' | 'printing' | 'queued'
 
 export interface ProductionJob {
   id: string
+  jobNumber: string
   designName: string
   machine: string
   startedAt: string
@@ -31,6 +32,7 @@ export type PackagingStatus = 'pending' | 'packed'
 
 export interface ProductionJobQueueItem {
   id: string
+  jobNumber: string
   description: string
   qty: number
   status: QueueStatus
@@ -121,6 +123,9 @@ export interface BatchRecord {
   packingStrategy: string | null
   jobsCount: number | null
   createdAt: string
+  // Derived from bedUtilizationPercent against the nominal bed area.
+  occupiedAreaMm2: number | null
+  freeAreaMm2: number | null
   // The merged plate's overall combined size (only populated on the
   // single-batch detail fetch - see toBatchRecord).
   plateBboxXMm: number | null

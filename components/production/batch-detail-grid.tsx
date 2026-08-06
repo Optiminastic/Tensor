@@ -44,6 +44,18 @@ export function BatchDetailGrid({ batch }: BatchDetailGridProps): JSX.Element {
         }
         mono
       />
+      <DetailField
+        label="Occupied area"
+        value={
+          batch.occupiedAreaMm2 !== null ? `${(batch.occupiedAreaMm2 / 100).toFixed(0)} cm²` : '—'
+        }
+        mono
+      />
+      <DetailField
+        label="Free area"
+        value={batch.freeAreaMm2 !== null ? `${(batch.freeAreaMm2 / 100).toFixed(0)} cm²` : '—'}
+        mono
+      />
       <DetailField label="Packing strategy" value={batch.packingStrategy ?? '—'} mono />
       <DetailField
         label="Filament shortage"

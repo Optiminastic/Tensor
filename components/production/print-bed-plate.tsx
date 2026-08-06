@@ -79,6 +79,24 @@ export function fitScaleFor(
   return Math.min((bedWidthMm * MARGIN) / width, (bedDepthMm * MARGIN) / depth, 1)
 }
 
+// centerOnPlate mutates a geometry in place so its XY footprint is centred
+// on the origin (matching PrintBedPlate's own centred convention) and its
+// bottom face sits at z=0 - correcting for STL files whose own local
+// coordinate origin has nothing to do with where the part should sit on the
+// bed (e.g. exported from arbitrary CAD/studio space, not bed-placed).
+// Only meaningful for a single standalone part - a batch's merged plate
+// already carries deliberate bedpack placements between parts that must
+// never be individually recentred (see batch-plate-viewer.tsx's separate
+// corner-alignment fix instead).
+export function centerOnPlate(geometry: THREE.BufferGeometry): void {
+  geometry.computeBoundingBox()
+  const box = geometry.boundingBox
+  if (!box) return
+  const centerX = (box.min.x + box.max.x) / 2
+  const centerY = (box.min.y + box.max.y) / 2
+  geometry.translate(-centerX, -centerY, -box.min.z)
+}
+
 // buildPlateGeometry draws a rounded rectangle in the XY plane (this scene's
 // bed plane), then extrudes it downward so the top face sits exactly at
 // z=0 - the same plane every model's bottom already rests on.

@@ -39,7 +39,7 @@ export function RecentJobsTable({ jobs }: RecentJobsTableProps): JSX.Element {
             const status = JOB_STATUS_CONFIG[job.status]
             return (
               <TableRow key={job.id}>
-                <TableCell className="font-mono tabular-nums">{job.id}</TableCell>
+                <TableCell className="font-mono tabular-nums">{job.jobNumber}</TableCell>
                 <TableCell>{job.designName}</TableCell>
                 <TableCell className="text-muted-foreground">{job.machine}</TableCell>
                 <TableCell className="text-muted-foreground">{job.startedAt}</TableCell>

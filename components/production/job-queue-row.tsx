@@ -14,8 +14,11 @@ import {
 import { TonePill } from '@/components/production/tone-pill'
 import type { ProductionJobQueueItem } from '@/components/production/types'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { TableCell, TableRow } from '@/components/ui/table'
+
+// Matches internal/production/planner.go's urgentPriority - priority 1 (or
+// lower) is the same-day/urgent tier the batch optimizer places first.
+const URGENT_PRIORITY = 1
 
 interface JobQueueRowProps {
   brand: string
@@ -63,7 +66,7 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
       className="cursor-pointer"
       aria-label={`Open ${job.id}`}
     >
-      <TableCell className="font-mono text-sm">{job.id}</TableCell>
+      <TableCell className="font-mono text-sm">{job.jobNumber}</TableCell>
       <TableCell>{job.description}</TableCell>
       <TableCell numeric>{job.qty}</TableCell>
       <TableCell>
@@ -78,15 +81,15 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
       <TableCell>
         <TonePill {...PACKAGING_STATUS_CONFIG[job.packaging]} />
       </TableCell>
-      <TableCell>
-        <Input
-          type="number"
-          defaultValue={job.priority}
-          readOnly
-          data-numeric="true"
-          className="h-8 w-16 text-center"
-          onClick={stopRowClick}
-        />
+      <TableCell numeric>
+        <span className="inline-flex items-center justify-end gap-1">
+          {job.priority <= URGENT_PRIORITY ? (
+            <span className="text-danger" title="Urgent (same-day)" aria-hidden>
+              !
+            </span>
+          ) : null}
+          {job.priority}
+        </span>
       </TableCell>
       <TableCell className="text-muted-foreground">{job.createdAt}</TableCell>
       <TableCell className="text-right">

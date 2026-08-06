@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, type JSX } from 'react'
 import type * as THREE from 'three'
 
 import { parseModel } from '@/components/designs/model-viewer'
-import { fitScaleFor, PrintBedPlate } from '@/components/production/print-bed-plate'
+import { centerOnPlate, fitScaleFor, PrintBedPlate } from '@/components/production/print-bed-plate'
 
 interface JobModelViewerProps {
   modelUrl: string
@@ -34,6 +34,7 @@ export function JobModelViewer({ modelUrl }: JobModelViewerProps): JSX.Element {
       })
       .then(buf => {
         const geo = parseModel(buf)
+        centerOnPlate(geo)
         geo.computeVertexNormals()
         if (cancelled) {
           geo.dispose()

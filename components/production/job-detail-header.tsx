@@ -23,7 +23,7 @@ export function JobDetailHeader({ job }: JobDetailHeaderProps): JSX.Element {
     <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-2">
-          <span className="text-foreground text-base font-semibold">{job.id}</span>
+          <span className="text-foreground text-base font-semibold">{job.jobNumber}</span>
           <TonePill label={status.label} tone={status.tone} />
         </div>
         <p className="text-muted-foreground text-xs">Created {job.createdAt}</p>

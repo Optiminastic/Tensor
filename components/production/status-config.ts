@@ -36,9 +36,9 @@ export const PERSONALISATION_STATUS_CONFIG: Record<
   PersonalisationStatus,
   { label: string; tone: PillTone }
 > = {
-  not_required: { label: 'Not Required', tone: 'muted' },
-  required: { label: 'Required', tone: 'warning' },
-  completed: { label: 'Completed', tone: 'success' },
+  not_required: { label: 'None', tone: 'muted' },
+  required: { label: 'Pending', tone: 'warning' },
+  completed: { label: 'Verified', tone: 'success' },
 }
 
 export const QC_STATUS_CONFIG: Record<QcStatus, { label: string; tone: PillTone }> = {
