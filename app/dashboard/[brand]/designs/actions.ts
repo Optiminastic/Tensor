@@ -11,6 +11,8 @@ import {
   type DesignReview,
   type DesignSpecs,
   type DesignTimelineEntry,
+  type PersonalisationEstimate,
+  type PersonalisationRules,
   type PublishResult,
   DesignSkuInputSchema,
   DesignSpecsSchema,
@@ -20,14 +22,17 @@ import {
 import type { Machine } from '@/lib/validators/machines'
 import {
   DesignServiceError,
+  type EstimatePersonalisationInput,
   approveDesign as approveRequest,
   commentOnDesign as commentRequest,
   createDesign,
+  estimatePersonalisation as estimateRequest,
   getDesign,
   listDesignReviews as listReviewsRequest,
   publishToShopify,
   rejectDesign as rejectRequest,
   resubmitDesign as resubmitRequest,
+  setDesignPersonalisationRules as setRulesRequest,
   setDesignSku as setSkuRequest,
   submitDesign as submitRequest,
 } from '@/services/designs.service'
@@ -329,6 +334,41 @@ export async function setDesignSkuForBrand(
     const design = await setSkuRequest(token, id, parsed.data.sku)
     revalidatePath(`/dashboard/${brand}/designs/${id}`)
     return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// setDesignPersonalisationRulesForBrand stores what personalization a product
+// offers (null clears it). Guarded by shopify:publish in the backend.
+export async function setDesignPersonalisationRulesForBrand(
+  brand: string,
+  id: string,
+  rules: PersonalisationRules | null,
+): Promise<ActionResult<Design>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const design = await setRulesRequest(token, id, rules)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// estimateDesignPersonalisation returns a fast pre-slice estimate of a name's
+// added grams/time/cost. Read-only - no revalidation, safe to call as the user
+// types (debounced by the caller).
+export async function estimateDesignPersonalisation(
+  id: string,
+  input: EstimatePersonalisationInput,
+): Promise<ActionResult<PersonalisationEstimate>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const data = await estimateRequest(token, id, input)
+    return { ok: true, data }
   } catch (err) {
     return { ok: false, error: describe(err) }
   }

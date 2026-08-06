@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { type DesignDetail, type DesignSpecs, DesignSpecsSchema } from '@/lib/validators/designs'
 
 import { DesignDetailTabs } from './design-detail-tabs'
+import { DesignPersonalisationDialog } from './design-personalisation-dialog'
 import { type ReviewCaps, DesignReviewActions } from './design-review-actions'
 import { DesignSkuDialog } from './design-sku-dialog'
 import { DesignStatusBadge } from './design-status-badge'
@@ -114,6 +115,14 @@ export function DesignDetailView({
               brand={brand}
               designId={design.id}
               currentSku={design.sku ?? null}
+              onSaved={() => void refetch()}
+            />
+          ) : null}
+          {canManageSku ? (
+            <DesignPersonalisationDialog
+              brand={brand}
+              designId={design.id}
+              rules={design.personalisation_rules ?? null}
               onSaved={() => void refetch()}
             />
           ) : null}

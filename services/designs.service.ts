@@ -6,12 +6,15 @@ import {
   type DesignDetail,
   type DesignReview,
   type DesignSpecs,
+  type PersonalisationEstimate,
+  type PersonalisationRules,
   type PublishInput,
   type PublishResult,
   type ResubmitInput,
   DesignDetailSchema,
   DesignReviewSchema,
   DesignSchema,
+  PersonalisationEstimateSchema,
   PublishResultSchema,
 } from '@/lib/validators/designs'
 
@@ -33,12 +36,13 @@ const UPLOAD_TIMEOUT_MS = 5 * 60_000
 // A design's streamable files: the original uploaded model, the G-code archive
 // from its latest slice, the cover preview image, and the extracted plate G-code
 // text the layer preview renders from.
-export type DesignFileKind = 'model' | 'gcode' | 'preview' | 'plate'
+export type DesignFileKind = 'model' | 'model-lite' | 'gcode' | 'preview' | 'plate'
 
 // Frontend kind -> Tensor-Core sub-path. Most map one-to-one; the layer preview
 // reads the plate G-code text served at the nested /gcode/plate route.
 const KIND_PATHS: Record<DesignFileKind, string> = {
   model: 'model',
+  'model-lite': 'model-lite',
   gcode: 'gcode',
   preview: 'preview',
   plate: 'gcode/plate',
@@ -237,6 +241,40 @@ export async function setDesignSku(token: string, id: string, sku: string): Prom
     `/designs/${encodeURIComponent(id)}/sku`,
     { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ sku }) },
     data => DesignSchema.parse(data),
+  )
+}
+
+// Stores what personalization a product offers (null clears it). The backend
+// validates the rule shape.
+export async function setDesignPersonalisationRules(
+  token: string,
+  id: string,
+  rules: PersonalisationRules | null,
+): Promise<Design> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/personalisation-rules`,
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ rules }) },
+    data => DesignSchema.parse(data),
+  )
+}
+
+export interface EstimatePersonalisationInput {
+  text: string
+  height_mm?: number
+  depth_mm?: number
+}
+
+// Fast pre-slice estimate of what a name adds to a product (grams, time, cost).
+// Read-only on the backend; the authoritative numbers come from the slice.
+export async function estimatePersonalisation(
+  token: string,
+  id: string,
+  input: EstimatePersonalisationInput,
+): Promise<PersonalisationEstimate> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/personalisation-estimate`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => PersonalisationEstimateSchema.parse(data),
   )
 }
 

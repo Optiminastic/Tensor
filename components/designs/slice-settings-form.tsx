@@ -1,7 +1,6 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import Link from 'next/link'
 import { useEffect, useState, type JSX } from 'react'
 import { type FieldError, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
@@ -161,14 +160,7 @@ export function SliceSettingsForm({
             ) : (
               <div className="sm:col-span-3">
                 <p className="text-muted-foreground text-sm">
-                  No machines configured yet.{' '}
-                  <Link
-                    href="/dashboard/machines"
-                    className="text-accent underline-offset-2 hover:underline"
-                  >
-                    Add one in Machine Settings
-                  </Link>{' '}
-                  to slice on a specific printer. Until then this uses the default profile.
+                  No machines configured yet. This design will slice on the default profile.
                 </p>
               </div>
             )}

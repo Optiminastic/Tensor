@@ -1,7 +1,6 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type ChangeEvent, type JSX } from 'react'
 import { type FieldError, useForm } from 'react-hook-form'
@@ -234,14 +233,7 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
         ) : (
           <div className="sm:col-span-2">
             <p className="text-muted-foreground text-sm">
-              No machines configured yet.{' '}
-              <Link
-                href="/dashboard/machines"
-                className="text-accent underline-offset-2 hover:underline"
-              >
-                Add one in Machine Settings
-              </Link>{' '}
-              to slice on a specific printer. Until then this uses the default profile.
+              No machines configured yet. This design will slice on the default profile.
             </p>
           </div>
         )}

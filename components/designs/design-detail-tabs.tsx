@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import type { DesignDetail, DesignSpecs } from '@/lib/validators/designs'
 
+import { DesignMachineCard } from './design-machine-card'
 import { DesignMetricsPanel } from './design-metrics'
 import { DesignModelPreview } from './design-model-preview'
 import { DesignOrientation } from './design-orientation'
@@ -77,18 +78,22 @@ interface OverviewPanelProps {
 }
 
 function OverviewPanel({ design, onSeePricing }: OverviewPanelProps): JSX.Element {
-  if (!design.metrics && !design.pricing) {
-    return <EmptyPanel message="Nothing to show yet - this design has not been costed." />
-  }
   return (
     <>
-      {design.pricing ? (
-        <DesignOverview pricing={design.pricing} onSeePricing={onSeePricing} />
-      ) : null}
-      {design.metrics ? <DesignMetricsPanel metrics={design.metrics} /> : null}
-      {design.metrics?.orientation ? (
-        <DesignOrientation orientation={design.metrics.orientation} />
-      ) : null}
+      <DesignMachineCard machine={design.machine ?? null} />
+      {!design.metrics && !design.pricing ? (
+        <EmptyPanel message="Nothing to show yet - this design has not been costed." />
+      ) : (
+        <>
+          {design.pricing ? (
+            <DesignOverview pricing={design.pricing} onSeePricing={onSeePricing} />
+          ) : null}
+          {design.metrics ? <DesignMetricsPanel metrics={design.metrics} /> : null}
+          {design.metrics?.orientation ? (
+            <DesignOrientation orientation={design.metrics.orientation} />
+          ) : null}
+        </>
+      )}
     </>
   )
 }

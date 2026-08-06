@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { MachineSchema } from '@/lib/validators/machines'
+
 // The slice answers. Materials/qualities must match a worker H2S profile; the
 // backend re-validates these, so the frontend list is UX, not the constraint.
 export const MaterialSchema = z.enum(['PLA', 'PETG', 'ABS'])
@@ -64,6 +66,41 @@ export const DesignSkuInputSchema = z.object({
     }),
 })
 export type DesignSkuInput = z.infer<typeof DesignSkuInputSchema>
+
+// What personalization a product offers. Mirrors the backend jsonb rule set;
+// every field is defaulted so a partial/absent blob still parses.
+const PersonalisationEnumRuleSchema = z.object({
+  required: z.boolean().default(false),
+  allowed: z.string().array().default([]),
+})
+export const PersonalisationRulesSchema = z.object({
+  enabled: z.boolean().default(false),
+  name: z
+    .object({
+      required: z.boolean().default(false),
+      min_length: z.number().int().default(0),
+      max_length: z.number().int().default(0),
+    })
+    .default({}),
+  font: PersonalisationEnumRuleSchema.default({}),
+  colour: PersonalisationEnumRuleSchema.default({}),
+  variant: PersonalisationEnumRuleSchema.default({}),
+  photo: z.object({ required: z.boolean().default(false) }).default({}),
+  approval: z.object({ required: z.boolean().default(false) }).default({}),
+  zone: z.object({ width_mm: z.number(), height_mm: z.number() }).nullish(),
+})
+export type PersonalisationRules = z.infer<typeof PersonalisationRulesSchema>
+
+// The fast pre-slice estimate returned by /designs/:id/personalisation-estimate.
+export const PersonalisationEstimateSchema = z.object({
+  source: z.string(),
+  added_grams: z.number(),
+  added_time_minutes: z.number(),
+  base_design_cp: z.number(),
+  estimated_design_cp: z.number(),
+  added_design_cp: z.number(),
+})
+export type PersonalisationEstimate = z.infer<typeof PersonalisationEstimateSchema>
 
 export const DesignLifecycleSchema = z.enum([
   'queued',
@@ -208,6 +245,11 @@ export const DesignDetailSchema = DesignSchema.extend({
   metrics: DesignMetricsSchema.nullable(),
   pricing: DesignPricingSchema.nullable(),
   shopify: ShopifyProductSchema.nullable(),
+  // The machine profile this design slices on. null = the built-in default
+  // profile. nullish so a backend that predates the field still parses.
+  machine: MachineSchema.nullish(),
+  // What personalization this product offers. null = not personalizable.
+  personalisation_rules: PersonalisationRulesSchema.nullish(),
 })
 export type DesignDetail = z.infer<typeof DesignDetailSchema>
 

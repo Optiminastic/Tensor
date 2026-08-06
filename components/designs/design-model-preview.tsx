@@ -4,14 +4,15 @@ import { Maximize2, Minimize2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useRef, useState, type JSX, type ReactNode } from 'react'
 
+import { estimateDesignPersonalisation } from '@/app/dashboard/[brand]/designs/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { Orientation } from '@/lib/validators/designs'
+import type { Orientation, PersonalisationEstimate } from '@/lib/validators/designs'
 
 import { CutControls, useCut } from './cut-controls'
 import { LayerStage } from './design-layer-preview'
-import type { OrientationMeasure, RotateAxis } from './model-viewer'
+import type { LoadTiming, OrientationMeasure, RotateAxis } from './model-viewer'
 
 type PreviewMode = 'model' | 'layers'
 
@@ -21,7 +22,7 @@ const ModelViewer = dynamic(() => import('./model-viewer').then(m => m.ModelView
   ssr: false,
   loading: () => (
     <div className="text-muted-foreground flex h-full w-full items-center justify-center text-sm">
-      Loading 3D preview…
+      Loading viewer…
     </div>
   ),
 })
@@ -55,6 +56,40 @@ export function DesignModelPreview({
   const { clip, controls } = useCut()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [mode, setMode] = useState<PreviewMode>('model')
+  // Live name preview: the customer types a name and sees it on the model. Visual
+  // only - it never affects the slice or cost (see PersonalisationText).
+  const [nameText, setNameText] = useState('')
+  const [nameSize, setNameSize] = useState(10)
+  const [nameOffsetX, setNameOffsetX] = useState(0)
+  const [nameOffsetY, setNameOffsetY] = useState(0)
+  // The committed name, applied explicitly via the Apply button. Nothing hits the
+  // server while typing; the 3D text and the cost estimate update only on Apply,
+  // so typing "arkit" makes zero requests until you click.
+  const [appliedName, setAppliedName] = useState('')
+  const [estimate, setEstimate] = useState<PersonalisationEstimate | null>(null)
+
+  const personalisation =
+    appliedName === ''
+      ? null
+      : {
+          text: appliedName,
+          sizeMM: nameSize,
+          colour: '#1f2937',
+          offsetXMM: nameOffsetX,
+          offsetYMM: nameOffsetY,
+        }
+
+  const applyPersonalisation = useCallback(() => {
+    const name = nameText.trim()
+    setAppliedName(name)
+    if (name === '') {
+      setEstimate(null)
+      return
+    }
+    void estimateDesignPersonalisation(designId, { text: name, height_mm: nameSize }).then(res => {
+      setEstimate(res.ok && res.data ? res.data : null)
+    })
+  }, [nameText, nameSize, designId])
   // Layers mode is offered whenever a slice exists, inline and in the detailed view.
   const showLayers = hasSlice && mode === 'layers'
   // The element promoted to full screen: the whole stage (controls + viewer), so
@@ -68,6 +103,8 @@ export function DesignModelPreview({
   }, [])
   const reset = useCallback(() => setBaseReset('uploaded'), [setBaseReset])
   const handleMeasure = useCallback((m: OrientationMeasure) => setMeasure(m), [])
+  const [loadTiming, setLoadTiming] = useState<LoadTiming | null>(null)
+  const handleTiming = useCallback((t: LoadTiming) => setLoadTiming(t), [])
 
   useEffect(() => {
     function onChange(): void {
@@ -152,12 +189,14 @@ export function DesignModelPreview({
                 )}
               >
                 <ModelViewer
-                  modelUrl={`/api/designs/${designId}/model`}
+                  modelUrl={`/api/designs/${designId}/model-lite`}
                   orientation={orientation}
                   base={base}
                   steps={steps}
                   onMeasure={handleMeasure}
                   clip={clip}
+                  personalisation={personalisation}
+                  onTiming={handleTiming}
                 />
               </div>
 
@@ -183,10 +222,68 @@ export function DesignModelPreview({
                 ) : null}
               </div>
 
+              <div className="border-border flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3">
+                <span className="text-muted-foreground text-xs font-medium">Personalize</span>
+                <input
+                  value={nameText}
+                  onChange={e => setNameText(e.target.value.slice(0, 24))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') applyPersonalisation()
+                  }}
+                  placeholder="Type a name"
+                  aria-label="Personalisation name"
+                  className="border-border bg-surface text-foreground focus-visible:ring-ring rounded-md border px-2.5 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                />
+                <Button size="sm" onClick={applyPersonalisation}>
+                  Apply
+                </Button>
+                <label className="flex items-center gap-1.5 text-xs">
+                  <span className="text-muted-foreground">Size</span>
+                  <input
+                    type="range"
+                    min={3}
+                    max={40}
+                    step={1}
+                    value={nameSize}
+                    onChange={e => setNameSize(Number(e.target.value))}
+                    aria-label="Text size"
+                  />
+                  <span className="font-mono tabular-nums">{nameSize}mm</span>
+                </label>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground text-xs">Move</span>
+                  <RotateButton onClick={() => setNameOffsetX(x => x - 2)}>←</RotateButton>
+                  <RotateButton onClick={() => setNameOffsetX(x => x + 2)}>→</RotateButton>
+                  <RotateButton onClick={() => setNameOffsetY(y => y + 2)}>↑</RotateButton>
+                  <RotateButton onClick={() => setNameOffsetY(y => y - 2)}>↓</RotateButton>
+                  <RotateButton
+                    onClick={() => {
+                      setNameOffsetX(0)
+                      setNameOffsetY(0)
+                    }}
+                  >
+                    Center
+                  </RotateButton>
+                </div>
+                {estimate ? (
+                  <span className="text-muted-foreground ml-auto font-mono text-xs tabular-nums">
+                    +{estimate.added_grams}g · +{estimate.added_time_minutes}min · +₹
+                    {estimate.added_design_cp} <span className="text-subtle-foreground">est.</span>
+                  </span>
+                ) : null}
+              </div>
+
               <p className="text-subtle-foreground text-xs">
                 Amber faces need support in the shown orientation. Rotate to explore; drag to orbit,
-                scroll to zoom.
+                scroll to zoom. The name preview is visual only.
               </p>
+              {loadTiming ? (
+                <p className="text-subtle-foreground font-mono text-xs tabular-nums">
+                  Preview loaded: model {(loadTiming.bytes / 1_048_576).toFixed(1)} MB · downloaded{' '}
+                  {Math.round(loadTiming.downloadMs)} ms · built {Math.round(loadTiming.buildMs)} ms
+                  · total {((loadTiming.downloadMs + loadTiming.buildMs) / 1000).toFixed(1)} s
+                </p>
+              ) : null}
             </>
           )}
         </div>

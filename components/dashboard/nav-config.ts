@@ -1,7 +1,6 @@
 import {
   Box,
   Coins,
-  Cpu,
   Factory,
   LayoutDashboard,
   type LucideIcon,
@@ -40,7 +39,7 @@ export interface WorkspaceSection {
 
 // Static dashboard routes that must never be treated as a brand slug (Next
 // resolves these before the dynamic [brand] segment).
-export const RESERVED_SEGMENTS = ['users', 'settings', 'brands', 'projects', 'machines']
+export const RESERVED_SEGMENTS = ['users', 'settings', 'brands', 'projects']
 
 export const PRIMARY_SECTIONS: PrimarySection[] = [
   { label: 'Overview', icon: LayoutDashboard, segment: '', description: 'This brand at a glance.' },
@@ -118,12 +117,6 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
 ]
 
 export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
-  {
-    label: 'Machines',
-    icon: Cpu,
-    href: '/dashboard/machines',
-    description: 'Configure each machine and its slicing profile.',
-  },
   {
     label: 'Team',
     icon: Users,
