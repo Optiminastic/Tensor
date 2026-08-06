@@ -191,6 +191,47 @@ export async function fetchDesignFile(
   return response
 }
 
+/**
+ * Streams the personalized preview model - the design's model with the customer's
+ * name rendered as real embossed geometry (backend OpenSCAD). `search` is the raw
+ * query string (text, size_mm, depth_mm, offset_*_mm), forwarded verbatim. Like
+ * fetchDesignFile it returns the raw Response so the route handler can pipe bytes.
+ */
+export async function fetchPersonalisePreview(
+  token: string,
+  id: string,
+  search: string,
+): Promise<Response> {
+  let response: Response
+  try {
+    response = await fetch(
+      `${env.TENSOR_CORE_URL}/designs/${encodeURIComponent(id)}/personalise-preview${search}`,
+      {
+        headers: authHeader(token),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
+      },
+    )
+  } catch (error) {
+    log.error({ id, err: error }, 'Tensor-Core is unreachable')
+    throw new DesignServiceError('Tensor-Core is unreachable. Is the backend running?')
+  }
+
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((body: { detail?: string }) => body.detail)
+      .catch(() => undefined)
+    log.warn(
+      { id, status: response.status, detail },
+      'Tensor-Core rejected the personalise preview',
+    )
+    throw new DesignServiceError(detail ?? `Request failed (${response.status})`)
+  }
+
+  return response
+}
+
 export interface PublishToShopifyParams {
   id: string
   input: PublishInput

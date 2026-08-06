@@ -3,7 +3,7 @@
 import { Bounds, Grid, OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { Suspense, useEffect, useMemo, useRef, type JSX } from 'react'
+import { useEffect, useMemo, useRef, type JSX } from 'react'
 import * as THREE from 'three'
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
@@ -12,7 +12,6 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Orientation } from '@/lib/validators/designs'
 
 import { type ClipState, ClipController, buildClipPlane } from './clip-plane'
-import { type PersonalisationPreview, PersonalisationText } from './personalisation-text'
 
 // Above this triangle count a model is simplified for the preview so it stays
 // interactive (a 24 MB STL is ~480k triangles; parsing/painting that on the main
@@ -44,8 +43,6 @@ interface ModelViewerProps {
   steps: RotateAxis[]
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
-  // A live name preview laid on the model. null = no personalisation shown.
-  personalisation: PersonalisationPreview | null
   // Reports how long the model took to fetch and build (parse + decimate).
   onTiming?: (t: LoadTiming) => void
 }
@@ -111,7 +108,6 @@ export function ModelViewer({
   steps,
   onMeasure,
   clip,
-  personalisation,
   onTiming,
 }: ModelViewerProps): JSX.Element {
   const { data, isError } = useModelGeometry(modelUrl)
@@ -152,13 +148,7 @@ export function ModelViewer({
       <directionalLight position={[60, -40, 90]} intensity={1.1} />
       <directionalLight position={[-50, 50, 40]} intensity={0.4} />
       <Bounds fit clip observe margin={1.4}>
-        <ModelMesh
-          geometry={geometry}
-          quaternion={quaternion}
-          onMeasure={onMeasure}
-          clip={clip}
-          personalisation={personalisation}
-        />
+        <ModelMesh geometry={geometry} quaternion={quaternion} onMeasure={onMeasure} clip={clip} />
       </Bounds>
       <Grid
         args={[600, 600]}
@@ -183,16 +173,9 @@ interface ModelMeshProps {
   quaternion: THREE.Quaternion
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
-  personalisation: PersonalisationPreview | null
 }
 
-function ModelMesh({
-  geometry,
-  quaternion,
-  onMeasure,
-  clip,
-  personalisation,
-}: ModelMeshProps): JSX.Element {
+function ModelMesh({ geometry, quaternion, onMeasure, clip }: ModelMeshProps): JSX.Element {
   const meshRef = useRef<THREE.Mesh>(null)
   const worldPlane = useMemo(() => new THREE.Plane(), [])
 
@@ -236,15 +219,6 @@ function ModelMesh({
       </mesh>
       {clip && localPlane ? (
         <ClipController target={meshRef} worldPlane={worldPlane} localPlane={localPlane} />
-      ) : null}
-      {personalisation ? (
-        // Its own boundary: drei <Text> suspends while troika loads the font, and
-        // without this the suspension bubbles to the dynamic-import fallback and
-        // blanks the whole viewer. fallback={null} keeps the model on screen; the
-        // name simply appears once the font is ready.
-        <Suspense fallback={null}>
-          <PersonalisationText config={personalisation} boxMin={boxMin} boxMax={boxMax} />
-        </Suspense>
       ) : null}
     </>
   )
