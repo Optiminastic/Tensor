@@ -3,7 +3,7 @@
 import { Bounds, Grid, OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, type JSX } from 'react'
+import { Suspense, useEffect, useMemo, useRef, type JSX } from 'react'
 import * as THREE from 'three'
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
@@ -238,7 +238,13 @@ function ModelMesh({
         <ClipController target={meshRef} worldPlane={worldPlane} localPlane={localPlane} />
       ) : null}
       {personalisation ? (
-        <PersonalisationText config={personalisation} boxMin={boxMin} boxMax={boxMax} />
+        // Its own boundary: drei <Text> suspends while troika loads the font, and
+        // without this the suspension bubbles to the dynamic-import fallback and
+        // blanks the whole viewer. fallback={null} keeps the model on screen; the
+        // name simply appears once the font is ready.
+        <Suspense fallback={null}>
+          <PersonalisationText config={personalisation} boxMin={boxMin} boxMax={boxMax} />
+        </Suspense>
       ) : null}
     </>
   )
