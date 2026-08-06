@@ -84,7 +84,11 @@ function useModelGeometry(modelUrl: string): UseQueryResult<ModelData> {
     },
     staleTime: Infinity,
     gcTime: 10 * 60_000,
-    retry: false,
+    // A couple of retries so a transient blip (a dev hot-reload aborting the
+    // in-flight fetch, a backend still warming up) self-heals instead of leaving
+    // the viewer stuck on "unavailable" until the component remounts.
+    retry: 2,
+    retryDelay: attempt => Math.min(1000 * 2 ** attempt, 4000),
   })
 }
 
