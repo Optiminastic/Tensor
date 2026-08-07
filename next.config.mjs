@@ -62,6 +62,16 @@ const nextConfig = {
   allowedDevOrigins: devOrigins,
   reactStrictMode: true,
   poweredByHeader: false,
+  // Next's own type-checker runs in a jest-worker child process to isolate
+  // the TS compiler's heap - on this machine (Node 24 + Next 16 + Windows)
+  // that worker reliably crashes with STATUS_STACK_OVERFLOW, surfacing as a
+  // "Jest worker encountered N child process exceptions" dev-overlay error
+  // that has nothing to do with the page being viewed. `pnpm type-check`
+  // (tsc --noEmit, run separately - see package.json's build script and
+  // CLAUDE.md) is the actual type-safety gate, so this isn't a coverage gap.
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   // STL/3MF/STEP uploads flow through the design upload server action, so its
   // body limit must clear the backend's 60 MB model + 10 MB preview caps (default
   // is 1 MB). Headroom covers multipart encoding overhead.
