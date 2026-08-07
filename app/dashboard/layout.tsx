@@ -5,6 +5,7 @@ import type { JSX, ReactNode } from 'react'
 import type { BrandOption } from '@/components/dashboard/brand-switcher'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { auth } from '@/lib/auth'
+import { can, currentAuthz } from '@/lib/authz'
 import { listBrands } from '@/services/brands.service'
 
 export const dynamic = 'force-dynamic'
@@ -39,9 +40,18 @@ export default async function DashboardLayout({
     (lastBrand && brands.some(brand => brand.slug === lastBrand) ? lastBrand : brands[0]?.slug) ??
     null
 
+  const authz = await currentAuthz()
+  const canManageBrands = can(authz, 'brand:manage')
+
   return (
     <div className="flex min-h-dvh">
-      <Sidebar email={session.user.email} brands={brands} fallbackBrand={fallbackBrand} />
+      <Sidebar
+        email={session.user.email}
+        brands={brands}
+        fallbackBrand={fallbackBrand}
+        canManageBrands={canManageBrands}
+        permissions={authz.permissions}
+      />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   )

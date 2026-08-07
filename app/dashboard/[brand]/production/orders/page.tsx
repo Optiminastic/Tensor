@@ -6,6 +6,7 @@ import { OrdersLiveToggle } from '@/components/production/orders-live-toggle'
 import { OrdersTable } from '@/components/production/orders-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { OrderRecord } from '@/components/production/types'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import { ProductionServiceError, listOrders } from '@/services/production.service'
 
@@ -21,6 +22,7 @@ export default async function ProductionOrdersPage({
   searchParams,
 }: ProductionOrdersPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('order:read', `/dashboard/${brand}`)
   const live = (await searchParams).live === '1'
 
   let orders: OrderRecord[] = []

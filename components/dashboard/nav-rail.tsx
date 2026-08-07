@@ -7,10 +7,11 @@ import type { JSX } from 'react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
-import { PRIMARY_SECTIONS, primarySegment, WORKSPACE_SECTIONS } from './nav-config'
+import { primarySegment, visiblePrimarySections, visibleWorkspaceSections } from './nav-config'
 
 interface NavRailProps {
   base: string
+  permissions: string[]
 }
 
 function railClass(active: boolean): string {
@@ -27,9 +28,11 @@ function railClass(active: boolean): string {
  * Selecting an area navigates to it; the panel (column 2) then shows its
  * sub-items. Workspace areas sit at the foot.
  */
-export function NavRail({ base }: NavRailProps): JSX.Element {
+export function NavRail({ base, permissions }: NavRailProps): JSX.Element {
   const pathname = usePathname()
   const segment = primarySegment(pathname)
+  const primary = visiblePrimarySections(permissions)
+  const workspace = visibleWorkspaceSections(permissions)
 
   return (
     <aside className="border-border bg-surface sticky top-0 hidden h-dvh w-16 shrink-0 flex-col items-center gap-1 border-r py-3 lg:flex">
@@ -41,7 +44,7 @@ export function NavRail({ base }: NavRailProps): JSX.Element {
         <Logo showWordmark={false} markClassName="h-6" />
       </Link>
 
-      {PRIMARY_SECTIONS.map(section => {
+      {primary.map(section => {
         const Icon = section.icon
         const href = section.segment ? `${base}/${section.segment}` : base
         const active = segment !== null && segment === section.segment
@@ -60,7 +63,7 @@ export function NavRail({ base }: NavRailProps): JSX.Element {
 
       <div className="flex-1" />
 
-      {WORKSPACE_SECTIONS.map(section => {
+      {workspace.map(section => {
         const Icon = section.icon
         const active = pathname === section.href || pathname.startsWith(`${section.href}/`)
         return (

@@ -60,7 +60,15 @@ const KIND_PATHS: Record<DesignFileKind, string> = {
  */
 export class DesignServiceError extends Error {}
 
-async function call<T>(path: string, init: RequestInit, parse: (data: unknown) => T): Promise<T> {
+// Downloadable files stream through this process; re-exported so the personalise
+// service (split out to keep this file focused) shares the same ceiling.
+export { FILE_TIMEOUT_MS }
+
+export async function call<T>(
+  path: string,
+  init: RequestInit,
+  parse: (data: unknown) => T,
+): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
@@ -88,11 +96,11 @@ async function call<T>(path: string, init: RequestInit, parse: (data: unknown) =
   return parse(await response.json())
 }
 
-function authHeader(token: string): HeadersInit {
+export function authHeader(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' }
 }
 
-function jsonHeaders(token: string): HeadersInit {
+export function jsonHeaders(token: string): HeadersInit {
   return { ...authHeader(token), 'Content-Type': 'application/json' }
 }
 
@@ -288,6 +296,16 @@ export async function publishToShopify(
     `/designs/${encodeURIComponent(id)}/publish-shopify`,
     { method: 'POST', headers: authHeader(token), body: form },
     data => PublishResultSchema.parse(data),
+  )
+}
+
+// Permanently deletes a design and its child records (backend cascades). The
+// backend enforces design:delete + brand access.
+export async function deleteDesign(token: string, id: string): Promise<void> {
+  await call(
+    `/designs/${encodeURIComponent(id)}`,
+    { method: 'DELETE', headers: authHeader(token) },
+    () => undefined,
   )
 }
 

@@ -9,11 +9,17 @@ import type { DesignOptimization, PersonalisationEstimate } from '@/lib/validato
 
 import { CutControls, type CutControlsState } from './cut-controls'
 import type { OrientationMeasure, RotateAxis } from './model-viewer'
+import type { GizmoMode } from './personalisation-text'
 
 const MAX_NAME_LENGTH = 24
 const NUDGE_MM = 2
 
 type SidebarTab = 'personalize' | 'optimize'
+
+interface Swatch {
+  name: string
+  hex: string
+}
 
 interface PreviewControlsProps {
   onRotate: (axis: RotateAxis) => void
@@ -22,11 +28,20 @@ interface PreviewControlsProps {
   measure: OrientationMeasure | null
   nameText: string
   onNameChange: (value: string) => void
-  onApply: () => void
   nameSize: number
   onSizeChange: (value: number) => void
+  rotationDeg: number
+  onRotationChange: (value: number) => void
   onNudge: (dx: number, dy: number) => void
   onCenter: () => void
+  gizmo: GizmoMode
+  onGizmoChange: (mode: GizmoMode) => void
+  textColour: string
+  onTextColourChange: (hex: string) => void
+  colours: Swatch[]
+  onSave: () => void
+  saving: boolean
+  saveError: string | null
   estimate: PersonalisationEstimate | null
   onOptimize: () => void
   optimization: DesignOptimization | null
@@ -61,32 +76,35 @@ export function PreviewControls(props: PreviewControlsProps): JSX.Element {
 function PersonalizeTab({
   nameText,
   onNameChange,
-  onApply,
   nameSize,
   onSizeChange,
+  rotationDeg,
+  onRotationChange,
   onNudge,
   onCenter,
+  gizmo,
+  onGizmoChange,
+  textColour,
+  onTextColourChange,
+  colours,
+  onSave,
+  saving,
+  saveError,
   estimate,
 }: PreviewControlsProps): JSX.Element {
+  const hasName = nameText.trim() !== ''
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2">
-        <input
-          value={nameText}
-          onChange={e => onNameChange(e.target.value.slice(0, MAX_NAME_LENGTH))}
-          onKeyDown={e => {
-            if (e.key === 'Enter') onApply()
-          }}
-          placeholder="Type a name"
-          aria-label="Personalisation name"
-          className="border-border bg-surface text-foreground focus-visible:ring-ring w-full rounded-md border px-2.5 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
-        />
-        <Button size="sm" onClick={onApply}>
-          Apply
-        </Button>
-      </div>
+      <input
+        value={nameText}
+        onChange={e => onNameChange(e.target.value.slice(0, MAX_NAME_LENGTH))}
+        placeholder="Type a name"
+        aria-label="Personalisation name"
+        className="border-border bg-surface text-foreground focus-visible:ring-ring w-full rounded-md border px-2.5 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
+      />
+
       <label className="flex items-center gap-2 text-xs">
-        <span className="text-muted-foreground">Size</span>
+        <span className="text-muted-foreground w-14">Size</span>
         <input
           type="range"
           min={3}
@@ -97,8 +115,24 @@ function PersonalizeTab({
           aria-label="Text size"
           className="flex-1"
         />
-        <span className="font-mono tabular-nums">{nameSize}mm</span>
+        <span className="w-12 text-right font-mono tabular-nums">{nameSize}mm</span>
       </label>
+
+      <label className="flex items-center gap-2 text-xs">
+        <span className="text-muted-foreground w-14">Rotate</span>
+        <input
+          type="range"
+          min={0}
+          max={359}
+          step={1}
+          value={Math.round(rotationDeg)}
+          onChange={e => onRotationChange(Number(e.target.value))}
+          aria-label="Text rotation"
+          className="flex-1"
+        />
+        <span className="w-12 text-right font-mono tabular-nums">{Math.round(rotationDeg)}°</span>
+      </label>
+
       <div className="flex flex-wrap items-center gap-1">
         <span className="text-muted-foreground text-xs">Move</span>
         <PadButton onClick={() => onNudge(-NUDGE_MM, 0)} label="Move left">
@@ -115,15 +149,61 @@ function PersonalizeTab({
         </PadButton>
         <PadButton onClick={onCenter}>Center</PadButton>
       </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground text-xs">Drag gizmo</span>
+        <div className="border-border flex rounded-md border p-0.5">
+          <TabButton active={gizmo === 'move'} onClick={() => onGizmoChange('move')}>
+            Move
+          </TabButton>
+          <TabButton active={gizmo === 'rotate'} onClick={() => onGizmoChange('rotate')}>
+            Rotate
+          </TabButton>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-muted-foreground text-xs">Text colour</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {colours.map(colour => (
+            <button
+              key={colour.hex}
+              type="button"
+              onClick={() => onTextColourChange(colour.hex)}
+              title={colour.name}
+              aria-label={colour.name}
+              style={{ backgroundColor: colour.hex }}
+              className={cn(
+                'size-6 rounded-full border transition-transform hover:scale-110',
+                textColour.toLowerCase() === colour.hex.toLowerCase()
+                  ? 'ring-accent ring-2'
+                  : 'border-border',
+              )}
+            />
+          ))}
+        </div>
+      </div>
+
       {estimate ? (
         <p className="text-muted-foreground font-mono text-xs tabular-nums">
           +{estimate.added_grams}g · +{estimate.added_time_minutes}min · +₹
           {estimate.added_design_cp} <span className="text-subtle-foreground">est.</span>
         </p>
       ) : null}
+
+      {saveError ? (
+        <p role="alert" className="text-danger text-xs">
+          {saveError}
+        </p>
+      ) : null}
+
+      <Button size="sm" onClick={onSave} disabled={saving}>
+        {saving ? 'Saving…' : hasName ? 'Save & re-slice' : 'Save (remove name)'}
+      </Button>
+
       <p className="text-subtle-foreground text-xs">
-        The name is embossed as real, printable geometry. Adjust the size and position, then Apply
-        to regenerate.
+        The name is real, printable embossed geometry. Move, rotate and recolour it live, then save
+        to bake it into the model and re-slice - the cost and Layers update to match.
       </p>
     </div>
   )

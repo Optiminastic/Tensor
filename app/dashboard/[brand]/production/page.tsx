@@ -5,6 +5,7 @@ import { type OverviewStat } from '@/components/dashboard/overview-stats'
 import { toMachineSummary, toRecentJob } from '@/components/production/adapters'
 import { ProductionOverview } from '@/components/production/production-overview'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Machine } from '@/lib/validators/machines'
 import type { ProductionJob } from '@/lib/validators/production'
@@ -13,7 +14,16 @@ import { listProductionJobs } from '@/services/production.service'
 
 export const metadata: Metadata = { title: 'Production' }
 
-export default async function ProductionPage(): Promise<JSX.Element> {
+interface ProductionPageProps {
+  params: Promise<{ brand: string }>
+}
+
+export default async function ProductionPage({
+  params,
+}: ProductionPageProps): Promise<JSX.Element> {
+  const { brand } = await params
+  await requirePermission('production:read', `/dashboard/${brand}`)
+
   let jobs: ProductionJob[] = []
   let machines: Machine[] = []
   let error: string | null = null

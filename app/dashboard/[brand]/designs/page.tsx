@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 
 import { DesignsView } from '@/components/designs/designs-view'
 import { UploadDesignDialog } from '@/components/designs/upload-design-dialog'
+import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Design } from '@/lib/validators/designs'
 import { DesignServiceError, listDesigns } from '@/services/designs.service'
@@ -19,6 +20,8 @@ interface DesignsPageProps {
  */
 export default async function DesignsPage({ params }: DesignsPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('design:read', `/dashboard/${brand}`)
+  const canDelete = can(await currentAuthz(), 'design:delete')
 
   let designs: Design[] = []
   let error: string | null = null
@@ -50,7 +53,7 @@ export default async function DesignsPage({ params }: DesignsPageProps): Promise
           {error}
         </p>
       ) : (
-        <DesignsView brand={brand} designs={designs} />
+        <DesignsView brand={brand} designs={designs} canDelete={canDelete} />
       )}
     </main>
   )

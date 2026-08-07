@@ -3,38 +3,53 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { type BrandChoice } from '@/components/admin/brand-multi-select'
 import { InviteManager } from '@/components/admin/invite-manager'
-import { auth } from '@/lib/auth'
-import type { Invite } from '@/lib/validators/admin'
-import { listInvites } from '@/services/admin.service'
+import { MembersList, type MemberView } from '@/components/admin/members-list'
+import { auth, getUserDirectory } from '@/lib/auth'
+import { can, currentAuthz, requirePermission } from '@/lib/authz'
+import type { Invite, Member } from '@/lib/validators/admin'
+import { listInvites, listMembers } from '@/services/admin.service'
+import { listBrands } from '@/services/brands.service'
 
 export const metadata: Metadata = { title: 'People' }
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Where an admin creates accounts.
- *
- * The redirect below is UX, not security: it saves a signed-out visitor from a
- * broken-looking page. Authorization is decided by Tensor-Core, which enforces
- * `user:manage` on every call behind this screen — a Designer who reached this
- * URL would see the page shell and get an error from every action on it.
+ * The team roster. Admins (`user:manage`) invite people and assign brands; Project
+ * Leads (`user:read`) can view the roster and remove junior members but see no
+ * invite tools. Tensor-Core enforces all of this - the UI only mirrors it.
  */
 export default async function UsersPage(): Promise<JSX.Element> {
   const requestHeaders = await headers()
   const session = await auth.api.getSession({ headers: requestHeaders })
   if (!session) redirect('/login?callbackUrl=/dashboard/users')
 
+  await requirePermission('user:read', '/dashboard')
+  const authz = await currentAuthz()
+  const canManageUsers = can(authz, 'user:manage')
+
   let invites: Invite[] = []
+  let brands: BrandChoice[] = []
+  let members: MemberView[] = []
   let loadError: string | null = null
 
   try {
     const token = await auth.api.getToken({ headers: requestHeaders })
-    invites = token?.token ? await listInvites(token.token) : []
+    if (token?.token) {
+      // Invites are admin-only; a Project Lead skips that call (it would 403).
+      const [brandRows, memberRows, inviteRows] = await Promise.all([
+        listBrands(token.token),
+        listMembers(token.token),
+        canManageUsers ? listInvites(token.token) : Promise.resolve<Invite[]>([]),
+      ])
+      brands = brandRows.map(brand => ({ slug: brand.slug, name: brand.name }))
+      members = await withEmails(memberRows)
+      invites = inviteRows
+    }
   } catch (error) {
-    // Most often a Designer landing here: the backend refuses with 403 and we
-    // show that plainly rather than pretending the list is empty.
-    loadError = error instanceof Error ? error.message : 'Could not load invitations.'
+    loadError = error instanceof Error ? error.message : 'Could not load the team.'
   }
 
   return (
@@ -42,11 +57,35 @@ export default async function UsersPage(): Promise<JSX.Element> {
       <div className="flex flex-col gap-2">
         <h1 className="text-display text-4xl">People</h1>
         <p className="text-muted-foreground max-w-prose text-sm text-pretty">
-          Tensor has no public sign-up. Invite someone by email and they set their own password.
-          Links work once and expire after 72 hours.
+          {canManageUsers
+            ? 'Invite someone by email and they set their own password. Links work once and expire after 72 hours. Assign the brands each member may work in.'
+            : 'View the team and remove junior members. Inviting people and assigning brands is done by an admin.'}
         </p>
       </div>
-      <InviteManager initialInvites={invites} loadError={loadError} />
+      {canManageUsers ? (
+        <InviteManager initialInvites={invites} brands={brands} loadError={loadError} />
+      ) : null}
+      <MembersList
+        members={members}
+        brands={brands}
+        currentUserId={session.user.id}
+        actorIsAdmin={canManageUsers}
+      />
     </main>
   )
+}
+
+/** Join Better Auth identities onto the backend's member rows for display. */
+async function withEmails(rows: Member[]): Promise<MemberView[]> {
+  const directory = await getUserDirectory(rows.map(row => row.user_id))
+  return rows.map(row => {
+    const identity = directory.get(row.user_id)
+    return {
+      userId: row.user_id,
+      email: identity?.email ?? null,
+      name: identity?.name ?? null,
+      roles: row.roles,
+      brandSlugs: row.brand_slugs,
+    }
+  })
 }

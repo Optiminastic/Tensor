@@ -12,6 +12,9 @@ interface SidebarProps {
   email: string
   brands: BrandOption[]
   fallbackBrand: string | null
+  canManageBrands: boolean
+  // The caller's permission keys, used to hide nav areas they cannot access.
+  permissions: string[]
 }
 
 /**
@@ -20,15 +23,28 @@ interface SidebarProps {
  * cookie fallback on workspace pages). Both columns are hidden below lg; a mobile
  * drawer is a follow-up.
  */
-export function Sidebar({ email, brands, fallbackBrand }: SidebarProps): JSX.Element {
+export function Sidebar({
+  email,
+  brands,
+  fallbackBrand,
+  canManageBrands,
+  permissions,
+}: SidebarProps): JSX.Element {
   const pathname = usePathname()
   const activeBrand = brandFromPathname(pathname) ?? fallbackBrand
   const base = activeBrand ? `/dashboard/${activeBrand}` : '/dashboard'
 
   return (
     <>
-      <NavRail base={base} />
-      <NavPanel base={base} brands={brands} activeSlug={activeBrand} email={email} />
+      <NavRail base={base} permissions={permissions} />
+      <NavPanel
+        base={base}
+        brands={brands}
+        activeSlug={activeBrand}
+        email={email}
+        canManageBrands={canManageBrands}
+        permissions={permissions}
+      />
     </>
   )
 }

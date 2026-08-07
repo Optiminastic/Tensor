@@ -6,6 +6,7 @@ import { useState, type JSX } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { inviteUser } from '@/app/admin/actions'
+import { type BrandChoice, BrandMultiSelect } from '@/components/admin/brand-multi-select'
 import { InviteLink } from '@/components/admin/invite-link'
 import { InviteList } from '@/components/admin/invite-list'
 import { Button } from '@/components/ui/button'
@@ -25,12 +26,19 @@ const ROLES = [
 
 interface InviteManagerProps {
   initialInvites: Invite[]
+  brands: BrandChoice[]
   loadError: string | null
 }
 
-export function InviteManager({ initialInvites, loadError }: InviteManagerProps): JSX.Element {
+export function InviteManager({
+  initialInvites,
+  brands,
+  loadError,
+}: InviteManagerProps): JSX.Element {
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
+  // Brand access is picked outside RHF (a checkbox group), then merged on submit.
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   // Held in state, never re-fetched: the backend stores only a hash, so once
   // this is gone the only remedy is a fresh invite.
   const [issuedLink, setIssuedLink] = useState<{
@@ -51,14 +59,14 @@ export function InviteManager({ initialInvites, loadError }: InviteManagerProps)
     formState: { errors, isSubmitting },
   } = useForm<InviteCreateInput>({
     resolver: zodResolver(InviteCreateSchema),
-    defaultValues: { email: '', role: 'DESIGNER' },
+    defaultValues: { email: '', role: 'DESIGNER', brand_slugs: [] },
   })
 
   async function onSubmit(values: InviteCreateInput): Promise<void> {
     setFormError(null)
     setIssuedLink(null)
 
-    const result = await inviteUser(values)
+    const result = await inviteUser({ ...values, brand_slugs: selectedBrands })
     if (!result.ok || !result.data) {
       setFormError(result.error ?? 'Could not create the invitation.')
       return
@@ -73,7 +81,8 @@ export function InviteManager({ initialInvites, loadError }: InviteManagerProps)
       invite,
       ...current.filter(i => i.email !== invite.email || i.accepted_at !== null),
     ])
-    reset({ email: '', role: values.role })
+    reset({ email: '', role: values.role, brand_slugs: [] })
+    setSelectedBrands([])
     router.refresh()
   }
 
@@ -114,6 +123,20 @@ export function InviteManager({ initialInvites, loadError }: InviteManagerProps)
                 </Select>
               </Field>
             </div>
+
+            <Field
+              label="Brand access"
+              htmlFor="invite-brands"
+              hint="The brands this member may see and work in. Admins always see every brand."
+            >
+              <div id="invite-brands">
+                <BrandMultiSelect
+                  brands={brands}
+                  selected={selectedBrands}
+                  onChange={setSelectedBrands}
+                />
+              </div>
+            </Field>
 
             <Button type="submit" disabled={isSubmitting} className="self-start">
               {isSubmitting ? 'Creating…' : 'Create invitation'}

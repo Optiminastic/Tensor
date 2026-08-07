@@ -4,6 +4,7 @@ import type { JSX } from 'react'
 
 import { BrandConnections } from '@/components/brands/brand-connections'
 import { auth } from '@/lib/auth'
+import { requirePermission } from '@/lib/authz'
 import { env } from '@/lib/env'
 import type { Connection } from '@/lib/validators/connections'
 import { listConnections } from '@/services/connections.service'
@@ -36,6 +37,7 @@ export default async function IntegrationsPage({
   searchParams,
 }: IntegrationsPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('integration:manage', `/dashboard/${brand}`)
   const { google } = await searchParams
   const token = await auth.api.getToken({ headers: await headers() })
   let connections: Connection[] = []

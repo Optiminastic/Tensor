@@ -115,10 +115,13 @@ function PreviewPanel({ brand, design, specs, onChanged }: PreviewPanelProps): J
   return (
     <>
       <DesignModelPreview
+        brand={brand}
         designId={design.id}
         orientation={design.metrics?.orientation ?? null}
         refreshKey={design.updated_at}
         hasSlice={Boolean(design.metrics?.gcode_key)}
+        savedPersonalisation={design.personalisation ?? null}
+        onPersonalised={onChanged}
       />
       <SliceSettingsForm
         brand={brand}

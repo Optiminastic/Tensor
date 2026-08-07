@@ -6,6 +6,7 @@ import { AutoCreateBatchesButton } from '@/components/production/auto-create-bat
 import { BatchTable } from '@/components/production/batch-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { BatchRecord } from '@/components/production/types'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import { BatchServiceError, listBatches } from '@/services/batches.service'
 
@@ -19,6 +20,7 @@ export default async function BatchManagementPage({
   params,
 }: BatchManagementPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('batch:read', `/dashboard/${brand}`)
 
   let batches: BatchRecord[] = []
   let error: string | null = null

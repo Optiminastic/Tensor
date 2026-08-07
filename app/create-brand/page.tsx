@@ -7,6 +7,7 @@ import { BrandOnboarding } from '@/components/brands/create/brand-onboarding'
 import type { ShopifyPrefill } from '@/components/brands/create/types'
 import { Logo } from '@/components/logo'
 import { auth } from '@/lib/auth'
+import { can, currentAuthz } from '@/lib/authz'
 import { env } from '@/lib/env'
 import { readPendingCookie } from '@/lib/shopify/pending'
 
@@ -36,6 +37,11 @@ export default async function CreateBrandPage({
 }: CreateBrandPageProps): Promise<JSX.Element> {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login?callbackUrl=/create-brand')
+
+  // Only brand managers may create a brand. A member without brand:manage is sent
+  // back to the dashboard, which shows the "ask your admin" state. The backend is
+  // the real gate (brand:manage on save); this only avoids a dead-end screen.
+  if (!can(await currentAuthz(), 'brand:manage')) redirect('/dashboard')
 
   const shopifyEnabled = Boolean(env.SHOPIFY_API_KEY && env.SHOPIFY_API_SECRET)
   const pending = await readPendingCookie()

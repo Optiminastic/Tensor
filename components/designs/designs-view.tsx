@@ -17,11 +17,14 @@ const STORAGE_KEY = 'designs-view'
 interface DesignsViewProps {
   brand: string
   designs: Design[]
+  // Whether the viewer may delete designs (design:delete). Shows the delete
+  // affordance on each card/row; the backend still enforces it.
+  canDelete: boolean
 }
 
 /** The designs list with a grid/table toggle. The choice is remembered per
  * browser; the grid is the default (cover-forward, like the reference). */
-export function DesignsView({ brand, designs }: DesignsViewProps): JSX.Element {
+export function DesignsView({ brand, designs, canDelete }: DesignsViewProps): JSX.Element {
   const [view, setView] = useState<View>('grid')
 
   useEffect(() => {
@@ -65,9 +68,9 @@ export function DesignsView({ brand, designs }: DesignsViewProps): JSX.Element {
         </div>
       </div>
       {view === 'grid' ? (
-        <DesignGrid brand={brand} designs={designs} />
+        <DesignGrid brand={brand} designs={designs} canDelete={canDelete} />
       ) : (
-        <DesignList brand={brand} designs={designs} />
+        <DesignList brand={brand} designs={designs} canDelete={canDelete} />
       )}
     </div>
   )

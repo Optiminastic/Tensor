@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
 import { FilamentInventory } from '@/components/production/filament-inventory'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Filament } from '@/lib/validators/production'
 import { ProductionServiceError, listFilament } from '@/services/production.service'
@@ -16,6 +17,7 @@ export default async function FilamentInventoryPage({
   params,
 }: FilamentInventoryPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('filament:read', `/dashboard/${brand}`)
 
   let filaments: Filament[] = []
   let error: string | null = null

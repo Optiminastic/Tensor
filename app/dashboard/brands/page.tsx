@@ -9,6 +9,7 @@ import { BrandEditor } from '@/components/brands/brand-editor'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { auth } from '@/lib/auth'
+import { can, currentAuthz } from '@/lib/authz'
 import { env } from '@/lib/env'
 import type { BrandProfile } from '@/lib/validators/brands'
 import type { Connection } from '@/lib/validators/connections'
@@ -50,6 +51,8 @@ export default async function BrandsPage(): Promise<JSX.Element> {
     loadError = error instanceof Error ? error.message : 'Could not load brands.'
   }
 
+  const canManageBrands = can(await currentAuthz(), 'brand:manage')
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">
       <div className="flex items-start justify-between gap-4">
@@ -60,9 +63,11 @@ export default async function BrandsPage(): Promise<JSX.Element> {
             here and every new selling price uses the change.
           </p>
         </div>
-        <Link href="/create-brand" className={buttonVariants()}>
-          New brand
-        </Link>
+        {canManageBrands ? (
+          <Link href="/create-brand" className={buttonVariants()}>
+            New brand
+          </Link>
+        ) : null}
       </div>
 
       {loadError ? (

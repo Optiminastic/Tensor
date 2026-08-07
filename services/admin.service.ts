@@ -9,6 +9,8 @@ import {
   InviteSchema,
   type InviteValidated,
   InviteValidatedSchema,
+  type Member,
+  MemberSchema,
 } from '@/lib/validators/admin'
 
 const log = createLogger('AdminService')
@@ -143,6 +145,39 @@ export async function revokeInvite(accessToken: string, inviteId: string): Promi
   await request(
     `/admin/invites/${encodeURIComponent(inviteId)}/revoke`,
     { method: 'POST', headers: bearer(accessToken) },
+    () => undefined,
+  )
+}
+
+/** Every team member with a role, plus the brands each is assigned. */
+export async function listMembers(accessToken: string): Promise<Member[]> {
+  return request('/admin/users', { headers: bearer(accessToken) }, data =>
+    MemberSchema.array().parse(data),
+  )
+}
+
+/** Remove a member: delete their roles + brand access (their account remains). */
+export async function removeMember(accessToken: string, userId: string): Promise<void> {
+  await request(
+    `/admin/users/${encodeURIComponent(userId)}`,
+    { method: 'DELETE', headers: bearer(accessToken) },
+    () => undefined,
+  )
+}
+
+/** Replace a member's brand access with the given set of slugs. */
+export async function setMemberBrands(
+  accessToken: string,
+  userId: string,
+  brandSlugs: string[],
+): Promise<void> {
+  await request(
+    `/admin/users/${encodeURIComponent(userId)}/brands`,
+    {
+      method: 'PUT',
+      headers: bearer(accessToken),
+      body: JSON.stringify({ brand_slugs: brandSlugs }),
+    },
     () => undefined,
   )
 }

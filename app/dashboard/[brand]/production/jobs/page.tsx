@@ -5,6 +5,7 @@ import { toQueueItem } from '@/components/production/adapters'
 import { JobQueueTable } from '@/components/production/job-queue-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { ProductionJobQueueItem } from '@/components/production/types'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import { ProductionServiceError, listProductionJobs } from '@/services/production.service'
 
@@ -18,6 +19,7 @@ export default async function ProductionJobsPage({
   params,
 }: ProductionJobsPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('production:read', `/dashboard/${brand}`)
 
   let jobs: ProductionJobQueueItem[] = []
   let error: string | null = null

@@ -6,25 +6,27 @@ import type { JSX } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import type { Design } from '@/lib/validators/designs'
 
+import { DeleteDesignButton } from './delete-design-button'
 import { DesignStatusBadge } from './design-status-badge'
 
 interface DesignListProps {
   brand: string
   designs: Design[]
+  canDelete: boolean
 }
 
 /** The brand's designs as a table/list, newest first, each linking to its
  * pre-check detail. A small cover thumbnail sits beside each row. */
-export function DesignList({ brand, designs }: DesignListProps): JSX.Element {
+export function DesignList({ brand, designs, canDelete }: DesignListProps): JSX.Element {
   return (
     <Card>
       <CardContent className="p-0">
         <ul className="divide-border divide-y">
           {designs.map(design => (
-            <li key={design.id}>
+            <li key={design.id} className="flex items-center">
               <Link
                 href={`/dashboard/${brand}/designs/${design.id}`}
-                className="hover:bg-surface-muted flex items-center gap-4 px-4 py-3 transition-colors"
+                className="hover:bg-surface-muted flex flex-1 items-center gap-4 px-4 py-3 transition-colors"
               >
                 <div className="border-border bg-surface-muted relative size-11 shrink-0 overflow-hidden rounded-md border">
                   {design.has_preview ? (
@@ -56,6 +58,16 @@ export function DesignList({ brand, designs }: DesignListProps): JSX.Element {
                 </div>
                 <DesignStatusBadge status={design.status} className="shrink-0" />
               </Link>
+              {canDelete ? (
+                <div className="pr-3">
+                  <DeleteDesignButton
+                    brand={brand}
+                    designId={design.id}
+                    name={design.name}
+                    variant="inline"
+                  />
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
