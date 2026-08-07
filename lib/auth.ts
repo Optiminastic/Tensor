@@ -73,9 +73,18 @@ export const auth = betterAuth({
       },
     }),
   ],
-  // Both the public ngrok origin and local dev are trusted, so sign-in works
-  // whether the app is opened at the ngrok URL or http://localhost:3001.
-  trustedOrigins: [env.NEXT_PUBLIC_APP_URL, 'http://localhost:3001'],
+  // NEXT_PUBLIC_APP_URL covers the primary domain; local dev covers
+  // http://localhost:3001. Vercel Preview deployments (e.g. this repo's
+  // staging branch) get a per-branch/per-deployment origin that never
+  // matches either, so VERCEL_BRANCH_URL/VERCEL_URL - system env vars
+  // Vercel injects automatically, no manual value needed - are trusted too.
+  // Both are bare hosts (no scheme), so they're prefixed with https://.
+  trustedOrigins: [
+    env.NEXT_PUBLIC_APP_URL,
+    'http://localhost:3001',
+    ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+  ],
 })
 
 export type Session = typeof auth.$Infer.Session
