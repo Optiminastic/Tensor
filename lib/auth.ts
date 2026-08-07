@@ -3,7 +3,10 @@ import { jwt } from 'better-auth/plugins'
 
 import { authPool } from '@/lib/db'
 import { env } from '@/lib/env'
+import { createLogger } from '@/lib/logger'
 import { fetchUserAuthz } from '@/services/authz.service'
+
+const log = createLogger('Auth')
 
 export const auth = betterAuth({
   // Better Auth talks to Postgres directly. It owns only its own tables
@@ -88,6 +91,36 @@ export const auth = betterAuth({
 })
 
 export type Session = typeof auth.$Infer.Session
+
+/**
+ * auth.api.getSession, but a thrown error is treated the same as "no
+ * session" instead of crashing the page.
+ *
+ * getSession/getToken do their own DB-backed session validation on every
+ * call - independent of and stricter than middleware's cookie-presence-only
+ * check - so either can throw on an expired/invalid session or a transient
+ * DB hiccup. Every server component here already handles a null session by
+ * redirecting to /login; this just makes sure a thrown error reaches that
+ * same handling instead of surfacing as an unhandled exception.
+ */
+export async function getSessionSafe(
+  requestHeaders: Headers,
+): Promise<Awaited<ReturnType<typeof auth.api.getSession>>> {
+  return auth.api.getSession({ headers: requestHeaders }).catch((error: unknown) => {
+    log.error({ err: error }, 'getSession threw; treating as unauthenticated')
+    return null
+  })
+}
+
+/** Same as getSessionSafe, for auth.api.getToken. */
+export async function getTokenSafe(
+  requestHeaders: Headers,
+): Promise<Awaited<ReturnType<typeof auth.api.getToken>> | null> {
+  return auth.api.getToken({ headers: requestHeaders }).catch((error: unknown) => {
+    log.error({ err: error }, 'getToken threw; treating as unauthenticated')
+    return null
+  })
+}
 
 /** A user's display identity, for rendering "who did what" in activity views. */
 export interface UserDisplay {

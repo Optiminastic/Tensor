@@ -4,7 +4,7 @@ import type { JSX, ReactNode } from 'react'
 
 import type { BrandOption } from '@/components/dashboard/brand-switcher'
 import { Sidebar } from '@/components/dashboard/sidebar'
-import { auth } from '@/lib/auth'
+import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import { listBrands } from '@/services/brands.service'
 
 export const dynamic = 'force-dynamic'
@@ -23,10 +23,10 @@ export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps): Promise<JSX.Element> {
   const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
+  const session = await getSessionSafe(requestHeaders)
   if (!session) redirect('/login?callbackUrl=/dashboard')
 
-  const token = await auth.api.getToken({ headers: requestHeaders })
+  const token = await getTokenSafe(requestHeaders)
   let brands: BrandOption[] = []
   if (token?.token) {
     brands = await listBrands(token.token)

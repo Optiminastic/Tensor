@@ -6,7 +6,7 @@ import type { JSX } from 'react'
 import { BrandOnboarding } from '@/components/brands/create/brand-onboarding'
 import type { ShopifyPrefill } from '@/components/brands/create/types'
 import { Logo } from '@/components/logo'
-import { auth } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import { env } from '@/lib/env'
 import { readPendingCookie } from '@/lib/shopify/pending'
 
@@ -34,7 +34,7 @@ function statusNotice(status: string | undefined): string | null {
 export default async function CreateBrandPage({
   searchParams,
 }: CreateBrandPageProps): Promise<JSX.Element> {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await getSessionSafe(await headers())
   if (!session) redirect('/login?callbackUrl=/create-brand')
 
   const shopifyEnabled = Boolean(env.SHOPIFY_API_KEY && env.SHOPIFY_API_SECRET)

@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import type { JSX } from 'react'
 
 import { BrandConnections } from '@/components/brands/brand-connections'
-import { auth } from '@/lib/auth'
+import { getTokenSafe } from '@/lib/auth'
 import { env } from '@/lib/env'
 import type { Connection } from '@/lib/validators/connections'
 import { listConnections } from '@/services/connections.service'
@@ -37,7 +37,7 @@ export default async function IntegrationsPage({
 }: IntegrationsPageProps): Promise<JSX.Element> {
   const { brand } = await params
   const { google } = await searchParams
-  const token = await auth.api.getToken({ headers: await headers() })
+  const token = await getTokenSafe(await headers())
   let connections: Connection[] = []
   if (token?.token) {
     connections = await listConnections(token.token, brand).catch(() => [])

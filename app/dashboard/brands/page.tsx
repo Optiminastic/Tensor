@@ -8,7 +8,7 @@ import { BrandConnections } from '@/components/brands/brand-connections'
 import { BrandEditor } from '@/components/brands/brand-editor'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { auth } from '@/lib/auth'
+import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import { env } from '@/lib/env'
 import type { BrandProfile } from '@/lib/validators/brands'
 import type { Connection } from '@/lib/validators/connections'
@@ -27,7 +27,7 @@ export const dynamic = 'force-dynamic'
  */
 export default async function BrandsPage(): Promise<JSX.Element> {
   const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
+  const session = await getSessionSafe(requestHeaders)
   if (!session) redirect('/login?callbackUrl=/dashboard/brands')
 
   let brands: BrandProfile[] = []
@@ -39,7 +39,7 @@ export default async function BrandsPage(): Promise<JSX.Element> {
   )
 
   try {
-    const token = await auth.api.getToken({ headers: requestHeaders })
+    const token = await getTokenSafe(requestHeaders)
     if (token?.token) {
       brands = await listBrands(token.token)
       connectionsByBrand = await Promise.all(
