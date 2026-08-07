@@ -11,7 +11,14 @@ interface RouteContext {
   params: Promise<{ id: string; kind: string }>
 }
 
-const VALID_KINDS = new Set<DesignFileKind>(['model', 'model-lite', 'gcode', 'preview', 'plate'])
+const VALID_KINDS = new Set<DesignFileKind>([
+  'model',
+  'model-lite',
+  'gcode',
+  'preview',
+  'plate',
+  'report',
+])
 
 function isValidKind(kind: string): kind is DesignFileKind {
   return VALID_KINDS.has(kind as DesignFileKind)

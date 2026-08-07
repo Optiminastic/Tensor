@@ -6,6 +6,7 @@ import {
   type DesignDetail,
   type DesignMachine,
   type DesignMachineSpec,
+  type DesignOptimization,
   type DesignReview,
   type DesignSpecs,
   type PersonalisationEstimate,
@@ -15,6 +16,7 @@ import {
   type ResubmitInput,
   DesignDetailSchema,
   DesignMachineSchema,
+  DesignOptimizationSchema,
   DesignReviewSchema,
   DesignSchema,
   PersonalisationEstimateSchema,
@@ -39,7 +41,7 @@ const UPLOAD_TIMEOUT_MS = 5 * 60_000
 // A design's streamable files: the original uploaded model, the G-code archive
 // from its latest slice, the cover preview image, and the extracted plate G-code
 // text the layer preview renders from.
-export type DesignFileKind = 'model' | 'model-lite' | 'gcode' | 'preview' | 'plate'
+export type DesignFileKind = 'model' | 'model-lite' | 'gcode' | 'preview' | 'plate' | 'report'
 
 // Frontend kind -> Tensor-Core sub-path. Most map one-to-one; the layer preview
 // reads the plate G-code text served at the nested /gcode/plate route.
@@ -49,6 +51,7 @@ const KIND_PATHS: Record<DesignFileKind, string> = {
   gcode: 'gcode',
   preview: 'preview',
   plate: 'gcode/plate',
+  report: 'report.pdf',
 }
 
 /**
@@ -115,6 +118,7 @@ export interface CreateDesignInput {
   file: File
   preview: File
   notes?: string
+  attributes?: Record<string, string>
 }
 
 // createDesign sends multipart/form-data: Content-Type is left unset so fetch
@@ -134,6 +138,9 @@ export async function createDesign(token: string, input: CreateDesignInput): Pro
   form.set('left_flow', input.machine.left_flow)
   form.set('right_flow', input.machine.right_flow)
   if (input.notes) form.set('notes', input.notes)
+  if (input.attributes) {
+    for (const [key, value] of Object.entries(input.attributes)) form.set(key, value)
+  }
   form.set('file', input.file, input.file.name)
   form.set('preview', input.preview, input.preview.name)
 
@@ -232,6 +239,20 @@ export async function fetchPersonalisePreview(
   return response
 }
 
+// Emails the design's cost-report PDF to a recipient. Returns { sent, to } on
+// success; the backend 503s when SMTP is not configured.
+export async function emailDesignReport(
+  token: string,
+  id: string,
+  to: string,
+): Promise<{ sent: boolean; to: string }> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/email-report`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify({ to }) },
+    data => data as { sent: boolean; to: string },
+  )
+}
+
 export interface PublishToShopifyParams {
   id: string
   input: PublishInput
@@ -311,6 +332,28 @@ export interface EstimatePersonalisationInput {
   text: string
   height_mm?: number
   depth_mm?: number
+}
+
+// The AI optimizer calls an LLM, so it gets a generous ceiling well beyond the
+// small-JSON default.
+const OPTIMIZE_TIMEOUT_MS = 90_000
+
+// Runs the nozzle-aware AI optimization advisor for a costed design and returns
+// its structured report (verdict, filament, support, ranked recommendations). The
+// backend caches per (design, inputs), so a repeat call for the same inputs is fast.
+export async function getDesignOptimization(
+  token: string,
+  id: string,
+): Promise<DesignOptimization> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/optimize`,
+    {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      signal: AbortSignal.timeout(OPTIMIZE_TIMEOUT_MS),
+    },
+    data => DesignOptimizationSchema.parse(data),
+  )
 }
 
 // Fast pre-slice estimate of what a name adds to a product (grams, time, cost).

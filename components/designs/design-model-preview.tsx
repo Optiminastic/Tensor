@@ -4,15 +4,21 @@ import { Maximize2, Minimize2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from 'react'
 
+import { optimizeDesign } from '@/app/dashboard/[brand]/designs/optimization-actions'
 import { estimateDesignPersonalisation } from '@/app/dashboard/[brand]/designs/personalisation-actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { Orientation, PersonalisationEstimate } from '@/lib/validators/designs'
+import type {
+  DesignOptimization,
+  Orientation,
+  PersonalisationEstimate,
+} from '@/lib/validators/designs'
 
-import { CutControls, useCut } from './cut-controls'
+import { useCut } from './cut-controls'
 import { LayerStage } from './design-layer-preview'
-import type { LoadTiming, OrientationMeasure, RotateAxis } from './model-viewer'
+import { PreviewControls } from './design-preview-controls'
+import type { OrientationMeasure, RotateAxis } from './model-viewer'
 
 type PreviewMode = 'model' | 'layers'
 
@@ -28,6 +34,20 @@ interface PersonalisationSpec {
 // How far the name is raised off the surface (mm). Fixed for now; the emboss reads
 // clearly and stays cheap to print. A control can expose it later.
 const PERSONALISE_DEPTH_MM = 1
+
+// Default filament palette for the whole-model colour preview. An STL has no
+// colour, so a swatch just re-tints the render; a per-design editable palette can
+// override this list later.
+const FILAMENT_COLORS: { name: string; hex: string }[] = [
+  { name: 'White', hex: '#f2f2f0' },
+  { name: 'Black', hex: '#1c1c1c' },
+  { name: 'Gold', hex: '#c9a227' },
+  { name: 'Silver', hex: '#b9bcc0' },
+  { name: 'Red', hex: '#c0392b' },
+  { name: 'Blue', hex: '#2b6cb0' },
+  { name: 'Green', hex: '#2f855a' },
+  { name: 'Terracotta', hex: '#bf5b3b' },
+]
 
 // The viewer is WebGL and must not server-render; loading it lazily also keeps
 // three.js out of every other page's bundle.
@@ -79,6 +99,12 @@ export function DesignModelPreview({
   const [nameOffsetY, setNameOffsetY] = useState(0)
   const [appliedSpec, setAppliedSpec] = useState<PersonalisationSpec | null>(null)
   const [estimate, setEstimate] = useState<PersonalisationEstimate | null>(null)
+  // AI optimization advisor (Optimizations tab): the report plus its loading/error.
+  const [optimization, setOptimization] = useState<DesignOptimization | null>(null)
+  const [optimizeLoading, setOptimizeLoading] = useState(false)
+  const [optimizeError, setOptimizeError] = useState<string | null>(null)
+  // A filament colour to preview the whole model in (null = analysis shading).
+  const [tint, setTint] = useState<string | null>(null)
 
   const applyPersonalisation = useCallback(() => {
     const name = nameText.trim()
@@ -123,8 +149,26 @@ export function DesignModelPreview({
   }, [])
   const reset = useCallback(() => setBaseReset('uploaded'), [setBaseReset])
   const handleMeasure = useCallback((m: OrientationMeasure) => setMeasure(m), [])
-  const [loadTiming, setLoadTiming] = useState<LoadTiming | null>(null)
-  const handleTiming = useCallback((t: LoadTiming) => setLoadTiming(t), [])
+  const nudgeName = useCallback((dx: number, dy: number) => {
+    setNameOffsetX(x => x + dx)
+    setNameOffsetY(y => y + dy)
+  }, [])
+  const centerName = useCallback(() => {
+    setNameOffsetX(0)
+    setNameOffsetY(0)
+  }, [])
+  const runOptimize = useCallback(() => {
+    setOptimizeLoading(true)
+    setOptimizeError(null)
+    void optimizeDesign(designId).then(res => {
+      setOptimizeLoading(false)
+      if (res.ok && res.data) {
+        setOptimization(res.data)
+      } else {
+        setOptimizeError(res.error ?? 'Could not run the optimization.')
+      }
+    })
+  }, [designId])
 
   useEffect(() => {
     function onChange(): void {
@@ -141,6 +185,53 @@ export function DesignModelPreview({
     }
     void stageRef.current?.requestFullscreen().catch(() => undefined)
   }, [])
+
+  const viewerEl = (
+    <ModelViewer
+      modelUrl={modelUrl}
+      orientation={orientation}
+      base={base}
+      steps={steps}
+      onMeasure={handleMeasure}
+      clip={clip}
+      tint={tint}
+    />
+  )
+
+  // Colour swatches overlaid on the viewer: re-tint the whole model, or reset to
+  // the analysis shading. STL has no colour, so this is a preview only.
+  const swatchStrip = (
+    <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
+      <div className="border-border bg-surface flex items-center gap-1.5 rounded-full border px-2 py-1.5 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setTint(null)}
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
+            tint === null
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          Original
+        </button>
+        {FILAMENT_COLORS.map(colour => (
+          <button
+            key={colour.hex}
+            type="button"
+            onClick={() => setTint(colour.hex)}
+            title={colour.name}
+            aria-label={colour.name}
+            style={{ backgroundColor: colour.hex }}
+            className={cn(
+              'size-5 rounded-full border transition-transform hover:scale-110',
+              tint === colour.hex ? 'ring-accent ring-2' : 'border-border',
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <Card>
@@ -200,110 +291,41 @@ export function DesignModelPreview({
 
           {showLayers ? (
             <LayerStage designId={designId} refreshKey={refreshKey} fill={isFullscreen} />
+          ) : isFullscreen ? (
+            // Detailed view: the viewer fills the space, with all the tools in a
+            // right sidebar (orientation + personalization).
+            <div className="flex min-h-0 flex-1 gap-4">
+              <div className="bg-surface-muted border-border relative flex-1 overflow-hidden rounded-md border">
+                {viewerEl}
+                {swatchStrip}
+              </div>
+              <aside className="w-80 shrink-0 overflow-y-auto pr-1">
+                <PreviewControls
+                  onRotate={rotate}
+                  onReset={reset}
+                  cut={controls}
+                  measure={measure}
+                  nameText={nameText}
+                  onNameChange={setNameText}
+                  onApply={applyPersonalisation}
+                  nameSize={nameSize}
+                  onSizeChange={setNameSize}
+                  onNudge={nudgeName}
+                  onCenter={centerName}
+                  estimate={estimate}
+                  onOptimize={runOptimize}
+                  optimization={optimization}
+                  optimizeLoading={optimizeLoading}
+                  optimizeError={optimizeError}
+                />
+              </aside>
+            </div>
           ) : (
-            <>
-              <div
-                className={cn(
-                  'bg-surface-muted border-border relative w-full overflow-hidden rounded-md border',
-                  isFullscreen ? 'flex-1' : 'h-[380px]',
-                )}
-              >
-                <ModelViewer
-                  modelUrl={modelUrl}
-                  orientation={orientation}
-                  base={base}
-                  steps={steps}
-                  onMeasure={handleMeasure}
-                  clip={clip}
-                  onTiming={handleTiming}
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">Rotate 90°:</span>
-                  <RotateButton onClick={() => rotate('x')}>X</RotateButton>
-                  <RotateButton onClick={() => rotate('y')}>Y</RotateButton>
-                  <RotateButton onClick={() => rotate('z')}>Z</RotateButton>
-                  <RotateButton onClick={reset}>Reset</RotateButton>
-                </div>
-                <CutControls {...controls} />
-                {measure ? (
-                  <div className="flex items-center gap-4 font-mono text-xs tabular-nums">
-                    <span className="text-foreground flex items-center gap-1.5">
-                      <span className="bg-warning inline-block size-2.5 rounded-sm" aria-hidden />
-                      Overhang {Math.round(measure.overhang)} mm²
-                    </span>
-                    <span className="text-muted-foreground">
-                      Bed contact {Math.round(measure.contact)} mm²
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="border-border flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3">
-                <span className="text-muted-foreground text-xs font-medium">Personalize</span>
-                <input
-                  value={nameText}
-                  onChange={e => setNameText(e.target.value.slice(0, 24))}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') applyPersonalisation()
-                  }}
-                  placeholder="Type a name"
-                  aria-label="Personalisation name"
-                  className="border-border bg-surface text-foreground focus-visible:ring-ring rounded-md border px-2.5 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
-                />
-                <Button size="sm" onClick={applyPersonalisation}>
-                  Apply
-                </Button>
-                <label className="flex items-center gap-1.5 text-xs">
-                  <span className="text-muted-foreground">Size</span>
-                  <input
-                    type="range"
-                    min={3}
-                    max={40}
-                    step={1}
-                    value={nameSize}
-                    onChange={e => setNameSize(Number(e.target.value))}
-                    aria-label="Text size"
-                  />
-                  <span className="font-mono tabular-nums">{nameSize}mm</span>
-                </label>
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground text-xs">Move</span>
-                  <RotateButton onClick={() => setNameOffsetX(x => x - 2)}>←</RotateButton>
-                  <RotateButton onClick={() => setNameOffsetX(x => x + 2)}>→</RotateButton>
-                  <RotateButton onClick={() => setNameOffsetY(y => y + 2)}>↑</RotateButton>
-                  <RotateButton onClick={() => setNameOffsetY(y => y - 2)}>↓</RotateButton>
-                  <RotateButton
-                    onClick={() => {
-                      setNameOffsetX(0)
-                      setNameOffsetY(0)
-                    }}
-                  >
-                    Center
-                  </RotateButton>
-                </div>
-                {estimate ? (
-                  <span className="text-muted-foreground ml-auto font-mono text-xs tabular-nums">
-                    +{estimate.added_grams}g · +{estimate.added_time_minutes}min · +₹
-                    {estimate.added_design_cp} <span className="text-subtle-foreground">est.</span>
-                  </span>
-                ) : null}
-              </div>
-
-              <p className="text-subtle-foreground text-xs">
-                Amber faces need support in the shown orientation. Rotate to explore; drag to orbit,
-                scroll to zoom. The name preview is visual only.
-              </p>
-              {loadTiming ? (
-                <p className="text-subtle-foreground font-mono text-xs tabular-nums">
-                  Preview loaded: model {(loadTiming.bytes / 1_048_576).toFixed(1)} MB · downloaded{' '}
-                  {Math.round(loadTiming.downloadMs)} ms · built {Math.round(loadTiming.buildMs)} ms
-                  · total {((loadTiming.downloadMs + loadTiming.buildMs) / 1000).toFixed(1)} s
-                </p>
-              ) : null}
-            </>
+            // Inline: just the model. Open the detailed view for the tools.
+            <div className="bg-surface-muted border-border relative h-[380px] w-full overflow-hidden rounded-md border">
+              {viewerEl}
+              {swatchStrip}
+            </div>
           )}
         </div>
       </CardContent>
@@ -326,23 +348,6 @@ function ToggleButton({ active, onClick, children }: ToggleButtonProps): JSX.Ele
         'rounded px-3 py-1 text-xs font-medium transition-colors',
         active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground',
       )}
-    >
-      {children}
-    </button>
-  )
-}
-
-interface RotateButtonProps {
-  onClick: () => void
-  children: ReactNode
-}
-
-function RotateButton({ onClick, children }: RotateButtonProps): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="border-border text-foreground hover:bg-surface-muted rounded-md border px-2.5 py-1 text-xs font-medium transition-colors"
     >
       {children}
     </button>

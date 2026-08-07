@@ -43,6 +43,9 @@ interface ModelViewerProps {
   steps: RotateAxis[]
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
+  // A filament colour to render the whole model in (hex). null shows the analysis
+  // shading (base grey + amber overhangs) instead.
+  tint?: string | null
   // Reports how long the model took to fetch and build (parse + decimate).
   onTiming?: (t: LoadTiming) => void
 }
@@ -108,6 +111,7 @@ export function ModelViewer({
   steps,
   onMeasure,
   clip,
+  tint,
   onTiming,
 }: ModelViewerProps): JSX.Element {
   const { data, isError } = useModelGeometry(modelUrl)
@@ -148,7 +152,13 @@ export function ModelViewer({
       <directionalLight position={[60, -40, 90]} intensity={1.1} />
       <directionalLight position={[-50, 50, 40]} intensity={0.4} />
       <Bounds fit clip observe margin={1.4}>
-        <ModelMesh geometry={geometry} quaternion={quaternion} onMeasure={onMeasure} clip={clip} />
+        <ModelMesh
+          geometry={geometry}
+          quaternion={quaternion}
+          onMeasure={onMeasure}
+          clip={clip}
+          tint={tint}
+        />
       </Bounds>
       <Grid
         args={[600, 600]}
@@ -173,9 +183,10 @@ interface ModelMeshProps {
   quaternion: THREE.Quaternion
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
+  tint?: string | null
 }
 
-function ModelMesh({ geometry, quaternion, onMeasure, clip }: ModelMeshProps): JSX.Element {
+function ModelMesh({ geometry, quaternion, onMeasure, clip, tint }: ModelMeshProps): JSX.Element {
   const meshRef = useRef<THREE.Mesh>(null)
   const worldPlane = useMemo(() => new THREE.Plane(), [])
 
@@ -209,7 +220,8 @@ function ModelMesh({ geometry, quaternion, onMeasure, clip }: ModelMeshProps): J
     <>
       <mesh ref={meshRef} geometry={prepared}>
         <meshStandardMaterial
-          vertexColors
+          vertexColors={!tint}
+          color={tint ?? '#ffffff'}
           flatShading
           roughness={0.72}
           metalness={0}

@@ -1,16 +1,20 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Box, FileCode, Loader2, ShoppingBag } from 'lucide-react'
+import { Box, FileText, Loader2, ShoppingBag } from 'lucide-react'
 import type { JSX } from 'react'
 
 import { fetchDesignDetail } from '@/app/dashboard/[brand]/designs/actions'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { type DesignDetail, type DesignSpecs, DesignSpecsSchema } from '@/lib/validators/designs'
+import {
+  type DesignAttributes,
+  type DesignDetail,
+  type DesignSpecs,
+  DesignSpecsSchema,
+} from '@/lib/validators/designs'
 
 import { DesignDetailTabs } from './design-detail-tabs'
-import { DesignPersonalisationDialog } from './design-personalisation-dialog'
 import { type ReviewCaps, DesignReviewActions } from './design-review-actions'
 import { DesignSkuDialog } from './design-sku-dialog'
 import { DesignStatusBadge } from './design-status-badge'
@@ -25,6 +29,19 @@ interface DesignDetailViewProps {
   canManageSku: boolean
 }
 
+// attributesSummary renders the optional upload metadata as one compact line.
+function attributesSummary(a: DesignAttributes): string {
+  return [
+    a.product_type ? `Type: ${a.product_type}` : '',
+    a.personalisation_type ? `Personalisation: ${a.personalisation_type}` : '',
+    a.colour_count ? `Colours: ${a.colour_count}` : '',
+    a.add_ons?.length ? `Add-ons: ${a.add_ons.join(', ')}` : '',
+    a.packaging_type ? `Packaging: ${a.packaging_type}` : '',
+  ]
+    .filter(Boolean)
+    .join('  ·  ')
+}
+
 function currentSpecs(design: DesignDetail): DesignSpecs {
   const parsed = DesignSpecsSchema.safeParse({
     material: design.material,
@@ -37,10 +54,10 @@ function currentSpecs(design: DesignDetail): DesignSpecs {
   return parsed.success
     ? parsed.data
     : {
-        material: 'PLA Basics',
+        material: 'PLA',
         finish: 'none',
         units_per_bed: 1,
-        quality: '0.20-standard',
+        quality: 'standard',
         infill_pct: 15,
       }
 }
@@ -70,7 +87,6 @@ export function DesignDetailView({
   })
 
   const isProcessing = design.status === 'queued' || design.status === 'slicing'
-  const gcodeAvailable = Boolean(design.metrics?.gcode_key)
   // The submit/approve review workflow isn't wired to any backend route, so
   // priced designs have no other way to reach Shopify - offer the push as
   // soon as pricing exists, not only after the unreachable "approved" step.
@@ -94,6 +110,11 @@ export function DesignDetailView({
               <span className="italic">not assigned</span>
             )}
           </p>
+          {design.attributes ? (
+            <p className="text-muted-foreground mt-1 text-xs">
+              {attributesSummary(design.attributes)}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* Same-origin links: the route handler mints the backend token from
@@ -107,29 +128,19 @@ export function DesignDetailView({
             <Box aria-hidden />
             Model
           </a>
-          {gcodeAvailable ? (
-            <a
-              href={`/api/designs/${design.id}/gcode`}
-              download
-              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-            >
-              <FileCode aria-hidden />
-              G-code
-            </a>
-          ) : null}
+          <a
+            href={`/api/designs/${design.id}/report`}
+            download
+            className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+          >
+            <FileText aria-hidden />
+            Report
+          </a>
           {canManageSku ? (
             <DesignSkuDialog
               brand={brand}
               designId={design.id}
               currentSku={design.sku ?? null}
-              onSaved={() => void refetch()}
-            />
-          ) : null}
-          {canManageSku ? (
-            <DesignPersonalisationDialog
-              brand={brand}
-              designId={design.id}
-              rules={design.personalisation_rules ?? null}
               onSaved={() => void refetch()}
             />
           ) : null}
