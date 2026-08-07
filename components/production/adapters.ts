@@ -62,6 +62,7 @@ export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
     packaging: toPackaging(job.packaging_status),
     priority: job.priority,
     createdAt: job.created_at,
+    issueReason: job.issue_reason ?? null,
   }
 }
 

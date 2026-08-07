@@ -42,13 +42,13 @@ export const PERSONALISATION_STATUS_CONFIG: Record<
 }
 
 export const QC_STATUS_CONFIG: Record<QcStatus, { label: string; tone: PillTone }> = {
-  pending: { label: 'Pending', tone: 'muted' },
+  pending: { label: 'Pending', tone: 'warning' },
   passed: { label: 'Passed', tone: 'success' },
   failed: { label: 'Failed', tone: 'danger' },
 }
 
 export const PACKAGING_STATUS_CONFIG: Record<PackagingStatus, { label: string; tone: PillTone }> = {
-  pending: { label: 'Pending', tone: 'muted' },
+  pending: { label: 'Pending', tone: 'warning' },
   packed: { label: 'Packed', tone: 'success' },
 }
 

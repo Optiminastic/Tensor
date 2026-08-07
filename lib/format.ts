@@ -24,3 +24,14 @@ export function countdown(seconds: number): string {
   if (minutes > 0) return `${minutes}m`
   return '<1m'
 }
+
+/** Formats an ISO timestamp as "6 Aug 2026, 1:29 PM" - date and time to the minute, never seconds or a raw offset. */
+export function dateTime(value: string): string {
+  return new Date(value).toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}

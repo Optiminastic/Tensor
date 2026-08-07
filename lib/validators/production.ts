@@ -19,6 +19,7 @@ export const ProductionJobSchema = z.object({
   personalisation_status: z.string(),
   priority: z.number(),
   held: z.boolean(),
+  issue_reason: z.string().nullish(),
   due_date: z.string().nullish(),
   sku: z.string().nullish(),
   product_name: z.string().nullish(),

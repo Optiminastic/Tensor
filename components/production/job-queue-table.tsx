@@ -16,7 +16,6 @@ const COLUMNS = [
   'Qty',
   'Status',
   'Personalisation',
-  'QC',
   'Packaging',
   'Priority',
   'Created',

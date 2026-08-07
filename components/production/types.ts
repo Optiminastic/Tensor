@@ -41,6 +41,10 @@ export interface ProductionJobQueueItem {
   packaging: PackagingStatus
   priority: number
   createdAt: string
+  // Set when Stage 3 validation flagged this job (missing SKU/design/STL) -
+  // it's excluded from auto-batching until a human fixes it, so it's the
+  // one case the queue still needs manual Hold/Start controls for.
+  issueReason: string | null
 }
 
 export type FilamentQuantityUnit = 'kg' | 'count'
