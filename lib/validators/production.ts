@@ -30,6 +30,8 @@ export const ProductionJobSchema = z.object({
   estimated_print_time_minutes: z.number().nullish(),
   print_file_id: z.string().nullish(),
   shopify_order_id: z.number().nullish(),
+  shopify_customer_id: z.number().nullish(),
+  customer_name: z.string().nullish(),
   personalisation_name: z.string().nullish(),
   personalisation_font: z.string().nullish(),
   personalisation_colour: z.string().nullish(),
@@ -76,6 +78,56 @@ export const PersonalisationValidateInputSchema = z.object({
   photo_file_id: z.string().nullish(),
 })
 export type PersonalisationValidateInput = z.infer<typeof PersonalisationValidateInputSchema>
+
+// assemblyRequest (internal/httpapi/production_qc.go#submitAssembly). POST
+// /production-jobs/:id/assembly.
+export const AssemblyInputSchema = z.object({
+  parts_combined: z.boolean(),
+  hardware_attached: z.boolean(),
+  addons_attached: z.boolean(),
+  fit_check_ok: z.boolean(),
+  photo_file_id: z.string().nullish(),
+  notes: z.string().max(2000).nullish(),
+})
+export type AssemblyInput = z.infer<typeof AssemblyInputSchema>
+
+// qcRequest (internal/httpapi/production_qc.go#submitQc). POST
+// /production-jobs/:id/qc. A "fail" decision has the backend clone a reprint
+// job at urgent priority, returned alongside the checked job.
+export const QcInputSchema = z.object({
+  correct_personalisation: z.boolean(),
+  correct_colour: z.boolean(),
+  surface_finish_ok: z.boolean(),
+  no_cracks: z.boolean(),
+  no_layer_defects: z.boolean(),
+  dimensions_ok: z.boolean(),
+  assembly_fit_ok: z.boolean(),
+  addons_working: z.boolean(),
+  packaging_safe: z.boolean(),
+  photo_file_id: z.string().nullish(),
+  decision: z.enum(['pass', 'fail']),
+  notes: z.string().max(2000).nullish(),
+})
+export type QcInput = z.infer<typeof QcInputSchema>
+
+export const QcSubmitResultSchema = z.object({
+  job: ProductionJobSchema,
+  reprint_job: ProductionJobSchema.nullish(),
+})
+export type QcSubmitResult = z.infer<typeof QcSubmitResultSchema>
+
+// packagingRequest (internal/httpapi/production_qc.go#submitPackaging). POST
+// /production-jobs/:id/packaging. Requires qc_status = 'passed' on the backend.
+export const PackagingInputSchema = z.object({
+  packaging_type: z.string().min(1, 'Packaging type is required').max(128),
+  addons: z.string().max(2000).nullish(),
+  gift_message: z.string().max(2000).nullish(),
+  fragile: z.boolean(),
+  courier_partner: z.string().max(255).nullish(),
+  invoice_reference: z.string().max(255).nullish(),
+  photo_file_id: z.string().nullish(),
+})
+export type PackagingInput = z.infer<typeof PackagingInputSchema>
 
 // orderResponse (internal/httpapi/orders.go). source is "shopify_webhook" for a
 // real imported order or "seed" for a dummy one - what the live/dummy toggle

@@ -13,9 +13,13 @@ import { type Machine, MachineStatusSchema } from '@/lib/validators/machines'
 import {
   type Filament,
   type ProductionJob,
+  type QcSubmitResult,
+  AssemblyInputSchema,
   FilamentInputSchema,
   JobPatchInputSchema,
+  PackagingInputSchema,
   PersonalisationValidateInputSchema,
+  QcInputSchema,
 } from '@/lib/validators/production'
 import {
   approveBatch as approveBatchCall,
@@ -28,6 +32,10 @@ import {
   createJobsFromOrder as createJobsFromOrderCall,
   patchProductionJob,
   ProductionServiceError,
+  skipAssembly as skipAssemblyCall,
+  submitAssembly as submitAssemblyCall,
+  submitPackaging as submitPackagingCall,
+  submitQc as submitQcCall,
   upsertFilament,
   validateJobPersonalisation as validateJobPersonalisationCall,
 } from '@/services/production.service'
@@ -207,6 +215,103 @@ export async function patchBatchAction(
     return { ok: true, data: batch }
   } catch (err) {
     const message = err instanceof BatchServiceError ? err.message : 'Could not update the batch.'
+    return { ok: false, error: message }
+  }
+}
+
+// The three post-print station actions - each revalidates the job's queue
+// page, its own list page, and its detail page, mirroring the other job
+// actions above.
+
+export async function submitJobAssembly(
+  brand: string,
+  jobId: string,
+  input: unknown,
+): Promise<ActionResult<ProductionJob>> {
+  const parsed = AssemblyInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the assembly check.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const job = await submitAssemblyCall(token, jobId, parsed.data)
+    revalidatePath(`/dashboard/${brand}/production/assembly`)
+    revalidatePath(`/dashboard/${brand}/production/jobs/${jobId}`)
+    return { ok: true, data: job }
+  } catch (err) {
+    const message =
+      err instanceof ProductionServiceError ? err.message : 'Could not record assembly.'
+    return { ok: false, error: message }
+  }
+}
+
+// skipJobAssembly marks assembly as not required for a job with no assembly
+// step (e.g. a single-part print) - it needs no form, just confirmation.
+export async function skipJobAssembly(
+  brand: string,
+  jobId: string,
+): Promise<ActionResult<ProductionJob>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const job = await skipAssemblyCall(token, jobId)
+    revalidatePath(`/dashboard/${brand}/production/assembly`)
+    revalidatePath(`/dashboard/${brand}/production/jobs/${jobId}`)
+    return { ok: true, data: job }
+  } catch (err) {
+    const message = err instanceof ProductionServiceError ? err.message : 'Could not skip assembly.'
+    return { ok: false, error: message }
+  }
+}
+
+// submitJobQc records a QC decision (pass/fail). A fail clones a reprint job
+// at urgent priority on the backend, returned as reprint_job.
+export async function submitJobQc(
+  brand: string,
+  jobId: string,
+  input: unknown,
+): Promise<ActionResult<QcSubmitResult>> {
+  const parsed = QcInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the QC checklist.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const result = await submitQcCall(token, jobId, parsed.data)
+    revalidatePath(`/dashboard/${brand}/production/qc-packaging`)
+    revalidatePath(`/dashboard/${brand}/production/jobs/${jobId}`)
+    revalidatePath(`/dashboard/${brand}/production/jobs`)
+    return { ok: true, data: result }
+  } catch (err) {
+    const message =
+      err instanceof ProductionServiceError ? err.message : 'Could not record the QC check.'
+    return { ok: false, error: message }
+  }
+}
+
+// submitJobPackaging is the last station - requires qc_status = 'passed' on
+// the backend, enforced there, not re-checked here.
+export async function submitJobPackaging(
+  brand: string,
+  jobId: string,
+  input: unknown,
+): Promise<ActionResult<ProductionJob>> {
+  const parsed = PackagingInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the packaging details.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const job = await submitPackagingCall(token, jobId, parsed.data)
+    revalidatePath(`/dashboard/${brand}/production/qc-packaging`)
+    revalidatePath(`/dashboard/${brand}/production/jobs/${jobId}`)
+    return { ok: true, data: job }
+  } catch (err) {
+    const message =
+      err instanceof ProductionServiceError ? err.message : 'Could not record packaging.'
     return { ok: false, error: message }
   }
 }

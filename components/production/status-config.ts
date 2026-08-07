@@ -1,5 +1,6 @@
 import type { PillTone } from '@/components/production/tone-pill'
 import type {
+  AssemblyStatus,
   BatchStatus,
   JobStatus,
   MachineStatus,
@@ -39,6 +40,12 @@ export const PERSONALISATION_STATUS_CONFIG: Record<
   not_required: { label: 'None', tone: 'muted' },
   required: { label: 'Pending', tone: 'warning' },
   completed: { label: 'Verified', tone: 'success' },
+}
+
+export const ASSEMBLY_STATUS_CONFIG: Record<AssemblyStatus, { label: string; tone: PillTone }> = {
+  pending: { label: 'Pending', tone: 'warning' },
+  completed: { label: 'Completed', tone: 'success' },
+  not_required: { label: 'Not required', tone: 'muted' },
 }
 
 export const QC_STATUS_CONFIG: Record<QcStatus, { label: string; tone: PillTone }> = {

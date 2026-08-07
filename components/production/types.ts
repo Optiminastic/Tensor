@@ -27,6 +27,7 @@ export interface ActivityPoint {
 
 export type QueueStatus = 'queued' | 'in_progress' | 'on_hold' | 'completed' | 'failed'
 export type PersonalisationStatus = 'not_required' | 'required' | 'completed'
+export type AssemblyStatus = 'pending' | 'completed' | 'not_required'
 export type QcStatus = 'pending' | 'passed' | 'failed'
 export type PackagingStatus = 'pending' | 'packed'
 
