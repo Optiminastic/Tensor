@@ -1,11 +1,19 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { MessageSquarePlus } from 'lucide-react'
 import { useState, type JSX } from 'react'
 
 import { addDesignComment, fetchDesignReviews } from '@/app/dashboard/[brand]/designs/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import type { DesignTimelineEntry, ReviewKind } from '@/lib/validators/designs'
@@ -130,6 +138,7 @@ interface CommentComposerProps {
 }
 
 function CommentComposer({ designId, onPosted }: CommentComposerProps): JSX.Element {
+  const [open, setOpen] = useState(false)
   const [body, setBody] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -145,32 +154,54 @@ function CommentComposer({ designId, onPosted }: CommentComposerProps): JSX.Elem
       return
     }
     setBody('')
+    setOpen(false)
     onPosted()
   }
 
   return (
-    <div className="border-border flex flex-col gap-2 border-t pt-4">
-      <Textarea
-        rows={3}
-        value={body}
-        onChange={event => setBody(event.target.value)}
-        placeholder="Add a comment"
-        aria-label="Add a comment"
-      />
-      {error ? (
-        <p role="alert" className="text-danger text-sm">
-          {error}
-        </p>
-      ) : null}
-      <Button
-        variant="secondary"
-        size="sm"
-        className="self-start"
-        disabled={pending || body.trim().length === 0}
-        onClick={() => void post()}
+    <div className="border-border border-t pt-4">
+      <Dialog
+        open={open}
+        onOpenChange={next => {
+          setOpen(next)
+          if (next) setError(null)
+        }}
       >
-        {pending ? 'Posting…' : 'Comment'}
-      </Button>
+        <DialogTrigger asChild>
+          <Button variant="secondary" size="sm">
+            <MessageSquarePlus aria-hidden />
+            Comment
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add a comment</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <Textarea
+              rows={4}
+              value={body}
+              onChange={event => setBody(event.target.value)}
+              placeholder="Add a comment"
+              aria-label="Comment"
+            />
+            {error ? (
+              <p role="alert" className="text-danger text-sm">
+                {error}
+              </p>
+            ) : null}
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                disabled={pending || body.trim().length === 0}
+                onClick={() => void post()}
+              >
+                {pending ? 'Posting…' : 'Post comment'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

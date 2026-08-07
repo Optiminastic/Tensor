@@ -2,21 +2,11 @@ import { z } from 'zod'
 
 import { FlowSchema, NozzleSchema } from '@/lib/validators/machines'
 
-// The slice answers. Materials/qualities must match a bundled BBL H2C profile
-// (internal/slicing/profiles.go); the backend re-validates these, so the
-// frontend list is UX, not the constraint.
-export const MaterialSchema = z.enum(['PLA Basics', 'PA-CF'])
-// Quality keys match the backend's slugs exactly; QUALITY_LABELS (the upload
-// form) maps them to the literal Bambu Studio preset names they represent.
-export const QualitySchema = z.enum([
-  '0.08-high',
-  '0.12-high',
-  '0.16-high',
-  '0.16-standard',
-  '0.20-high',
-  '0.20-standard',
-  '0.24-standard',
-])
+// The slice answers. Materials/qualities must match what the backend accepts
+// (internal/httpapi/designs.go validMaterials/validQualities -> the H2S slicer
+// profiles in internal/slicing/profiles.go). The backend re-validates these.
+export const MaterialSchema = z.enum(['PLA', 'PETG', 'ABS'])
+export const QualitySchema = z.enum(['draft', 'standard', 'fine'])
 export const FinishSchema = z.enum(['none', 'sanded', 'painted'])
 
 export const DesignSpecsSchema = z.object({
@@ -88,6 +78,67 @@ export const DesignSkuInputSchema = z.object({
     }),
 })
 export type DesignSkuInput = z.infer<typeof DesignSkuInputSchema>
+
+// What personalization a product offers. Mirrors the backend jsonb rule set;
+// every field is defaulted so a partial/absent blob still parses.
+const PersonalisationEnumRuleSchema = z.object({
+  required: z.boolean().default(false),
+  allowed: z.string().array().default([]),
+})
+export const PersonalisationRulesSchema = z.object({
+  enabled: z.boolean().default(false),
+  name: z
+    .object({
+      required: z.boolean().default(false),
+      min_length: z.number().int().default(0),
+      max_length: z.number().int().default(0),
+    })
+    .default({}),
+  font: PersonalisationEnumRuleSchema.default({}),
+  colour: PersonalisationEnumRuleSchema.default({}),
+  variant: PersonalisationEnumRuleSchema.default({}),
+  photo: z.object({ required: z.boolean().default(false) }).default({}),
+  approval: z.object({ required: z.boolean().default(false) }).default({}),
+  zone: z.object({ width_mm: z.number(), height_mm: z.number() }).nullish(),
+})
+export type PersonalisationRules = z.infer<typeof PersonalisationRulesSchema>
+
+// The fast pre-slice estimate returned by /designs/:id/personalisation-estimate.
+export const PersonalisationEstimateSchema = z.object({
+  source: z.string(),
+  added_grams: z.number(),
+  added_time_minutes: z.number(),
+  base_design_cp: z.number(),
+  estimated_design_cp: z.number(),
+  added_design_cp: z.number(),
+})
+export type PersonalisationEstimate = z.infer<typeof PersonalisationEstimateSchema>
+
+// The AI optimization advisor's report returned by POST /designs/:id/optimize:
+// an overall verdict plus nozzle-aware filament, support, and ranked improvements.
+export const OptimizationRecommendationSchema = z.object({
+  title: z.string(),
+  detail: z.string(),
+  category: z.string(),
+  impact: z.string(),
+})
+export const DesignOptimizationSchema = z.object({
+  verdict: z.enum(['green', 'yellow', 'red']),
+  summary: z.string(),
+  filament: z.object({
+    material: z.string(),
+    recommended_preset: z.string(),
+    rationale: z.string(),
+  }),
+  support: z.object({
+    needed: z.boolean(),
+    strategy: z.string(),
+    material: z.string(),
+    rationale: z.string(),
+  }),
+  recommendations: OptimizationRecommendationSchema.array(),
+})
+export type DesignOptimization = z.infer<typeof DesignOptimizationSchema>
 
 export const DesignLifecycleSchema = z.enum([
   'queued',
@@ -230,11 +281,32 @@ export const DesignMachineSchema = z.object({
   id: z.string(),
   family: z.string(),
   nozzle_mm: z.number(),
-  right_nozzle_mm: z.number().nullable(),
+  // default(null): a single-nozzle backend (or one out of step with this repo)
+  // omits the right-side keys entirely; treat a missing value as "no right side"
+  // so the Machine tab renders "-" instead of crashing on parse.
+  right_nozzle_mm: z.number().nullable().default(null),
   flow: z.string(),
-  right_flow: z.string().nullable(),
+  right_flow: z.string().nullable().default(null),
 })
 export type DesignMachine = z.infer<typeof DesignMachineSchema>
+
+// Upload metadata captured on the design (spec Step 1).
+export const DesignAttributesSchema = z.object({
+  product_type: z.string().optional(),
+  personalisation_type: z.string().optional(),
+  colour_count: z.number().int().optional(),
+  add_ons: z.string().array().optional(),
+  packaging_type: z.string().optional(),
+})
+export type DesignAttributes = z.infer<typeof DesignAttributesSchema>
+
+// Advisory print-reliability signal derived from the slice metrics (spec section 2).
+export const FailureRiskSchema = z.object({
+  score: z.number(),
+  band: z.enum(['low', 'medium', 'high']),
+  factors: z.string().array(),
+})
+export type FailureRisk = z.infer<typeof FailureRiskSchema>
 
 export const DesignDetailSchema = DesignSchema.extend({
   // nullish (not just nullable): tolerate a backend that predates the notes field,
@@ -248,6 +320,10 @@ export const DesignDetailSchema = DesignSchema.extend({
   // one whose machine_id link couldn't be resolved, both render an empty tab
   // rather than crashing.
   machine: DesignMachineSchema.nullish(),
+  // What personalization this product offers. null = not personalizable.
+  personalisation_rules: PersonalisationRulesSchema.nullish(),
+  attributes: DesignAttributesSchema.nullish(),
+  failure_risk: FailureRiskSchema.nullish(),
 })
 export type DesignDetail = z.infer<typeof DesignDetailSchema>
 

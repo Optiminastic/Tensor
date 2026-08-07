@@ -58,6 +58,7 @@ interface ParsedUpload {
   file: File
   preview: File
   notes?: string
+  attributes?: Record<string, string>
 }
 
 // readUploadFiles validates the two required uploads (model + preview image).
@@ -122,8 +123,21 @@ function parseUploadForm(formData: FormData): { value?: ParsedUpload; error?: st
       file: files.file,
       preview: files.preview,
       notes: readNotes(formData),
+      attributes: readAttributes(formData),
     },
   }
+}
+
+// readAttributes collects the optional upload-metadata fields (spec Step 1). The
+// backend validates and stores them; empty fields are dropped.
+function readAttributes(formData: FormData): Record<string, string> | undefined {
+  const keys = ['product_type', 'personalisation_type', 'colour_count', 'add_ons', 'packaging_type']
+  const out: Record<string, string> = {}
+  for (const key of keys) {
+    const value = String(formData.get(key) ?? '').trim()
+    if (value) out[key] = value
+  }
+  return Object.keys(out).length > 0 ? out : undefined
 }
 
 // readNotes pulls the optional "Notes for Project Lead" off the form. The length

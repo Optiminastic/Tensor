@@ -2,7 +2,8 @@
 
 import { Bounds, Grid, OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, type JSX } from 'react'
 import * as THREE from 'three'
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
@@ -11,6 +12,15 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Orientation } from '@/lib/validators/designs'
 
 import { type ClipState, ClipController, buildClipPlane } from './clip-plane'
+
+// Above this triangle count a model is simplified for the preview so it stays
+// interactive (a 24 MB STL is ~480k triangles; parsing/painting that on the main
+// thread stalls the tab). The full STL is untouched - only this browser preview
+// is decimated; the slicer still uses the original.
+const PREVIEW_MAX_TRIANGLES = 150_000
+// Grid resolution for the vertex-clustering decimation: vertices sharing a cell
+// collapse to the cell's centroid, dropping the fine triangles.
+const PREVIEW_DECIMATE_GRID = 90
 
 // A face needs support when its normal points downward past the self-support
 // limit (~45deg), matching the backend rule so the shaded faces agree.
@@ -33,6 +43,59 @@ interface ModelViewerProps {
   steps: RotateAxis[]
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
+  // A filament colour to render the whole model in (hex). null shows the analysis
+  // shading (base grey + amber overhangs) instead.
+  tint?: string | null
+  // Reports how long the model took to fetch and build (parse + decimate).
+  onTiming?: (t: LoadTiming) => void
+}
+
+interface ModelData {
+  geometry: THREE.BufferGeometry
+  timing: LoadTiming
+}
+
+/**
+ * Loads and parses the model once per URL, cached in TanStack Query. A remount -
+ * React StrictMode's double-mount, a dev Fast-Refresh, or a parent re-render as
+ * the user types a name - then returns the already-built mesh from cache instead
+ * of re-downloading it and flashing a loading state. The cached geometry is a
+ * shared source that ModelMesh clones, so no consumer mutates or disposes it.
+ */
+function useModelGeometry(modelUrl: string): UseQueryResult<ModelData> {
+  return useQuery<ModelData>({
+    queryKey: ['design-model-geometry', modelUrl],
+    queryFn: async () => {
+      const started = performance.now()
+      const res = await fetch(modelUrl, { credentials: 'same-origin' })
+      if (!res.ok) throw new Error(`status ${res.status}`)
+      const buf = await res.arrayBuffer()
+      const downloaded = performance.now()
+      const geometry = parseModel(buf)
+      const built = performance.now()
+      return {
+        geometry,
+        timing: {
+          bytes: buf.byteLength,
+          downloadMs: downloaded - started,
+          buildMs: built - downloaded,
+        },
+      }
+    },
+    staleTime: Infinity,
+    gcTime: 10 * 60_000,
+    // A couple of retries so a transient blip (a dev hot-reload aborting the
+    // in-flight fetch, a backend still warming up) self-heals instead of leaving
+    // the viewer stuck on "unavailable" until the component remounts.
+    retry: 2,
+    retryDelay: attempt => Math.min(1000 * 2 ** attempt, 4000),
+  })
+}
+
+export interface LoadTiming {
+  bytes: number
+  downloadMs: number
+  buildMs: number
 }
 
 /**
@@ -48,45 +111,32 @@ export function ModelViewer({
   steps,
   onMeasure,
   clip,
+  tint,
+  onTiming,
 }: ModelViewerProps): JSX.Element {
-  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null)
-  const [failed, setFailed] = useState(false)
+  const { data, isError } = useModelGeometry(modelUrl)
+  const geometry = data?.geometry ?? null
 
+  // Report load timing once, when the (cached) data first becomes available. Kept
+  // in a ref so a changing onTiming identity never re-runs the effect.
+  const onTimingRef = useRef(onTiming)
   useEffect(() => {
-    let cancelled = false
-    setGeometry(null)
-    setFailed(false)
-    void fetch(modelUrl, { credentials: 'same-origin' })
-      .then(async res => {
-        if (!res.ok) throw new Error(`status ${res.status}`)
-        return res.arrayBuffer()
-      })
-      .then(buf => {
-        const geo = parseModel(buf)
-        if (cancelled) {
-          geo.dispose()
-          return
-        }
-        setGeometry(geo)
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [modelUrl])
+    onTimingRef.current = onTiming
+  }, [onTiming])
+  useEffect(() => {
+    if (data?.timing) onTimingRef.current?.(data.timing)
+  }, [data])
 
   const quaternion = useMemo(
     () => poseQuaternion(orientation, base, steps),
     [orientation, base, steps],
   )
 
-  if (failed) {
+  if (isError) {
     return <ViewerMessage text="3D preview unavailable for this model." />
   }
   if (!geometry) {
-    return <ViewerMessage text="Loading 3D preview…" />
+    return <ViewerMessage text="Fetching model…" />
   }
 
   return (
@@ -102,7 +152,13 @@ export function ModelViewer({
       <directionalLight position={[60, -40, 90]} intensity={1.1} />
       <directionalLight position={[-50, 50, 40]} intensity={0.4} />
       <Bounds fit clip observe margin={1.4}>
-        <ModelMesh geometry={geometry} quaternion={quaternion} onMeasure={onMeasure} clip={clip} />
+        <ModelMesh
+          geometry={geometry}
+          quaternion={quaternion}
+          onMeasure={onMeasure}
+          clip={clip}
+          tint={tint}
+        />
       </Bounds>
       <Grid
         args={[600, 600]}
@@ -127,9 +183,10 @@ interface ModelMeshProps {
   quaternion: THREE.Quaternion
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
+  tint?: string | null
 }
 
-function ModelMesh({ geometry, quaternion, onMeasure, clip }: ModelMeshProps): JSX.Element {
+function ModelMesh({ geometry, quaternion, onMeasure, clip, tint }: ModelMeshProps): JSX.Element {
   const meshRef = useRef<THREE.Mesh>(null)
   const worldPlane = useMemo(() => new THREE.Plane(), [])
 
@@ -163,7 +220,8 @@ function ModelMesh({ geometry, quaternion, onMeasure, clip }: ModelMeshProps): J
     <>
       <mesh ref={meshRef} geometry={prepared}>
         <meshStandardMaterial
-          vertexColors
+          vertexColors={!tint}
+          color={tint ?? '#ffffff'}
           flatShading
           roughness={0.72}
           metalness={0}
@@ -276,8 +334,9 @@ function paintAndMeasure(g: THREE.BufferGeometry): OrientationMeasure {
 }
 
 // parseModel sniffs the format (3MF is a zip, "PK.."; otherwise STL) and returns
-// a single non-indexed geometry so overhang colouring can work per triangle.
-// Exported for reuse by any other plain-model viewer (see
+// a single non-indexed geometry so overhang colouring can work per triangle. A
+// very heavy mesh is decimated first so the preview stays interactive. Exported
+// for reuse by any other plain-model viewer (see
 // components/production/job-model-viewer.tsx).
 export function parseModel(buf: ArrayBuffer): THREE.BufferGeometry {
   const head = new Uint8Array(buf, 0, Math.min(2, buf.byteLength))
@@ -286,8 +345,79 @@ export function parseModel(buf: ArrayBuffer): THREE.BufferGeometry {
   if (geo.index) {
     geo = geo.toNonIndexed()
   }
+  if (geo.getAttribute('position').count / 3 > PREVIEW_MAX_TRIANGLES) {
+    const lite = decimateGeometry(geo, PREVIEW_DECIMATE_GRID)
+    // Keep the simplified mesh only if it survived with a usable number of
+    // triangles; otherwise fall back to the original (never show a blank model).
+    if (lite !== geo && lite.getAttribute('position').count >= 3 * 100) {
+      geo.dispose()
+      geo = lite
+    } else if (lite !== geo) {
+      lite.dispose()
+    }
+  }
   geo.computeVertexNormals()
   return geo
+}
+
+// decimateGeometry reduces a non-indexed geometry by grid vertex-clustering: the
+// bounding box is split into a gridN^3 lattice, every vertex snaps to its cell's
+// centroid, and triangles whose corners collapse into one cell are dropped. Cheap
+// (two linear passes) and good enough for an orbit preview; it is not a
+// quality-preserving simplification and slightly changes the overhang readout.
+function decimateGeometry(geo: THREE.BufferGeometry, gridN: number): THREE.BufferGeometry {
+  const pos = geo.getAttribute('position')
+  geo.computeBoundingBox()
+  const bb = geo.boundingBox
+  if (!bb) return geo
+  const maxDim = Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z)
+  if (maxDim <= 0) return geo
+
+  const arr = pos.array as ArrayLike<number>
+  const cell = maxDim / gridN
+  const stride = gridN + 2 // +2 so the max corner never overflows the lattice
+  const keyOf = (x: number, y: number, z: number): number =>
+    Math.floor((x - bb.min.x) / cell) +
+    Math.floor((y - bb.min.y) / cell) * stride +
+    Math.floor((z - bb.min.z) / cell) * stride * stride
+
+  // First pass: accumulate each cell's centroid.
+  const cells = new Map<number, { x: number; y: number; z: number; n: number }>()
+  for (let i = 0; i < pos.count; i++) {
+    const x = arr[i * 3]
+    const y = arr[i * 3 + 1]
+    const z = arr[i * 3 + 2]
+    const k = keyOf(x, y, z)
+    let acc = cells.get(k)
+    if (!acc) {
+      acc = { x: 0, y: 0, z: 0, n: 0 }
+      cells.set(k, acc)
+    }
+    acc.x += x
+    acc.y += y
+    acc.z += z
+    acc.n += 1
+  }
+
+  // Second pass: rebuild triangles from cell centroids, dropping collapsed ones.
+  const out: number[] = []
+  const push = (k: number): void => {
+    const c = cells.get(k)
+    if (c) out.push(c.x / c.n, c.y / c.n, c.z / c.n)
+  }
+  for (let i = 0; i < pos.count; i += 3) {
+    const kA = keyOf(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2])
+    const kB = keyOf(arr[i * 3 + 3], arr[i * 3 + 4], arr[i * 3 + 5])
+    const kC = keyOf(arr[i * 3 + 6], arr[i * 3 + 7], arr[i * 3 + 8])
+    if (kA === kB || kB === kC || kA === kC) continue
+    push(kA)
+    push(kB)
+    push(kC)
+  }
+
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3))
+  return g
 }
 
 function merge3MF(object: THREE.Object3D): THREE.BufferGeometry {

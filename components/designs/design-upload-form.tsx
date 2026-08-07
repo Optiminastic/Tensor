@@ -28,16 +28,12 @@ const FINISHES: { value: string; label: string }[] = [
   { value: 'sanded', label: 'Sanded' },
   { value: 'painted', label: 'Painted' },
 ]
-// Labels are the literal BBL H2C system preset names shown in Bambu Studio -
-// values are the backend's matching slugs (internal/httpapi/designs.go).
+// Values are the backend's quality slugs (internal/httpapi/designs.go
+// validQualities -> internal/slicing/profiles.go H2S process presets).
 const QUALITIES: { value: (typeof QualitySchema.options)[number]; label: string }[] = [
-  { value: '0.08-high', label: '0.08mm High Quality @BBL H2C' },
-  { value: '0.12-high', label: '0.12mm High Quality @BBL H2C' },
-  { value: '0.16-high', label: '0.16mm High Quality @BBL H2C' },
-  { value: '0.16-standard', label: '0.16mm Standard @BBL H2C' },
-  { value: '0.20-high', label: '0.20mm High Quality @BBL H2C' },
-  { value: '0.20-standard', label: '0.20mm Standard @BBL H2C' },
-  { value: '0.24-standard', label: '0.24mm Standard @BBL H2C' },
+  { value: 'draft', label: 'Draft - 0.24mm, fastest' },
+  { value: 'standard', label: 'Standard - 0.20mm' },
+  { value: 'fine', label: 'Fine - 0.12mm, best detail' },
 ]
 const NOZZLES_MM = [0.2, 0.4, 0.6, 0.8] as const
 const FLOWS: { value: 'standard' | 'high_flow'; label: string }[] = [
@@ -55,19 +51,29 @@ const FormSchema = z
     quality: QualitySchema,
     infill_pct: z.number().min(0).max(100),
     notes: z.string().max(2000).optional(),
+    product_type: z.string().max(80).optional(),
+    personalisation_type: z.string().max(80).optional(),
+    colour_count: z.coerce.number().int().min(1).max(20).optional(),
+    add_ons: z.string().max(200).optional(),
+    packaging_type: z.string().max(80).optional(),
   })
   .extend(DesignMachineSpecSchema.shape)
 type FormValues = z.infer<typeof FormSchema>
 
 const DEFAULTS: FormValues = {
   name: '',
-  material: 'PLA Basics',
+  material: 'PLA',
   colour: '',
   finish: 'none',
   units_per_bed: 1,
-  quality: '0.20-standard',
+  quality: 'standard',
   infill_pct: 15,
   notes: '',
+  product_type: '',
+  personalisation_type: '',
+  colour_count: 1,
+  add_ons: '',
+  packaging_type: '',
   left_nozzle_mm: 0.4,
   right_nozzle_mm: 0.4,
   left_flow: 'standard',
@@ -129,6 +135,11 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
     form.set('quality', values.quality)
     form.set('infill_pct', String(values.infill_pct))
     if (values.notes) form.set('notes', values.notes)
+    if (values.product_type) form.set('product_type', values.product_type)
+    if (values.personalisation_type) form.set('personalisation_type', values.personalisation_type)
+    if (values.colour_count) form.set('colour_count', String(values.colour_count))
+    if (values.add_ons) form.set('add_ons', values.add_ons)
+    if (values.packaging_type) form.set('packaging_type', values.packaging_type)
     form.set('left_nozzle_mm', String(values.left_nozzle_mm))
     form.set('right_nozzle_mm', String(values.right_nozzle_mm))
     form.set('left_flow', values.left_flow)
@@ -278,6 +289,46 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
           </Select>
         </Field>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Product type" htmlFor="product_type" hint="Optional">
+          <Input
+            id="product_type"
+            placeholder="e.g. nameplate, planter"
+            {...register('product_type')}
+          />
+        </Field>
+        <Field label="Personalisation type" htmlFor="personalisation_type" hint="Optional">
+          <Input
+            id="personalisation_type"
+            placeholder="e.g. name, photo"
+            {...register('personalisation_type')}
+          />
+        </Field>
+        <Field label="Colour count" htmlFor="colour_count" hint="Optional">
+          <Input
+            id="colour_count"
+            type="number"
+            min={1}
+            max={20}
+            {...register('colour_count', { valueAsNumber: true })}
+          />
+        </Field>
+        <Field label="Packaging type" htmlFor="packaging_type" hint="Optional">
+          <Input
+            id="packaging_type"
+            placeholder="e.g. box, mailer"
+            {...register('packaging_type')}
+          />
+        </Field>
+      </div>
+      <Field
+        label="Add-ons"
+        htmlFor="add_ons"
+        hint="Comma-separated, optional (e.g. light, base, stand)"
+      >
+        <Input id="add_ons" placeholder="light, base, stand, frame" {...register('add_ons')} />
+      </Field>
 
       <Field label="Notes for Project Lead" htmlFor="notes" hint="Optional">
         <Textarea

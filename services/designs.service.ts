@@ -6,15 +6,20 @@ import {
   type DesignDetail,
   type DesignMachine,
   type DesignMachineSpec,
+  type DesignOptimization,
   type DesignReview,
   type DesignSpecs,
+  type PersonalisationEstimate,
+  type PersonalisationRules,
   type PublishInput,
   type PublishResult,
   type ResubmitInput,
   DesignDetailSchema,
   DesignMachineSchema,
+  DesignOptimizationSchema,
   DesignReviewSchema,
   DesignSchema,
+  PersonalisationEstimateSchema,
   PublishResultSchema,
 } from '@/lib/validators/designs'
 
@@ -36,15 +41,17 @@ const UPLOAD_TIMEOUT_MS = 5 * 60_000
 // A design's streamable files: the original uploaded model, the G-code archive
 // from its latest slice, the cover preview image, and the extracted plate G-code
 // text the layer preview renders from.
-export type DesignFileKind = 'model' | 'gcode' | 'preview' | 'plate'
+export type DesignFileKind = 'model' | 'model-lite' | 'gcode' | 'preview' | 'plate' | 'report'
 
 // Frontend kind -> Tensor-Core sub-path. Most map one-to-one; the layer preview
 // reads the plate G-code text served at the nested /gcode/plate route.
 const KIND_PATHS: Record<DesignFileKind, string> = {
   model: 'model',
+  'model-lite': 'model-lite',
   gcode: 'gcode',
   preview: 'preview',
   plate: 'gcode/plate',
+  report: 'report.pdf',
 }
 
 /**
@@ -111,6 +118,7 @@ export interface CreateDesignInput {
   file: File
   preview: File
   notes?: string
+  attributes?: Record<string, string>
 }
 
 // createDesign sends multipart/form-data: Content-Type is left unset so fetch
@@ -130,6 +138,9 @@ export async function createDesign(token: string, input: CreateDesignInput): Pro
   form.set('left_flow', input.machine.left_flow)
   form.set('right_flow', input.machine.right_flow)
   if (input.notes) form.set('notes', input.notes)
+  if (input.attributes) {
+    for (const [key, value] of Object.entries(input.attributes)) form.set(key, value)
+  }
   form.set('file', input.file, input.file.name)
   form.set('preview', input.preview, input.preview.name)
 
@@ -185,6 +196,61 @@ export async function fetchDesignFile(
   }
 
   return response
+}
+
+/**
+ * Streams the personalized preview model - the design's model with the customer's
+ * name rendered as real embossed geometry (backend OpenSCAD). `search` is the raw
+ * query string (text, size_mm, depth_mm, offset_*_mm), forwarded verbatim. Like
+ * fetchDesignFile it returns the raw Response so the route handler can pipe bytes.
+ */
+export async function fetchPersonalisePreview(
+  token: string,
+  id: string,
+  search: string,
+): Promise<Response> {
+  let response: Response
+  try {
+    response = await fetch(
+      `${env.TENSOR_CORE_URL}/designs/${encodeURIComponent(id)}/personalise-preview${search}`,
+      {
+        headers: authHeader(token),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
+      },
+    )
+  } catch (error) {
+    log.error({ id, err: error }, 'Tensor-Core is unreachable')
+    throw new DesignServiceError('Tensor-Core is unreachable. Is the backend running?')
+  }
+
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((body: { detail?: string }) => body.detail)
+      .catch(() => undefined)
+    log.warn(
+      { id, status: response.status, detail },
+      'Tensor-Core rejected the personalise preview',
+    )
+    throw new DesignServiceError(detail ?? `Request failed (${response.status})`)
+  }
+
+  return response
+}
+
+// Emails the design's cost-report PDF to a recipient. Returns { sent, to } on
+// success; the backend 503s when SMTP is not configured.
+export async function emailDesignReport(
+  token: string,
+  id: string,
+  to: string,
+): Promise<{ sent: boolean; to: string }> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/email-report`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify({ to }) },
+    data => data as { sent: boolean; to: string },
+  )
 }
 
 export interface PublishToShopifyParams {
@@ -245,6 +311,62 @@ export async function setDesignSku(token: string, id: string, sku: string): Prom
     `/designs/${encodeURIComponent(id)}/sku`,
     { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ sku }) },
     data => DesignSchema.parse(data),
+  )
+}
+
+// Stores what personalization a product offers (null clears it). The backend
+// validates the rule shape.
+export async function setDesignPersonalisationRules(
+  token: string,
+  id: string,
+  rules: PersonalisationRules | null,
+): Promise<Design> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/personalisation-rules`,
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ rules }) },
+    data => DesignSchema.parse(data),
+  )
+}
+
+export interface EstimatePersonalisationInput {
+  text: string
+  height_mm?: number
+  depth_mm?: number
+}
+
+// The AI optimizer calls an LLM, so it gets a generous ceiling well beyond the
+// small-JSON default.
+const OPTIMIZE_TIMEOUT_MS = 90_000
+
+// Runs the nozzle-aware AI optimization advisor for a costed design and returns
+// its structured report (verdict, filament, support, ranked recommendations). The
+// backend caches per (design, inputs), so a repeat call for the same inputs is fast.
+export async function getDesignOptimization(
+  token: string,
+  id: string,
+): Promise<DesignOptimization> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/optimize`,
+    {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      signal: AbortSignal.timeout(OPTIMIZE_TIMEOUT_MS),
+    },
+    data => DesignOptimizationSchema.parse(data),
+  )
+}
+
+// Fast pre-slice estimate of what a name adds to a product (grams, time, cost).
+// Read-only on the backend; the authoritative numbers come from the slice.
+export async function estimatePersonalisation(
+  token: string,
+  id: string,
+  input: EstimatePersonalisationInput,
+): Promise<PersonalisationEstimate> {
+  return call(
+    `/designs/${encodeURIComponent(id)}/personalisation-estimate`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => PersonalisationEstimateSchema.parse(data),
   )
 }
 

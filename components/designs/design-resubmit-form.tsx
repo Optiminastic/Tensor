@@ -26,16 +26,12 @@ const FINISHES: { value: string; label: string }[] = [
   { value: 'sanded', label: 'Sanded' },
   { value: 'painted', label: 'Painted' },
 ]
-// Labels are the literal BBL H2C system preset names shown in Bambu Studio -
-// values are the backend's matching slugs (internal/httpapi/designs.go).
+// Values are the backend's quality slugs (internal/httpapi/designs.go
+// validQualities -> internal/slicing/profiles.go H2S process presets).
 const QUALITIES: { value: (typeof QualitySchema.options)[number]; label: string }[] = [
-  { value: '0.08-high', label: '0.08mm High Quality @BBL H2C' },
-  { value: '0.12-high', label: '0.12mm High Quality @BBL H2C' },
-  { value: '0.16-high', label: '0.16mm High Quality @BBL H2C' },
-  { value: '0.16-standard', label: '0.16mm Standard @BBL H2C' },
-  { value: '0.20-high', label: '0.20mm High Quality @BBL H2C' },
-  { value: '0.20-standard', label: '0.20mm Standard @BBL H2C' },
-  { value: '0.24-standard', label: '0.24mm Standard @BBL H2C' },
+  { value: 'draft', label: 'Draft - 0.24mm, fastest' },
+  { value: 'standard', label: 'Standard - 0.20mm' },
+  { value: 'fine', label: 'Fine - 0.12mm, best detail' },
 ]
 
 interface DesignResubmitFormProps {
