@@ -87,6 +87,8 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       { label: 'Production Jobs', href: '/production/jobs' },
       { label: 'Batch Management', href: '/production/batches', permission: 'batch:read' },
       { label: 'Machine Management', href: '/production/machines', permission: 'machine:read' },
+      { label: 'Assembly', href: '/production/assembly' },
+      { label: 'QC/Packaging', href: '/production/qc-packaging' },
       { label: 'Filament Inventory', href: '/production/inventory', permission: 'filament:read' },
     ],
   },

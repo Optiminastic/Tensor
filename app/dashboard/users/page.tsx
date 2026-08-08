@@ -6,7 +6,7 @@ import type { JSX } from 'react'
 import { type BrandChoice } from '@/components/admin/brand-multi-select'
 import { InviteManager } from '@/components/admin/invite-manager'
 import { MembersList, type MemberView } from '@/components/admin/members-list'
-import { auth, getUserDirectory } from '@/lib/auth'
+import { getSessionSafe, getTokenSafe, getUserDirectory } from '@/lib/auth'
 import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import type { Invite, Member } from '@/lib/validators/admin'
 import { listInvites, listMembers } from '@/services/admin.service'
@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic'
  */
 export default async function UsersPage(): Promise<JSX.Element> {
   const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
+  const session = await getSessionSafe(requestHeaders)
   if (!session) redirect('/login?callbackUrl=/dashboard/users')
 
   await requirePermission('user:read', '/dashboard')
@@ -36,7 +36,7 @@ export default async function UsersPage(): Promise<JSX.Element> {
   let loadError: string | null = null
 
   try {
-    const token = await auth.api.getToken({ headers: requestHeaders })
+    const token = await getTokenSafe(requestHeaders)
     if (token?.token) {
       // Invites are admin-only; a Project Lead skips that call (it would 403).
       const [brandRows, memberRows, inviteRows] = await Promise.all([

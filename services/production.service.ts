@@ -2,17 +2,22 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
+  type AssemblyInput,
   type Filament,
   type FilamentInput,
   type JobPatchInput,
   type Order,
   type OrderDetail,
+  type PackagingInput,
   type PersonalisationValidateInput,
   type ProductionJob,
+  type QcInput,
+  type QcSubmitResult,
   FilamentSchema,
   OrderDetailSchema,
   OrderSchema,
   ProductionJobSchema,
+  QcSubmitResultSchema,
 } from '@/lib/validators/production'
 
 const log = createLogger('ProductionService')
@@ -59,9 +64,24 @@ function jsonHeaders(token: string): HeadersInit {
   }
 }
 
-export async function listProductionJobs(token: string): Promise<ProductionJob[]> {
-  return call('/production-jobs', { headers: jsonHeaders(token) }, data =>
-    ProductionJobSchema.array().parse(data),
+export interface ProductionJobFilters {
+  status?: string
+  assembly_status?: string
+  qc_status?: string
+  packaging_status?: string
+}
+
+export async function listProductionJobs(
+  token: string,
+  filters?: ProductionJobFilters,
+): Promise<ProductionJob[]> {
+  const query = new URLSearchParams(
+    Object.entries(filters ?? {}).filter((entry): entry is [string, string] => Boolean(entry[1])),
+  ).toString()
+  return call(
+    `/production-jobs${query ? `?${query}` : ''}`,
+    { headers: jsonHeaders(token) },
+    data => ProductionJobSchema.array().parse(data),
   )
 }
 
@@ -158,5 +178,53 @@ export async function upsertFilament(token: string, input: FilamentInput): Promi
     '/filament-inventory',
     { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
     data => FilamentSchema.parse(data),
+  )
+}
+
+// The post-print station handlers (assembly, QC, packaging) - each records an
+// audit row and advances the job's matching sub-status; the backend gates on
+// the prior stage so the order (assembly -> QC -> packaging) can't be skipped.
+
+export async function submitAssembly(
+  token: string,
+  jobId: string,
+  input: AssemblyInput,
+): Promise<ProductionJob> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/assembly`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => ProductionJobSchema.parse(data),
+  )
+}
+
+export async function skipAssembly(token: string, jobId: string): Promise<ProductionJob> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/assembly/skip`,
+    { method: 'POST', headers: jsonHeaders(token) },
+    data => ProductionJobSchema.parse(data),
+  )
+}
+
+export async function submitQc(
+  token: string,
+  jobId: string,
+  input: QcInput,
+): Promise<QcSubmitResult> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/qc`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => QcSubmitResultSchema.parse(data),
+  )
+}
+
+export async function submitPackaging(
+  token: string,
+  jobId: string,
+  input: PackagingInput,
+): Promise<ProductionJob> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/packaging`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => ProductionJobSchema.parse(data),
   )
 }

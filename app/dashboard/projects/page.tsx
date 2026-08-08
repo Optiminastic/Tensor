@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
 import { ProjectManager, type BrandOption } from '@/components/projects/project-manager'
-import { auth } from '@/lib/auth'
+import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import type { Project } from '@/lib/validators/projects'
 import { listBrands } from '@/services/brands.service'
 import { listProjects } from '@/services/projects.service'
@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic'
  */
 export default async function ProjectsPage(): Promise<JSX.Element> {
   const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
+  const session = await getSessionSafe(requestHeaders)
   if (!session) redirect('/login?callbackUrl=/dashboard/projects')
 
   let projects: Project[] = []
@@ -30,7 +30,7 @@ export default async function ProjectsPage(): Promise<JSX.Element> {
   let loadError: string | null = null
 
   try {
-    const token = await auth.api.getToken({ headers: requestHeaders })
+    const token = await getTokenSafe(requestHeaders)
     if (token?.token) {
       projects = await listProjects(token.token)
       // Brands populate the project's brand picker; a failure here should not

@@ -26,6 +26,10 @@ export const BatchSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   jobs_count: z.number().nullish(),
+  // Derived from bed_utilization_percent against the nominal bed area -
+  // present on every response, list and single-batch alike.
+  occupied_area_mm2: z.number().nullish(),
+  free_area_mm2: z.number().nullish(),
   // Only present on the single-batch GET (see attachPlateBbox in
   // internal/httpapi/batches.go) - the merged plate's overall combined size.
   plate_bbox_x_mm: z.number().nullish(),

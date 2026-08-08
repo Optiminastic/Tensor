@@ -53,6 +53,7 @@ function toPackaging(status: string): PackagingStatus {
 export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
   return {
     id: job.id,
+    jobNumber: job.job_number,
     description: job.description,
     qty: job.quantity,
     status: toQueueStatus(job),
@@ -61,6 +62,7 @@ export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
     packaging: toPackaging(job.packaging_status),
     priority: job.priority,
     createdAt: job.created_at,
+    issueReason: job.issue_reason ?? null,
   }
 }
 
@@ -100,6 +102,7 @@ function toJobStatus(job: ProductionJob): JobStatus {
 export function toRecentJob(job: ProductionJob): RecentJob {
   return {
     id: job.id,
+    jobNumber: job.job_number,
     designName: job.product_name ?? job.description,
     machine: job.nozzle_profile ?? '-',
     startedAt: job.created_at,
@@ -192,6 +195,8 @@ export function toBatchRecord(batch: Batch): BatchRecord {
     packingStrategy: batch.packing_strategy ?? null,
     jobsCount: batch.jobs_count ?? null,
     createdAt: batch.created_at,
+    occupiedAreaMm2: batch.occupied_area_mm2 ?? null,
+    freeAreaMm2: batch.free_area_mm2 ?? null,
     plateBboxXMm: batch.plate_bbox_x_mm ?? null,
     plateBboxYMm: batch.plate_bbox_y_mm ?? null,
     plateBboxZMm: batch.plate_bbox_z_mm ?? null,
@@ -217,6 +222,8 @@ export function createSampleBatchRecords(): BatchRecord[] {
       packingStrategy: 'mixed',
       jobsCount: 9,
       createdAt: '2026-08-04T09:12:00Z',
+      occupiedAreaMm2: null,
+      freeAreaMm2: null,
       plateBboxXMm: null,
       plateBboxYMm: null,
       plateBboxZMm: null,
@@ -235,6 +242,8 @@ export function createSampleBatchRecords(): BatchRecord[] {
       packingStrategy: 'single_sku',
       jobsCount: 6,
       createdAt: '2026-08-04T08:47:00Z',
+      occupiedAreaMm2: null,
+      freeAreaMm2: null,
       plateBboxXMm: null,
       plateBboxYMm: null,
       plateBboxZMm: null,
@@ -253,6 +262,8 @@ export function createSampleBatchRecords(): BatchRecord[] {
       packingStrategy: 'multi_sku',
       jobsCount: 11,
       createdAt: '2026-07-31T14:20:00Z',
+      occupiedAreaMm2: null,
+      freeAreaMm2: null,
       plateBboxXMm: null,
       plateBboxYMm: null,
       plateBboxZMm: null,
@@ -271,6 +282,8 @@ export function createSampleBatchRecords(): BatchRecord[] {
       packingStrategy: 'mixed',
       jobsCount: 8,
       createdAt: '2026-07-31T11:05:00Z',
+      occupiedAreaMm2: null,
+      freeAreaMm2: null,
       plateBboxXMm: null,
       plateBboxYMm: null,
       plateBboxZMm: null,
@@ -289,6 +302,8 @@ export function createSampleBatchRecords(): BatchRecord[] {
       packingStrategy: 'single_sku',
       jobsCount: 10,
       createdAt: '2026-07-30T16:40:00Z',
+      occupiedAreaMm2: null,
+      freeAreaMm2: null,
       plateBboxXMm: null,
       plateBboxYMm: null,
       plateBboxZMm: null,

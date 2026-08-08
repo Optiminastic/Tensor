@@ -7,7 +7,7 @@ import type { JSX } from 'react'
 import { BrandDeleteList } from '@/components/brands/brand-delete-list'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { auth } from '@/lib/auth'
+import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import type { BrandProfile } from '@/lib/validators/brands'
 import { listBrands } from '@/services/brands.service'
 
@@ -22,13 +22,13 @@ export const dynamic = 'force-dynamic'
  */
 export default async function SettingsPage(): Promise<JSX.Element> {
   const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
+  const session = await getSessionSafe(requestHeaders)
   if (!session) redirect('/login?callbackUrl=/dashboard/settings')
 
   let brands: BrandProfile[] = []
   let loadError: string | null = null
   try {
-    const token = await auth.api.getToken({ headers: requestHeaders })
+    const token = await getTokenSafe(requestHeaders)
     if (token?.token) brands = await listBrands(token.token)
   } catch (error) {
     loadError = error instanceof Error ? error.message : 'Could not load brands.'

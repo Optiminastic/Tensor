@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 
-import { auth } from '@/lib/auth'
+import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 
 export interface ResolvedToken {
   token?: string
@@ -15,10 +15,10 @@ export interface ResolvedToken {
  */
 export async function resolveBackendToken(): Promise<ResolvedToken> {
   const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
+  const session = await getSessionSafe(requestHeaders)
   if (!session) return { error: 'Your session has expired. Sign in again.' }
 
-  const minted = await auth.api.getToken({ headers: requestHeaders })
+  const minted = await getTokenSafe(requestHeaders)
   if (!minted?.token) return { error: 'Could not mint an access token. Sign in again.' }
   return { token: minted.token }
 }

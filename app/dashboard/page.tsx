@@ -2,7 +2,7 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
-import { auth } from '@/lib/auth'
+import { getTokenSafe } from '@/lib/auth'
 import { can, currentAuthz } from '@/lib/authz'
 import { listBrands } from '@/services/brands.service'
 
@@ -15,8 +15,9 @@ export const dynamic = 'force-dynamic'
  * notice - a member must never be pushed into creating a brand.
  */
 export default async function DashboardPage(): Promise<JSX.Element> {
-  const token = await auth.api.getToken({ headers: await headers() })
-  const brands = token?.token ? await listBrands(token.token).catch(() => []) : []
+  const token = await getTokenSafe(await headers())
+  if (!token?.token) redirect('/login')
+  const brands = await listBrands(token.token).catch(() => [])
 
   if (brands.length === 0) {
     if (can(await currentAuthz(), 'brand:manage')) redirect('/create-brand')

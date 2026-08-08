@@ -2,6 +2,7 @@ export type JobStatus = 'completed' | 'failed' | 'printing' | 'queued'
 
 export interface ProductionJob {
   id: string
+  jobNumber: string
   designName: string
   machine: string
   startedAt: string
@@ -26,11 +27,13 @@ export interface ActivityPoint {
 
 export type QueueStatus = 'queued' | 'in_progress' | 'on_hold' | 'completed' | 'failed'
 export type PersonalisationStatus = 'not_required' | 'required' | 'completed'
+export type AssemblyStatus = 'pending' | 'completed' | 'not_required'
 export type QcStatus = 'pending' | 'passed' | 'failed'
 export type PackagingStatus = 'pending' | 'packed'
 
 export interface ProductionJobQueueItem {
   id: string
+  jobNumber: string
   description: string
   qty: number
   status: QueueStatus
@@ -39,6 +42,10 @@ export interface ProductionJobQueueItem {
   packaging: PackagingStatus
   priority: number
   createdAt: string
+  // Set when Stage 3 validation flagged this job (missing SKU/design/STL) -
+  // it's excluded from auto-batching until a human fixes it, so it's the
+  // one case the queue still needs manual Hold/Start controls for.
+  issueReason: string | null
 }
 
 export type FilamentQuantityUnit = 'kg' | 'count'
@@ -121,6 +128,9 @@ export interface BatchRecord {
   packingStrategy: string | null
   jobsCount: number | null
   createdAt: string
+  // Derived from bedUtilizationPercent against the nominal bed area.
+  occupiedAreaMm2: number | null
+  freeAreaMm2: number | null
   // The merged plate's overall combined size (only populated on the
   // single-batch detail fetch - see toBatchRecord).
   plateBboxXMm: number | null

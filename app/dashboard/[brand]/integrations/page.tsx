@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import type { JSX } from 'react'
 
 import { BrandConnections } from '@/components/brands/brand-connections'
-import { auth } from '@/lib/auth'
+import { getTokenSafe } from '@/lib/auth'
 import { requirePermission } from '@/lib/authz'
 import { env } from '@/lib/env'
 import type { Connection } from '@/lib/validators/connections'
@@ -39,7 +39,7 @@ export default async function IntegrationsPage({
   const { brand } = await params
   await requirePermission('integration:manage', `/dashboard/${brand}`)
   const { google } = await searchParams
-  const token = await auth.api.getToken({ headers: await headers() })
+  const token = await getTokenSafe(await headers())
   let connections: Connection[] = []
   if (token?.token) {
     connections = await listConnections(token.token, brand).catch(() => [])
