@@ -11,7 +11,14 @@ interface RouteContext {
   params: Promise<{ id: string; kind: string }>
 }
 
-const VALID_KINDS = new Set<DesignFileKind>(['model', 'gcode'])
+const VALID_KINDS = new Set<DesignFileKind>([
+  'model',
+  'model-lite',
+  'gcode',
+  'preview',
+  'plate',
+  'report',
+])
 
 function isValidKind(kind: string): kind is DesignFileKind {
   return VALID_KINDS.has(kind as DesignFileKind)
@@ -39,8 +46,11 @@ export async function GET(_request: NextRequest, { params }: RouteContext): Prom
 
   try {
     const upstream = await fetchDesignFile(token, id, kind)
-    const headers = new Headers({ 'Content-Type': 'application/octet-stream' })
-    // Preserve the backend's attachment filename and length when present.
+    // Preserve the backend's content type (an image for the preview, streamed
+    // inline; octet-stream for the model/G-code attachment downloads).
+    const headers = new Headers({
+      'Content-Type': upstream.headers.get('Content-Type') ?? 'application/octet-stream',
+    })
     const disposition = upstream.headers.get('Content-Disposition')
     if (disposition) headers.set('Content-Disposition', disposition)
     const length = upstream.headers.get('Content-Length')

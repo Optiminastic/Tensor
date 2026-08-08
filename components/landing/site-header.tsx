@@ -4,7 +4,7 @@ import type { JSX } from 'react'
 
 import { Logo } from '@/components/logo'
 import { buttonVariants } from '@/components/ui/button'
-import { auth } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 
 const NAV_LINKS = [
   { href: '#product', label: 'Product' },
@@ -29,7 +29,7 @@ export async function SiteHeader(): Promise<JSX.Element> {
   // (no database provisioned, backend down, cold start timeout). A failed
   // session lookup means "treat the visitor as signed out", never a 500 on the
   // marketing homepage. This is UX only; every real check happens in Tensor-Core.
-  const session = await auth.api.getSession({ headers: await headers() }).catch(() => null)
+  const session = await getSessionSafe(await headers())
   const action = session
     ? { href: '/dashboard', label: 'Dashboard' }
     : { href: '/login', label: 'Sign in' }

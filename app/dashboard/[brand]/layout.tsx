@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import type { JSX, ReactNode } from 'react'
 
-import { auth } from '@/lib/auth'
+import { getTokenSafe } from '@/lib/auth'
 import { listBrands } from '@/services/brands.service'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +21,7 @@ export default async function BrandLayout({
   params,
 }: BrandLayoutProps): Promise<JSX.Element> {
   const { brand } = await params
-  const token = await auth.api.getToken({ headers: await headers() })
+  const token = await getTokenSafe(await headers())
   if (token?.token) {
     const brands = await listBrands(token.token).catch(() => null)
     if (brands !== null && !brands.some(item => item.slug === brand)) notFound()

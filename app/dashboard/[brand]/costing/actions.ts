@@ -4,7 +4,9 @@ import { headers } from 'next/headers'
 import { z } from 'zod'
 
 import { auth } from '@/lib/auth'
+import { resolveBackendToken } from '@/lib/backend-token'
 import { createLogger } from '@/lib/logger'
+import { CostAssumptionInputSchema } from '@/lib/validators/config'
 import {
   CostAssumptionsSchema,
   type DesignCPBreakdown,
@@ -14,6 +16,11 @@ import {
   type SellingPriceResult,
   SlicerMetricsSchema,
 } from '@/lib/validators/pricing'
+import {
+  ConfigServiceError,
+  createDefaultCostAssumption,
+  updateCostAssumption,
+} from '@/services/config.service'
 import {
   computeDesignCP,
   evaluateStatus,
@@ -87,5 +94,33 @@ export async function calculatePrice(input: unknown): Promise<ActionResult<Calcu
     return { ok: true, data: { breakdown, selling, status } }
   } catch (error) {
     return { ok: false, error: describe(error) }
+  }
+}
+
+/**
+ * Saves the pricing cost assumptions (CP rates, fixed costs, margins). When id is
+ * null - no default set exists yet - it creates one; otherwise it updates in
+ * place. The token is re-resolved server-side; values are validated first. The
+ * backend enforces config:manage, so this is a UI affordance, not the guard.
+ */
+export async function savePricingConfig(id: string | null, raw: unknown): Promise<ActionResult> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Sign in again.' }
+
+  const parsed = CostAssumptionInputSchema.safeParse(raw)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Some values are invalid.' }
+  }
+
+  try {
+    if (id) {
+      await updateCostAssumption(token, id, parsed.data)
+    } else {
+      await createDefaultCostAssumption(token, parsed.data)
+    }
+    return { ok: true }
+  } catch (err) {
+    if (err instanceof ConfigServiceError) return { ok: false, error: err.message }
+    throw err
   }
 }

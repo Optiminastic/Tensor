@@ -1,0 +1,355 @@
+'use client'
+
+import { Maximize2, Minimize2 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from 'react'
+
+import { optimizeDesign } from '@/app/dashboard/[brand]/designs/optimization-actions'
+import { estimateDesignPersonalisation } from '@/app/dashboard/[brand]/designs/personalisation-actions'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import type {
+  DesignOptimization,
+  Orientation,
+  PersonalisationEstimate,
+} from '@/lib/validators/designs'
+
+import { useCut } from './cut-controls'
+import { LayerStage } from './design-layer-preview'
+import { PreviewControls } from './design-preview-controls'
+import type { OrientationMeasure, RotateAxis } from './model-viewer'
+
+type PreviewMode = 'model' | 'layers'
+
+// The applied personalisation: what the backend renders into the model. Committed
+// from the live controls on Apply.
+interface PersonalisationSpec {
+  text: string
+  sizeMM: number
+  offsetXMM: number
+  offsetYMM: number
+}
+
+// How far the name is raised off the surface (mm). Fixed for now; the emboss reads
+// clearly and stays cheap to print. A control can expose it later.
+const PERSONALISE_DEPTH_MM = 1
+
+// Default filament palette for the whole-model colour preview. An STL has no
+// colour, so a swatch just re-tints the render; a per-design editable palette can
+// override this list later.
+const FILAMENT_COLORS: { name: string; hex: string }[] = [
+  { name: 'White', hex: '#f2f2f0' },
+  { name: 'Black', hex: '#1c1c1c' },
+  { name: 'Gold', hex: '#c9a227' },
+  { name: 'Silver', hex: '#b9bcc0' },
+  { name: 'Red', hex: '#c0392b' },
+  { name: 'Blue', hex: '#2b6cb0' },
+  { name: 'Green', hex: '#2f855a' },
+  { name: 'Terracotta', hex: '#bf5b3b' },
+]
+
+// The viewer is WebGL and must not server-render; loading it lazily also keeps
+// three.js out of every other page's bundle.
+const ModelViewer = dynamic(() => import('./model-viewer').then(m => m.ModelViewer), {
+  ssr: false,
+  loading: () => (
+    <div className="text-muted-foreground flex h-full w-full items-center justify-center text-sm">
+      Loading viewer…
+    </div>
+  ),
+})
+
+interface DesignModelPreviewProps {
+  designId: string
+  orientation: Orientation | null
+  // design.updated_at - changes on re-slice so the layer view refetches.
+  refreshKey: string
+  // Whether a slice exists, i.e. the Layers mode has G-code to show.
+  hasSlice: boolean
+}
+
+/**
+ * The design's model on the build plate, as an interactive orientation tool:
+ * rotate it in 90deg steps and watch the amber overhang faces and the live
+ * support/contact readout change. Toggling "Recommended" jumps to the computed
+ * least-support pose. In the detailed (full-screen) view a Model / Layers toggle
+ * swaps the mesh for the sliced-layers preview.
+ */
+export function DesignModelPreview({
+  designId,
+  orientation,
+  refreshKey,
+  hasSlice,
+}: DesignModelPreviewProps): JSX.Element {
+  const canRecommend = Boolean(orientation && !orientation.already_optimal)
+  const [base, setBase] = useState<'uploaded' | 'recommended'>('uploaded')
+  const [steps, setSteps] = useState<RotateAxis[]>([])
+  const [measure, setMeasure] = useState<OrientationMeasure | null>(null)
+  const { clip, controls } = useCut()
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [mode, setMode] = useState<PreviewMode>('model')
+  // Personalisation: the customer types a name and, on Apply, the backend renders
+  // it as real embossed geometry (OpenSCAD extruded text) merged onto the model.
+  // The viewer then loads that personalised STL - the name is real, printable
+  // geometry, not a browser overlay. Size/Move commit with the name on Apply.
+  const [nameText, setNameText] = useState('')
+  const [nameSize, setNameSize] = useState(10)
+  const [nameOffsetX, setNameOffsetX] = useState(0)
+  const [nameOffsetY, setNameOffsetY] = useState(0)
+  const [appliedSpec, setAppliedSpec] = useState<PersonalisationSpec | null>(null)
+  const [estimate, setEstimate] = useState<PersonalisationEstimate | null>(null)
+  // AI optimization advisor (Optimizations tab): the report plus its loading/error.
+  const [optimization, setOptimization] = useState<DesignOptimization | null>(null)
+  const [optimizeLoading, setOptimizeLoading] = useState(false)
+  const [optimizeError, setOptimizeError] = useState<string | null>(null)
+  // A filament colour to preview the whole model in (null = analysis shading).
+  const [tint, setTint] = useState<string | null>(null)
+
+  const applyPersonalisation = useCallback(() => {
+    const name = nameText.trim()
+    if (name === '') {
+      setAppliedSpec(null)
+      setEstimate(null)
+      return
+    }
+    setAppliedSpec({ text: name, sizeMM: nameSize, offsetXMM: nameOffsetX, offsetYMM: nameOffsetY })
+    void estimateDesignPersonalisation(designId, { text: name, height_mm: nameSize }).then(res => {
+      setEstimate(res.ok && res.data ? res.data : null)
+    })
+  }, [nameText, nameSize, nameOffsetX, nameOffsetY, designId])
+
+  // The model URL: the plain lite model, or - once a name is applied - the
+  // personalised model (name baked in as real geometry). useModelGeometry caches
+  // per URL, so each distinct name/size/placement is generated by the backend once.
+  const modelUrl = useMemo(() => {
+    const base = `/api/designs/${designId}/model-lite`
+    if (!appliedSpec) {
+      return base
+    }
+    const q = new URLSearchParams({
+      text: appliedSpec.text,
+      size_mm: String(appliedSpec.sizeMM),
+      depth_mm: String(PERSONALISE_DEPTH_MM),
+      offset_x_mm: String(appliedSpec.offsetXMM),
+      offset_y_mm: String(appliedSpec.offsetYMM),
+    })
+    return `/api/designs/${designId}/personalise-preview?${q.toString()}`
+  }, [designId, appliedSpec])
+  // Layers mode is offered whenever a slice exists, inline and in the detailed view.
+  const showLayers = hasSlice && mode === 'layers'
+  // The element promoted to full screen: the whole stage (controls + viewer), so
+  // the orientation tools stay usable in the detailed view.
+  const stageRef = useRef<HTMLDivElement>(null)
+
+  const rotate = useCallback((axis: RotateAxis) => setSteps(prev => [...prev, axis]), [])
+  const setBaseReset = useCallback((next: 'uploaded' | 'recommended') => {
+    setBase(next)
+    setSteps([])
+  }, [])
+  const reset = useCallback(() => setBaseReset('uploaded'), [setBaseReset])
+  const handleMeasure = useCallback((m: OrientationMeasure) => setMeasure(m), [])
+  const nudgeName = useCallback((dx: number, dy: number) => {
+    setNameOffsetX(x => x + dx)
+    setNameOffsetY(y => y + dy)
+  }, [])
+  const centerName = useCallback(() => {
+    setNameOffsetX(0)
+    setNameOffsetY(0)
+  }, [])
+  const runOptimize = useCallback(() => {
+    setOptimizeLoading(true)
+    setOptimizeError(null)
+    void optimizeDesign(designId).then(res => {
+      setOptimizeLoading(false)
+      if (res.ok && res.data) {
+        setOptimization(res.data)
+      } else {
+        setOptimizeError(res.error ?? 'Could not run the optimization.')
+      }
+    })
+  }, [designId])
+
+  useEffect(() => {
+    function onChange(): void {
+      setIsFullscreen(document.fullscreenElement === stageRef.current)
+    }
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  const toggleFullscreen = useCallback((): void => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen()
+      return
+    }
+    void stageRef.current?.requestFullscreen().catch(() => undefined)
+  }, [])
+
+  const viewerEl = (
+    <ModelViewer
+      modelUrl={modelUrl}
+      orientation={orientation}
+      base={base}
+      steps={steps}
+      onMeasure={handleMeasure}
+      clip={clip}
+      tint={tint}
+    />
+  )
+
+  // Colour swatches overlaid on the viewer: re-tint the whole model, or reset to
+  // the analysis shading. STL has no colour, so this is a preview only.
+  const swatchStrip = (
+    <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
+      <div className="border-border bg-surface flex items-center gap-1.5 rounded-full border px-2 py-1.5 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setTint(null)}
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
+            tint === null
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          Original
+        </button>
+        {FILAMENT_COLORS.map(colour => (
+          <button
+            key={colour.hex}
+            type="button"
+            onClick={() => setTint(colour.hex)}
+            title={colour.name}
+            aria-label={colour.name}
+            style={{ backgroundColor: colour.hex }}
+            className={cn(
+              'size-5 rounded-full border transition-transform hover:scale-110',
+              tint === colour.hex ? 'ring-accent ring-2' : 'border-border',
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  )
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle>3D preview</CardTitle>
+        <Button variant="ghost" size="sm" onClick={toggleFullscreen}>
+          <Maximize2 aria-hidden />
+          Detailed view
+        </Button>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div
+          ref={stageRef}
+          className={cn(
+            'flex flex-col gap-3',
+            isFullscreen ? 'bg-background h-screen w-screen p-4' : 'px-5 py-4',
+          )}
+        >
+          {hasSlice || canRecommend || isFullscreen ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {hasSlice ? (
+                  <div className="border-border flex rounded-md border p-0.5">
+                    <ToggleButton active={mode === 'model'} onClick={() => setMode('model')}>
+                      Model
+                    </ToggleButton>
+                    <ToggleButton active={mode === 'layers'} onClick={() => setMode('layers')}>
+                      Layers
+                    </ToggleButton>
+                  </div>
+                ) : null}
+                {canRecommend && !showLayers ? (
+                  <div className="border-border flex rounded-md border p-0.5">
+                    <ToggleButton
+                      active={base === 'uploaded'}
+                      onClick={() => setBaseReset('uploaded')}
+                    >
+                      As uploaded
+                    </ToggleButton>
+                    <ToggleButton
+                      active={base === 'recommended'}
+                      onClick={() => setBaseReset('recommended')}
+                    >
+                      Recommended
+                    </ToggleButton>
+                  </div>
+                ) : null}
+              </div>
+              {isFullscreen ? (
+                <Button variant="secondary" size="sm" onClick={toggleFullscreen}>
+                  <Minimize2 aria-hidden />
+                  Exit full screen
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {showLayers ? (
+            <LayerStage designId={designId} refreshKey={refreshKey} fill={isFullscreen} />
+          ) : isFullscreen ? (
+            // Detailed view: the viewer fills the space, with all the tools in a
+            // right sidebar (orientation + personalization).
+            <div className="flex min-h-0 flex-1 gap-4">
+              <div className="bg-surface-muted border-border relative flex-1 overflow-hidden rounded-md border">
+                {viewerEl}
+                {swatchStrip}
+              </div>
+              <aside className="w-80 shrink-0 overflow-y-auto pr-1">
+                <PreviewControls
+                  onRotate={rotate}
+                  onReset={reset}
+                  cut={controls}
+                  measure={measure}
+                  nameText={nameText}
+                  onNameChange={setNameText}
+                  onApply={applyPersonalisation}
+                  nameSize={nameSize}
+                  onSizeChange={setNameSize}
+                  onNudge={nudgeName}
+                  onCenter={centerName}
+                  estimate={estimate}
+                  onOptimize={runOptimize}
+                  optimization={optimization}
+                  optimizeLoading={optimizeLoading}
+                  optimizeError={optimizeError}
+                />
+              </aside>
+            </div>
+          ) : (
+            // Inline: just the model. Open the detailed view for the tools.
+            <div className="bg-surface-muted border-border relative h-[380px] w-full overflow-hidden rounded-md border">
+              {viewerEl}
+              {swatchStrip}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface ToggleButtonProps {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}
+
+function ToggleButton({ active, onClick, children }: ToggleButtonProps): JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded px-3 py-1 text-xs font-medium transition-colors',
+        active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground',
+      )}
+    >
+      {children}
+    </button>
+  )
+}

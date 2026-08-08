@@ -1,7 +1,12 @@
 import { z } from 'zod'
 
 /** The external platforms a brand can connect to. Mirrors the backend provider set. */
-export const ConnectionProviderSchema = z.enum(['google_ads', 'meta_ads', 'shopify'])
+export const ConnectionProviderSchema = z.enum([
+  'google_ads',
+  'google_analytics',
+  'meta_ads',
+  'shopify',
+])
 
 /** A connection's lifecycle state. Mirrors the backend. */
 export const ConnectionStatusSchema = z.enum(['connected', 'disconnected', 'error'])
@@ -34,6 +39,7 @@ export const ConnectionUpsertSchema = z.object({
 /** Human labels for each provider, for UI. */
 export const PROVIDER_LABELS: Record<ConnectionProvider, string> = {
   google_ads: 'Google Ads',
+  google_analytics: 'Google Analytics',
   meta_ads: 'Meta Ads',
   shopify: 'Shopify',
 }

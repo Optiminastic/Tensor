@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
 import { InviteManager } from '@/components/admin/invite-manager'
-import { auth } from '@/lib/auth'
+import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import type { Invite } from '@/lib/validators/admin'
 import { listInvites } from '@/services/admin.service'
 
@@ -22,14 +22,14 @@ export const dynamic = 'force-dynamic'
  */
 export default async function UsersPage(): Promise<JSX.Element> {
   const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
+  const session = await getSessionSafe(requestHeaders)
   if (!session) redirect('/login?callbackUrl=/dashboard/users')
 
   let invites: Invite[] = []
   let loadError: string | null = null
 
   try {
-    const token = await auth.api.getToken({ headers: requestHeaders })
+    const token = await getTokenSafe(requestHeaders)
     invites = token?.token ? await listInvites(token.token) : []
   } catch (error) {
     // Most often a Designer landing here: the backend refuses with 403 and we

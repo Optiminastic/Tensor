@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
 import { DesignDetailView } from '@/components/designs/design-detail'
+import { can, currentAuthz } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { DesignDetail } from '@/lib/validators/designs'
 import { DesignServiceError, getDesign } from '@/services/designs.service'
@@ -19,7 +20,7 @@ export default async function DesignDetailPage({
   const { token, error } = await resolveBackendToken()
   if (!token) {
     return (
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-10">
+      <main className="flex w-full flex-col gap-8 px-6 py-10 lg:px-10">
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
           {error ?? 'Your session has expired. Sign in again.'}
         </p>
@@ -35,9 +36,21 @@ export default async function DesignDetailPage({
     throw err
   }
 
+  // Capability flags gate which review actions the UI offers; the backend still
+  // enforces each permission against the verified token.
+  const authz = await currentAuthz()
+  const caps = {
+    canSubmit: can(authz, 'design:submit'),
+    canApprove: can(authz, 'design:approve'),
+    canReject: can(authz, 'design:reject'),
+  }
+  // Assigning a SKU is a Project-Lead commerce action, gated by the same
+  // permission as publishing; the backend re-checks it.
+  const canManageSku = can(authz, 'shopify:publish')
+
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-10">
-      <DesignDetailView brand={brand} initial={initial} />
+    <main className="flex w-full flex-col gap-8 px-6 py-10 lg:px-10">
+      <DesignDetailView brand={brand} initial={initial} caps={caps} canManageSku={canManageSku} />
     </main>
   )
 }

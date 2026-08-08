@@ -1,24 +1,45 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Box, FileCode, Loader2 } from 'lucide-react'
+import { Box, FileText, Loader2, ShoppingBag } from 'lucide-react'
 import type { JSX } from 'react'
 
 import { fetchDesignDetail } from '@/app/dashboard/[brand]/designs/actions'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { type DesignDetail, type DesignSpecs, DesignSpecsSchema } from '@/lib/validators/designs'
+import {
+  type DesignAttributes,
+  type DesignDetail,
+  type DesignSpecs,
+  DesignSpecsSchema,
+} from '@/lib/validators/designs'
 
-import { DesignMetricsPanel } from './design-metrics'
-import { DesignResubmitForm } from './design-resubmit-form'
+import { DesignDetailTabs } from './design-detail-tabs'
+import { type ReviewCaps, DesignReviewActions } from './design-review-actions'
+import { DesignSkuDialog } from './design-sku-dialog'
 import { DesignStatusBadge } from './design-status-badge'
-import { DesignVerdict } from './design-verdict'
+import { PublishShopifyDialog } from './publish-shopify-dialog'
 
 const POLL_MS = 2500
 
 interface DesignDetailViewProps {
   brand: string
   initial: DesignDetail
+  caps: ReviewCaps
+  canManageSku: boolean
+}
+
+// attributesSummary renders the optional upload metadata as one compact line.
+function attributesSummary(a: DesignAttributes): string {
+  return [
+    a.product_type ? `Type: ${a.product_type}` : '',
+    a.personalisation_type ? `Personalisation: ${a.personalisation_type}` : '',
+    a.colour_count ? `Colours: ${a.colour_count}` : '',
+    a.add_ons?.length ? `Add-ons: ${a.add_ons.join(', ')}` : '',
+    a.packaging_type ? `Packaging: ${a.packaging_type}` : '',
+  ]
+    .filter(Boolean)
+    .join('  ·  ')
 }
 
 function currentSpecs(design: DesignDetail): DesignSpecs {
@@ -32,12 +53,23 @@ function currentSpecs(design: DesignDetail): DesignSpecs {
   })
   return parsed.success
     ? parsed.data
-    : { material: 'PLA', finish: 'none', units_per_bed: 1, quality: 'standard', infill_pct: 15 }
+    : {
+        material: 'PLA',
+        finish: 'none',
+        units_per_bed: 1,
+        quality: 'standard',
+        infill_pct: 15,
+      }
 }
 
 /** Polls the design through the slice -> price loop, then shows metrics, the
  * verdict, and the re-slice form. */
-export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX.Element {
+export function DesignDetailView({
+  brand,
+  initial,
+  caps,
+  canManageSku,
+}: DesignDetailViewProps): JSX.Element {
   const { data: design, refetch } = useQuery({
     queryKey: ['design', initial.id],
     initialData: initial,
@@ -55,7 +87,11 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
   })
 
   const isProcessing = design.status === 'queued' || design.status === 'slicing'
-  const gcodeAvailable = Boolean(design.metrics?.gcode_key)
+  // The submit/approve review workflow isn't wired to any backend route, so
+  // priced designs have no other way to reach Shopify - offer the push as
+  // soon as pricing exists, not only after the unreachable "approved" step.
+  const canPublish = design.status === 'priced' || design.status === 'approved'
+  const publishPrice = design.pricing?.approved_sp ?? design.pricing?.recommended_sp ?? null
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,6 +102,19 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
             {design.material} / {design.quality} / {design.units_per_bed} per bed /{' '}
             {design.infill_pct}% infill
           </p>
+          <p className="text-muted-foreground mt-1 font-mono text-xs tabular-nums">
+            SKU{' '}
+            {design.sku ? (
+              <span className="text-foreground">{design.sku}</span>
+            ) : (
+              <span className="italic">not assigned</span>
+            )}
+          </p>
+          {design.attributes ? (
+            <p className="text-muted-foreground mt-1 text-xs">
+              {attributesSummary(design.attributes)}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* Same-origin links: the route handler mints the backend token from
@@ -79,19 +128,66 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
             <Box aria-hidden />
             Model
           </a>
-          {gcodeAvailable ? (
+          <a
+            href={`/api/designs/${design.id}/report`}
+            download
+            className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+          >
+            <FileText aria-hidden />
+            Report
+          </a>
+          {canManageSku ? (
+            <DesignSkuDialog
+              brand={brand}
+              designId={design.id}
+              currentSku={design.sku ?? null}
+              onSaved={() => void refetch()}
+            />
+          ) : null}
+          {canPublish ? (
+            <PublishShopifyDialog
+              brand={brand}
+              designId={design.id}
+              defaultTitle={design.name}
+              defaultPrice={publishPrice}
+              defaultSku={design.sku ?? undefined}
+              isApproved={design.status === 'approved'}
+              onPublished={() => void refetch()}
+            />
+          ) : null}
+          {design.shopify ? (
             <a
-              href={`/api/designs/${design.id}/gcode`}
-              download
-              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+              href={design.shopify.admin_url}
+              target="_blank"
+              rel="noreferrer"
+              title="Open the draft in Shopify"
+              className={buttonVariants({ variant: 'secondary', size: 'sm' })}
             >
-              <FileCode aria-hidden />
-              G-code
+              <ShoppingBag aria-hidden />
+              Shopify
             </a>
           ) : null}
           <DesignStatusBadge status={design.status} />
         </div>
       </div>
+
+      <DesignReviewActions
+        brand={brand}
+        designId={design.id}
+        status={design.status}
+        verdict={design.pricing?.verdict ?? null}
+        caps={caps}
+        onDone={() => void refetch()}
+      />
+
+      {design.notes ? (
+        <Card>
+          <CardContent>
+            <p className="text-foreground text-sm font-medium">Designer notes</p>
+            <p className="text-muted-foreground mt-1 text-sm whitespace-pre-line">{design.notes}</p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {isProcessing ? (
         <Card>
@@ -114,15 +210,12 @@ export function DesignDetailView({ brand, initial }: DesignDetailViewProps): JSX
         </Card>
       ) : null}
 
-      {design.metrics ? <DesignMetricsPanel metrics={design.metrics} /> : null}
-      {design.pricing ? <DesignVerdict pricing={design.pricing} /> : null}
-
       {!isProcessing ? (
-        <DesignResubmitForm
+        <DesignDetailTabs
           brand={brand}
-          designId={design.id}
-          current={currentSpecs(design)}
-          onResubmitted={() => void refetch()}
+          design={design}
+          specs={currentSpecs(design)}
+          onChanged={() => void refetch()}
         />
       ) : null}
     </div>

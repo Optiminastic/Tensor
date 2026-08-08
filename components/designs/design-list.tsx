@@ -1,3 +1,5 @@
+import { Box } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import type { JSX } from 'react'
 
@@ -11,20 +13,9 @@ interface DesignListProps {
   designs: Design[]
 }
 
-/** The brand's designs, newest first, each linking to its pre-check detail. */
+/** The brand's designs as a table/list, newest first, each linking to its
+ * pre-check detail. A small cover thumbnail sits beside each row. */
 export function DesignList({ brand, designs }: DesignListProps): JSX.Element {
-  if (designs.length === 0) {
-    return (
-      <Card>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">
-            No designs yet. Upload one to run the pre-check.
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <Card>
       <CardContent className="p-0">
@@ -33,16 +24,37 @@ export function DesignList({ brand, designs }: DesignListProps): JSX.Element {
             <li key={design.id}>
               <Link
                 href={`/dashboard/${brand}/designs/${design.id}`}
-                className="hover:bg-surface-muted flex items-center justify-between gap-4 px-4 py-3 transition-colors"
+                className="hover:bg-surface-muted flex items-center gap-4 px-4 py-3 transition-colors"
               >
-                <div className="min-w-0">
+                <div className="border-border bg-surface-muted relative size-11 shrink-0 overflow-hidden rounded-md border">
+                  {design.has_preview ? (
+                    <Image
+                      src={`/api/designs/${design.id}/preview`}
+                      alt=""
+                      fill
+                      unoptimized
+                      sizes="44px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="text-subtle-foreground flex h-full items-center justify-center">
+                      <Box className="size-4" aria-hidden />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
                   <p className="text-foreground truncate text-sm font-medium">{design.name}</p>
                   <p className="text-muted-foreground font-mono text-xs tabular-nums">
                     {design.material} / {design.quality} / {design.units_per_bed} per bed /{' '}
                     {design.infill_pct}% infill
                   </p>
+                  {design.sku ? (
+                    <p className="text-subtle-foreground truncate font-mono text-xs tabular-nums">
+                      SKU {design.sku}
+                    </p>
+                  ) : null}
                 </div>
-                <DesignStatusBadge status={design.status} />
+                <DesignStatusBadge status={design.status} className="shrink-0" />
               </Link>
             </li>
           ))}

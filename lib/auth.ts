@@ -3,7 +3,10 @@ import { jwt } from 'better-auth/plugins'
 
 import { authPool } from '@/lib/db'
 import { env } from '@/lib/env'
+import { createLogger } from '@/lib/logger'
 import { fetchUserAuthz } from '@/services/authz.service'
+
+const log = createLogger('Auth')
 
 export const auth = betterAuth({
   // Better Auth talks to Postgres directly. It owns only its own tables
@@ -73,9 +76,76 @@ export const auth = betterAuth({
       },
     }),
   ],
-  // Both the public ngrok origin and local dev are trusted, so sign-in works
-  // whether the app is opened at the ngrok URL or http://localhost:3001.
-  trustedOrigins: [env.NEXT_PUBLIC_APP_URL, 'http://localhost:3001'],
+  // NEXT_PUBLIC_APP_URL covers the primary domain; local dev covers
+  // http://localhost:3001. Vercel Preview deployments (e.g. this repo's
+  // staging branch) get a per-branch/per-deployment origin that never
+  // matches either, so VERCEL_BRANCH_URL/VERCEL_URL - system env vars
+  // Vercel injects automatically, no manual value needed - are trusted too.
+  // Both are bare hosts (no scheme), so they're prefixed with https://.
+  trustedOrigins: [
+    env.NEXT_PUBLIC_APP_URL,
+    'http://localhost:3001',
+    ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+  ],
 })
 
 export type Session = typeof auth.$Infer.Session
+
+/**
+ * auth.api.getSession, but a thrown error is treated the same as "no
+ * session" instead of crashing the page.
+ *
+ * getSession/getToken do their own DB-backed session validation on every
+ * call - independent of and stricter than middleware's cookie-presence-only
+ * check - so either can throw on an expired/invalid session or a transient
+ * DB hiccup. Every server component here already handles a null session by
+ * redirecting to /login; this just makes sure a thrown error reaches that
+ * same handling instead of surfacing as an unhandled exception.
+ */
+export async function getSessionSafe(
+  requestHeaders: Headers,
+): Promise<Awaited<ReturnType<typeof auth.api.getSession>>> {
+  return auth.api.getSession({ headers: requestHeaders }).catch((error: unknown) => {
+    log.error({ err: error }, 'getSession threw; treating as unauthenticated')
+    return null
+  })
+}
+
+/** Same as getSessionSafe, for auth.api.getToken. */
+export async function getTokenSafe(
+  requestHeaders: Headers,
+): Promise<Awaited<ReturnType<typeof auth.api.getToken>> | null> {
+  return auth.api.getToken({ headers: requestHeaders }).catch((error: unknown) => {
+    log.error({ err: error }, 'getToken threw; treating as unauthenticated')
+    return null
+  })
+}
+
+/** A user's display identity, for rendering "who did what" in activity views. */
+export interface UserDisplay {
+  id: string
+  name: string | null
+  email: string
+}
+
+/**
+ * Resolves Better Auth user ids to their display identity (name + email).
+ *
+ * Identity belongs to the frontend: Better Auth owns the `user` table, while
+ * Tensor-Core stores these ids only as opaque author references on the review
+ * thread. This reads that one table (the sanctioned use of `authPool`) so the
+ * timeline can show a name instead of a raw id. Ids with no matching user are
+ * simply absent from the map, so callers can fall back gracefully.
+ */
+export async function getUserDirectory(ids: string[]): Promise<Map<string, UserDisplay>> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  if (unique.length === 0) return new Map()
+
+  const { rows } = await authPool.query(
+    'SELECT id, name, email FROM "user" WHERE id = ANY($1::text[])',
+    [unique],
+  )
+  const displays = rows as UserDisplay[]
+  return new Map(displays.map(row => [row.id, row]))
+}

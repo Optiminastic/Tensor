@@ -6,22 +6,32 @@ import { type FieldError, useForm } from 'react-hook-form'
 
 import { resubmitDesign } from '@/app/dashboard/[brand]/designs/actions'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { type DesignSpecs, DesignSpecsSchema } from '@/lib/validators/designs'
+import { DesignSpecsSchema, MaterialSchema } from '@/lib/validators/designs'
+import type { DesignSpecs, QualitySchema } from '@/lib/validators/designs'
 
-const MATERIALS = ['PLA', 'PETG', 'ABS'] as const
+const MATERIALS = MaterialSchema.options
 const FINISHES: { value: string; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'sanded', label: 'Sanded' },
   { value: 'painted', label: 'Painted' },
 ]
-const QUALITIES: { value: string; label: string }[] = [
-  { value: 'draft', label: 'Draft (0.24mm)' },
-  { value: 'standard', label: 'Standard (0.20mm)' },
-  { value: 'fine', label: 'Fine (0.12mm)' },
+// Values are the backend's quality slugs (internal/httpapi/designs.go
+// validQualities -> internal/slicing/profiles.go H2S process presets).
+const QUALITIES: { value: (typeof QualitySchema.options)[number]; label: string }[] = [
+  { value: 'draft', label: 'Draft - 0.24mm, fastest' },
+  { value: 'standard', label: 'Standard - 0.20mm' },
+  { value: 'fine', label: 'Fine - 0.12mm, best detail' },
 ]
 
 interface DesignResubmitFormProps {
@@ -31,13 +41,15 @@ interface DesignResubmitFormProps {
   onResubmitted: () => void
 }
 
-/** Change the answers and re-slice the same model - the green loop. */
+/** Change the answers and re-slice the same model - the green loop. The form
+ * lives in a dialog behind a button, and closes itself on a successful re-slice. */
 export function DesignResubmitForm({
   brand,
   designId,
   current,
   onResubmitted,
 }: DesignResubmitFormProps): JSX.Element {
+  const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const {
@@ -53,15 +65,22 @@ export function DesignResubmitForm({
       setError(outcome.error ?? 'Could not re-slice this design.')
       return
     }
+    setOpen(false)
     onResubmitted()
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Adjust and re-slice</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="secondary" className="self-start">
+          Adjust and re-slice
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Adjust and re-slice</DialogTitle>
+          <DialogDescription>Change the answers and re-slice the same model.</DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Material" htmlFor="rs-material" error={errors.material?.message}>
@@ -132,7 +151,7 @@ export function DesignResubmitForm({
             {isSubmitting ? 'Re-slicing…' : 'Re-slice with these settings'}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }

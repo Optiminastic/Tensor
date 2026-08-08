@@ -1,6 +1,9 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import dotenv from 'dotenv'
+dotenv.config({ path: './env/local.env' })
+
 /** @type {import('next').NextConfig} */
 
 // This directory, not wherever Next guesses. Next walks up looking for a
@@ -59,13 +62,29 @@ const nextConfig = {
   allowedDevOrigins: devOrigins,
   reactStrictMode: true,
   poweredByHeader: false,
+  // Next's own type-checker runs in a jest-worker child process to isolate
+  // the TS compiler's heap - on this machine (Node 24 + Next 16 + Windows)
+  // that worker reliably crashes with STATUS_STACK_OVERFLOW, surfacing as a
+  // "Jest worker encountered N child process exceptions" dev-overlay error
+  // that has nothing to do with the page being viewed. `pnpm type-check`
+  // (tsc --noEmit, run separately - see package.json's build script and
+  // CLAUDE.md) is the actual type-safety gate, so this isn't a coverage gap.
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   // STL/3MF/STEP uploads flow through the design upload server action, so its
-  // body limit must clear the backend's 60 MB cap (default is 1 MB). Headroom
-  // covers multipart encoding overhead.
+  // body limit must clear the backend's 60 MB model + 10 MB preview caps (default
+  // is 1 MB). Headroom covers multipart encoding overhead.
   experimental: {
     serverActions: {
-      bodySizeLimit: '64mb',
+      bodySizeLimit: '80mb',
     },
+    // The auth middleware also sees the request body, and Next caps THAT at 10 MB
+    // by default - so a large STL + preview is truncated mid-stream and the form
+    // parse throws "Unexpected end of form". Raise it past the upload size.
+    // (`proxyClientMaxBodySize` is the current key; it replaces the deprecated
+    // `middlewareClientMaxBodySize` and the two cannot both be set.)
+    proxyClientMaxBodySize: '80mb',
   },
   images: {
     unoptimized: true,

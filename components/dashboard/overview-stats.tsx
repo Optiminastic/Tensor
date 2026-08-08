@@ -19,7 +19,7 @@ interface OverviewStatsProps {
  */
 export function OverviewStats({ stats }: OverviewStatsProps): JSX.Element {
   return (
-    <section aria-label="Overview metrics" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section aria-label="Overview metrics" className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
       {stats.map(stat => (
         <Stat key={stat.label} label={stat.label} value={stat.value} hint={stat.hint} />
       ))}

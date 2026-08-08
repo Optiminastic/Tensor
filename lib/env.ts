@@ -39,6 +39,15 @@ export const env = createEnv({
     // Partner Dashboard). When set, Connect redirects here (with our state)
     // instead of building the standard /admin/oauth/authorize URL.
     SHOPIFY_CUSTOM_APP_INSTALL_URL: z.string().url().optional(),
+
+    // --- Google OAuth (Google Ads + Google Analytics) --------------------
+    // Optional as a group: with the id/secret unset, the "Connect with Google"
+    // buttons show as not configured and the connection can still be linked by
+    // hand. Set both (one Google Cloud OAuth 2.0 client) to enable the flow.
+    // The client's Authorized redirect URI must be
+    // ${NEXT_PUBLIC_APP_URL}/api/google/oauth/callback.
+    GOOGLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -61,6 +70,8 @@ export const env = createEnv({
     SHOPIFY_API_SECRET: process.env.SHOPIFY_API_SECRET,
     SHOPIFY_SCOPES: process.env.SHOPIFY_SCOPES,
     SHOPIFY_CUSTOM_APP_INSTALL_URL: process.env.SHOPIFY_CUSTOM_APP_INSTALL_URL,
+    GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

@@ -1,10 +1,13 @@
-import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
-import { ComingSoon } from '@/components/dashboard/coming-soon'
+interface CommercePageProps {
+  params: Promise<{ brand: string }>
+}
 
-export const metadata: Metadata = { title: 'Commerce' }
-
-export default function CommercePage(): JSX.Element {
-  return <ComingSoon title="Commerce" description="Shopify products, orders and collections." />
+// Commerce has no distinct overview yet - Shopify Products is the primary
+// view, so the segment root sends the rail-icon click straight there.
+export default async function CommercePage({ params }: CommercePageProps): Promise<JSX.Element> {
+  const { brand } = await params
+  redirect(`/dashboard/${brand}/commerce/products`)
 }
