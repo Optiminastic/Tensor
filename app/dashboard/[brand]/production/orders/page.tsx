@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 
 import { toOrderRecord } from '@/components/production/adapters'
 import { OrdersLiveToggle } from '@/components/production/orders-live-toggle'
+import { OrdersRefreshButton } from '@/components/production/orders-refresh-button'
 import { OrdersTable } from '@/components/production/orders-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { OrderRecord } from '@/components/production/types'
@@ -47,7 +48,10 @@ export default async function ProductionOrdersPage({
               : 'Sample orders for previewing the production queue.'
           }
         />
-        <OrdersLiveToggle brand={brand} live={live} />
+        <div className="flex items-center gap-2">
+          <OrdersRefreshButton />
+          <OrdersLiveToggle brand={brand} live={live} />
+        </div>
       </div>
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">

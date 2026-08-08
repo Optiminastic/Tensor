@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 
 import { BatchApproveDialog } from '@/components/production/batch-approve-dialog'
-import { BatchStatusButton } from '@/components/production/batch-status-button'
+import { BatchEditDialog } from '@/components/production/batch-edit-dialog'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { BatchRecord } from '@/components/production/types'
@@ -36,7 +36,13 @@ export function BatchDetailHeader({ brand, batch, machines }: BatchDetailHeaderP
           machines={machines}
         />
       ) : (
-        <BatchStatusButton brand={brand} batchId={batch.id} status={batch.status} />
+        <BatchEditDialog
+          brand={brand}
+          batchId={batch.id}
+          status={batch.status}
+          machineId={batch.machineId}
+          machines={machines}
+        />
       )}
     </div>
   )

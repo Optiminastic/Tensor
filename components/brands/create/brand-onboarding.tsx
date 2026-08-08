@@ -98,14 +98,25 @@ export function BrandOnboarding({
       setError(result.error ?? 'Could not create the brand.')
       return
     }
+    const slug = result.data.slug
     try {
       // The Shopify token was stashed server-side during OAuth; attach it now.
-      if (shopify.connected) await finalizeShopifyConnection(result.data.slug)
-      await persistAds(result.data.slug, conns)
+      if (shopify.connected) await finalizeShopifyConnection(slug)
+      await persistAds(slug, conns)
     } catch {
       // The brand exists; a failed connection is editable later on its page.
     }
-    router.push(`/dashboard/${result.data.slug}`)
+    if (shopify.connected && shopify.domain) {
+      // The onboarding connect above only pulled brand details (a separate
+      // Shopify app/scope, see shopify-order-import.tsx) - chain straight into
+      // the real order-import OAuth grant for the same store so paid/COD
+      // orders start flowing in via webhook without a second manual step.
+      // A top-level navigation, not router.push: this leaves the app for
+      // Shopify's consent screen and returns via Tensor-Core's callback.
+      window.location.href = `/api/shopify/orders/connect?brand=${encodeURIComponent(slug)}&shop_domain=${encodeURIComponent(shopify.domain)}`
+      return
+    }
+    router.push(`/dashboard/${slug}`)
     router.refresh()
   }
 
@@ -143,7 +154,11 @@ export function BrandOnboarding({
           >
             {creating ? (
               <StepFrame title="Creating your brand…">
-                <p className="text-muted-foreground text-sm">Saving your brand and connections.</p>
+                <p className="text-muted-foreground text-sm">
+                  {shopify.connected
+                    ? "Saving your brand, then we'll ask Shopify for permission to import orders."
+                    : 'Saving your brand and connections.'}
+                </p>
               </StepFrame>
             ) : error ? (
               <StepFrame title="Something went wrong">

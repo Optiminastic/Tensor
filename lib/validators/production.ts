@@ -52,14 +52,20 @@ export const ProductionJobSchema = z.object({
 })
 export type ProductionJob = z.infer<typeof ProductionJobSchema>
 
-// The subset of patchProductionJobRequest (internal/httpapi/production_jobs.go
-// #applyJobPatch) the queue UI exercises directly - held (Hold/Resume) and
-// status (Start Production limited to the one forward transition it offers).
-// The backend accepts more fields (assembly/qc/packaging status, priority,
-// batch_id); add them here if a UI surface needs them.
+// patchProductionJobRequest (internal/httpapi/production_jobs.go#applyJobPatch).
+// Every field the backend can PATCH - role-gated there via
+// production.AllowedPatchFields, not re-validated here (see
+// components/production/job-patch-fields.ts for the frontend's UX-only
+// mirror of that gate). "failed" is deliberately absent from status: it can
+// only be set via /fail, which records a reason and queues a reprint.
 export const JobPatchInputSchema = z.object({
   status: z.enum(['queued', 'in_production', 'completed']).optional(),
+  assembly_status: z.enum(['pending', 'completed', 'not_required']).optional(),
+  qc_status: z.enum(['pending', 'passed', 'failed']).optional(),
+  packaging_status: z.enum(['pending', 'packaged']).optional(),
+  priority: z.number().int().optional(),
   held: z.boolean().optional(),
+  batch_id: z.string().nullish(),
 })
 export type JobPatchInput = z.infer<typeof JobPatchInputSchema>
 

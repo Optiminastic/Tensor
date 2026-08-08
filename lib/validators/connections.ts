@@ -48,3 +48,14 @@ export type ConnectionProvider = z.infer<typeof ConnectionProviderSchema>
 export type ConnectionStatus = z.infer<typeof ConnectionStatusSchema>
 export type Connection = z.infer<typeof ConnectionSchema>
 export type ConnectionUpsertInput = z.infer<typeof ConnectionUpsertSchema>
+
+// shopifyConnectionResponse (internal/httpapi/shopify_oauth.go#listShopifyConnections) -
+// the REAL order-import OAuth connections (separate from the Connection shape
+// above: shopify_connections has no brand column, it's matched to a brand by
+// shop domain, not by a brand_slug foreign key).
+export const ShopifyOrderConnectionSchema = z.object({
+  id: z.string(),
+  shop_domain: z.string(),
+  connected_at: z.string(),
+})
+export type ShopifyOrderConnection = z.infer<typeof ShopifyOrderConnectionSchema>

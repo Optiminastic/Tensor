@@ -3,10 +3,11 @@ import { headers } from 'next/headers'
 import type { JSX } from 'react'
 
 import { BrandConnections } from '@/components/brands/brand-connections'
+import { ShopifyOrderImportStatus } from '@/components/brands/shopify-order-import-status'
 import { getTokenSafe } from '@/lib/auth'
 import { env } from '@/lib/env'
 import type { Connection } from '@/lib/validators/connections'
-import { listConnections } from '@/services/connections.service'
+import { listConnections, listShopifyOrderConnections } from '@/services/connections.service'
 
 export const metadata: Metadata = { title: 'Integrations' }
 
@@ -21,9 +22,26 @@ const GOOGLE_NOTICES: Record<string, { tone: 'success' | 'danger'; message: stri
   error: { tone: 'danger', message: 'Could not connect the Google account. Please try again.' },
 }
 
+// Connecting Shopify during brand creation chains straight into the real
+// order-import OAuth grant (see /api/shopify/orders/connect and
+// internal/httpapi/shopify_oauth.go), which redirects back here with
+// `?shopify_orders=<status>` once it's done.
+const SHOPIFY_ORDERS_NOTICES: Record<string, { tone: 'success' | 'danger'; message: string }> = {
+  connected: {
+    tone: 'success',
+    message: 'Shopify order import connected - paid and COD orders will flow in automatically.',
+  },
+  invalid_shop: { tone: 'danger', message: 'That doesn’t look like a Shopify store domain.' },
+  invalid_request: {
+    tone: 'danger',
+    message: 'A shop domain is required to connect order import.',
+  },
+  error: { tone: 'danger', message: 'Could not connect Shopify order import. Please try again.' },
+}
+
 interface IntegrationsPageProps {
   params: Promise<{ brand: string }>
-  searchParams: Promise<{ google?: string }>
+  searchParams: Promise<{ google?: string; shopify_orders?: string }>
 }
 
 /**
@@ -36,17 +54,42 @@ export default async function IntegrationsPage({
   searchParams,
 }: IntegrationsPageProps): Promise<JSX.Element> {
   const { brand } = await params
-  const { google } = await searchParams
+  const { google, shopify_orders: shopifyOrders } = await searchParams
   const token = await getTokenSafe(await headers())
   let connections: Connection[] = []
   if (token?.token) {
     connections = await listConnections(token.token, brand).catch(() => [])
   }
 
+  // Nudge only when the store is connected for products (brand_connections
+  // has a shop domain) but hasn't completed the real order-import OAuth
+  // grant (shopify_connections, matched by that same domain - it carries no
+  // brand column of its own). Any lookup failure (e.g. the viewer lacks
+  // integration:manage) defaults to not showing the nudge - UX only, no need
+  // to nag when we can't actually tell.
+  const shopifyShopDomain =
+    connections.find(c => c.provider === 'shopify' && c.status === 'connected')
+      ?.external_account_id ?? null
+  let orderImportMissing = false
+  if (token?.token && shopifyShopDomain) {
+    try {
+      const orderConnections = await listShopifyOrderConnections(token.token)
+      orderImportMissing = !orderConnections.some(
+        c => c.shop_domain.toLowerCase() === shopifyShopDomain.toLowerCase(),
+      )
+    } catch {
+      orderImportMissing = false
+    }
+  }
+
   const googleOAuthConfigured = Boolean(
     env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET,
   )
-  const notice = google ? GOOGLE_NOTICES[google] : undefined
+  const notice = google
+    ? GOOGLE_NOTICES[google]
+    : shopifyOrders
+      ? SHOPIFY_ORDERS_NOTICES[shopifyOrders]
+      : undefined
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">
@@ -73,6 +116,9 @@ export default async function IntegrationsPage({
         connections={connections}
         googleOAuthConfigured={googleOAuthConfigured}
       />
+      {orderImportMissing && shopifyShopDomain ? (
+        <ShopifyOrderImportStatus brandSlug={brand} shopDomain={shopifyShopDomain} />
+      ) : null}
     </main>
   )
 }

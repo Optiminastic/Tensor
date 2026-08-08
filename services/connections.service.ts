@@ -5,6 +5,8 @@ import {
   type ConnectionProvider,
   ConnectionSchema,
   type ConnectionUpsertInput,
+  type ShopifyOrderConnection,
+  ShopifyOrderConnectionSchema,
 } from '@/lib/validators/connections'
 
 const log = createLogger('ConnectionService')
@@ -84,6 +86,19 @@ export async function upsertConnection(
     `/brands/${encodeURIComponent(brandSlug)}/connections/${provider}`,
     { method: 'PUT', headers: bearer(accessToken), body: JSON.stringify(input) },
     data => ConnectionSchema.parse(data),
+  )
+}
+
+// listShopifyOrderConnections calls Tensor-Core's /integrations/shopify (the
+// REAL order-import connections, gated by integration:manage - a different
+// permission than the brand connections above). Used only to check whether a
+// brand's store already completed that OAuth grant, so the Integrations page
+// can show a reconnect link when it hasn't.
+export async function listShopifyOrderConnections(
+  accessToken: string,
+): Promise<ShopifyOrderConnection[]> {
+  return request('/integrations/shopify', { headers: bearer(accessToken) }, data =>
+    ShopifyOrderConnectionSchema.array().parse(data),
   )
 }
 

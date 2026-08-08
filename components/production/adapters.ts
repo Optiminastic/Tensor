@@ -7,6 +7,7 @@ import type { Machine } from '@/lib/validators/machines'
 import type { Order, OrderDetail, ProductionJob } from '@/lib/validators/production'
 
 import type {
+  AssemblyStatus,
   BatchRecord,
   BatchStatus,
   JobStatus,
@@ -128,9 +129,19 @@ export function toMachineSummary(machine: Machine): MachineSummary {
   }
 }
 
+function toAssemblyStatus(status: string): AssemblyStatus {
+  if (status === 'completed') return 'completed'
+  if (status === 'not_required') return 'not_required'
+  return 'pending'
+}
+
 export function toJobDetail(job: ProductionJob): ProductionJobDetail {
   return {
     ...toQueueItem(job),
+    statusRaw: job.status,
+    assemblyStatus: toAssemblyStatus(job.assembly_status),
+    held: job.held,
+    batchId: job.batch_id ?? null,
     shopifyOrderId:
       job.shopify_order_id === null || job.shopify_order_id === undefined
         ? PLACEHOLDER

@@ -2,13 +2,16 @@ import { FileText } from 'lucide-react'
 import type { JSX } from 'react'
 
 import { DetailField } from '@/components/production/detail-field'
-import type { ProductionJobDetail } from '@/components/production/types'
+import { ASSEMBLY_STATUS_CONFIG } from '@/components/production/status-config'
+import type { BatchRecord, ProductionJobDetail } from '@/components/production/types'
 
 interface JobDetailGridProps {
   job: ProductionJobDetail
+  batches: BatchRecord[]
 }
 
-export function JobDetailGrid({ job }: JobDetailGridProps): JSX.Element {
+export function JobDetailGrid({ job, batches }: JobDetailGridProps): JSX.Element {
+  const batch = batches.find(b => b.id === job.batchId)
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-5 px-5 py-5 md:grid-cols-4">
       <DetailField label="Shopify order ID" value={job.shopifyOrderId} mono />
@@ -41,6 +44,10 @@ export function JobDetailGrid({ job }: JobDetailGridProps): JSX.Element {
           )
         }
       />
+
+      <DetailField label="Assembly" value={ASSEMBLY_STATUS_CONFIG[job.assemblyStatus].label} />
+      <DetailField label="Batch" value={batch ? batch.batchNumber : 'Unassigned'} mono />
+      <DetailField label="Hold" value={job.held ? 'On hold' : 'Not held'} />
     </div>
   )
 }

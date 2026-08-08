@@ -139,6 +139,14 @@ export interface BatchRecord {
 }
 
 export interface ProductionJobDetail extends ProductionJobQueueItem {
+  // The raw backend status ('queued' | 'in_production' | 'completed' |
+  // 'failed'), distinct from `status` (QueueStatus above, which folds in
+  // `held` as a pseudo-status) - needed to prefill an edit form with the
+  // actual PATCH-able value.
+  statusRaw: string
+  assemblyStatus: AssemblyStatus
+  held: boolean
+  batchId: string | null
   shopifyOrderId: string
   sku: string
   material: string
