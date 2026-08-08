@@ -12,7 +12,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Orientation } from '@/lib/validators/designs'
 
 import { type ClipState, ClipController, buildClipPlane } from './clip-plane'
-import { type GizmoMode, PersonalisationText, type TextTransform } from './personalisation-text'
+import { PersonalisationText, type TextTransform } from './personalisation-text'
 
 // The live name layer the viewer draws on top of the model, driven by the editor.
 export interface PersonalisationView {
@@ -20,9 +20,6 @@ export interface PersonalisationView {
   textUrl: string | null
   colour: string
   transform: TextTransform
-  editable: boolean
-  gizmo: GizmoMode
-  onTransform: (next: TextTransform) => void
 }
 
 // Above this triangle count a model is simplified for the preview so it stays
@@ -184,9 +181,6 @@ export function ModelViewer({
             colour={personalisation.colour}
             topZ={topZ}
             transform={personalisation.transform}
-            editable={personalisation.editable}
-            gizmo={personalisation.gizmo}
-            onTransform={personalisation.onTransform}
           />
         ) : null}
       </Bounds>

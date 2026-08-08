@@ -13,17 +13,19 @@ import { DesignMetricsPanel } from './design-metrics'
 import { DesignModelPreview } from './design-model-preview'
 import { DesignOrientation } from './design-orientation'
 import { DesignOverview } from './design-overview'
+import { DesignPerformancePanel } from './design-performance'
 import { DesignResubmitForm } from './design-resubmit-form'
 import { DesignTimeline } from './design-timeline'
 import { DesignVerdict } from './design-verdict'
 import { SliceSettingsForm } from './slice-settings-form'
 
-type TabValue = 'overview' | 'preview' | 'pricing' | 'machine' | 'timeline'
+type TabValue = 'overview' | 'preview' | 'pricing' | 'performance' | 'machine' | 'timeline'
 
 const TABS: TabItem[] = [
   { value: 'overview', label: 'Overview' },
   { value: 'preview', label: '3D Preview' },
   { value: 'pricing', label: 'Cost & Pricing' },
+  { value: 'performance', label: 'Performance' },
   { value: 'machine', label: 'Machine' },
   { value: 'timeline', label: 'Timeline' },
 ]
@@ -67,6 +69,13 @@ export function DesignDetailTabs({
           <PreviewPanel brand={brand} design={design} specs={specs} onChanged={onChanged} />
         ) : null}
         {tab === 'pricing' ? <PricingPanel design={design} /> : null}
+        {tab === 'performance' ? (
+          <DesignPerformancePanel
+            designId={design.id}
+            sku={design.sku ?? null}
+            shopifyAdminUrl={design.shopify?.admin_url ?? null}
+          />
+        ) : null}
         {tab === 'machine' ? (
           <MachinePanel brand={brand} design={design} onChanged={onChanged} />
         ) : null}
@@ -220,7 +229,7 @@ interface TimelinePanelProps {
 function TimelinePanel({ brand, design, specs, onChanged }: TimelinePanelProps): JSX.Element {
   return (
     <>
-      <DesignTimeline designId={design.id} refreshKey={design.updated_at} />
+      <DesignTimeline designId={design.id} status={design.status} refreshKey={design.updated_at} />
       <DesignResubmitForm
         brand={brand}
         designId={design.id}

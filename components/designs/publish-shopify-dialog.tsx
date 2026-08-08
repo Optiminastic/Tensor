@@ -21,13 +21,9 @@ import { Textarea } from '@/components/ui/textarea'
 
 const MAX_IMAGES = 6
 
-// weight_grams is optional; an empty number input reads as NaN, which we map to
-// undefined so the field can be left blank.
-const optionalWeight = z.preprocess(
-  value => (typeof value === 'number' && Number.isNaN(value) ? undefined : value),
-  z.number().nonnegative('Weight cannot be negative').optional(),
-)
-
+// Weight and dimensions are NOT entered here: Tensor derives the printed weight
+// from the slice and the size from the model's bounding box, and the backend
+// attaches them to the Shopify product. No one types physical facts.
 const FormSchema = z.object({
   title: z.string().min(1, 'Give the product a title').max(255),
   price: z.number().int().positive('Price must be positive'),
@@ -37,7 +33,6 @@ const FormSchema = z.object({
   description: z.string().max(50_000),
   seo_title: z.string().max(255),
   seo_description: z.string().max(320),
-  weight_grams: optionalWeight,
 })
 type FormValues = z.infer<typeof FormSchema>
 
@@ -47,6 +42,7 @@ const METAFIELDS = [
   'Design CP',
   'print time',
   'filament (g)',
+  'dimensions (mm)',
   'units per bed',
   'effective machine time',
   'recommended SP',
@@ -94,7 +90,6 @@ export function PublishShopifyDialog({
       description: '',
       seo_title: '',
       seo_description: '',
-      weight_grams: undefined,
     },
   })
 
@@ -130,9 +125,9 @@ export function PublishShopifyDialog({
         description: values.description || undefined,
         seo_title: values.seo_title || undefined,
         seo_description: values.seo_description || undefined,
-        // SKU is system-generated and stored on the design; the backend stamps it
-        // on the Shopify variant automatically, so it is not sent (or edited) here.
-        weight_grams: values.weight_grams,
+        // SKU, weight and dimensions are all system-derived: the backend stamps
+        // the SKU, the printed weight (from the slice) and the model's dimensions
+        // on the Shopify product automatically, so none are sent or edited here.
       },
       images,
     })
@@ -237,18 +232,12 @@ export function PublishShopifyDialog({
                 className="text-muted-foreground font-mono tabular-nums"
               />
             </Field>
-            <Field
-              label="Weight (g)"
-              htmlFor="weight_grams"
-              hint="For shipping"
-              error={errors.weight_grams?.message}
-            >
+            <Field label="Weight & size" htmlFor="derived-physical" hint="From the slice + model">
               <Input
-                id="weight_grams"
-                type="number"
-                step="1"
-                data-numeric="true"
-                {...register('weight_grams', { valueAsNumber: true })}
+                id="derived-physical"
+                value="Set automatically from Tensor"
+                readOnly
+                className="text-muted-foreground"
               />
             </Field>
           </div>
@@ -268,8 +257,9 @@ export function PublishShopifyDialog({
           </div>
 
           <p className="text-muted-foreground text-xs">
-            Created as a <span className="font-medium">draft</span>. Costing metafields attached:{' '}
-            {METAFIELDS.join(', ')}. You can still refine it in Shopify.
+            Created as a <span className="font-medium">draft</span>. The variant weight (printed
+            grams from the slice) and the model dimensions are set automatically. Metafields
+            attached: {METAFIELDS.join(', ')}. You can still refine it in Shopify.
           </p>
 
           {error ? (

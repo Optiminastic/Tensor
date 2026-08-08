@@ -87,10 +87,10 @@ export function DesignDetailView({
   })
 
   const isProcessing = design.status === 'queued' || design.status === 'slicing'
-  // The submit/approve review workflow isn't wired to any backend route, so
-  // priced designs have no other way to reach Shopify - offer the push as
-  // soon as pricing exists, not only after the unreachable "approved" step.
-  const canPublish = design.status === 'priced' || design.status === 'approved'
+  // Publishing is the last step of the review flow: only an APPROVED design can be
+  // pushed to Shopify (the backend enforces this). A priced design must first be
+  // submitted and approved via the review actions above.
+  const canPublish = design.status === 'approved' || design.status === 'published'
   const publishPrice = design.pricing?.approved_sp ?? design.pricing?.recommended_sp ?? null
 
   return (
