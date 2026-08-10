@@ -5,19 +5,21 @@ import type { JSX } from 'react'
 
 import type { Design } from '@/lib/validators/designs'
 
+import { DeleteDesignButton } from './delete-design-button'
 import { DesignStatusBadge } from './design-status-badge'
 
 interface DesignGridProps {
   brand: string
   designs: Design[]
+  canDelete: boolean
 }
 
 /** The brand's designs as a cover-image grid, each card linking to its pre-check. */
-export function DesignGrid({ brand, designs }: DesignGridProps): JSX.Element {
+export function DesignGrid({ brand, designs, canDelete }: DesignGridProps): JSX.Element {
   return (
     <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {designs.map(design => (
-        <li key={design.id}>
+        <li key={design.id} className="relative">
           <Link
             href={`/dashboard/${brand}/designs/${design.id}`}
             className="group flex flex-col gap-2"
@@ -53,6 +55,11 @@ export function DesignGrid({ brand, designs }: DesignGridProps): JSX.Element {
               ) : null}
             </div>
           </Link>
+          {canDelete ? (
+            <div className="absolute top-2 right-2">
+              <DeleteDesignButton brand={brand} designId={design.id} name={design.name} />
+            </div>
+          ) : null}
         </li>
       ))}
     </ul>

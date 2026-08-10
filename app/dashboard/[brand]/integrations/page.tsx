@@ -5,6 +5,7 @@ import type { JSX } from 'react'
 import { BrandConnections } from '@/components/brands/brand-connections'
 import { ShopifyOrderImportStatus } from '@/components/brands/shopify-order-import-status'
 import { getTokenSafe } from '@/lib/auth'
+import { requirePermission } from '@/lib/authz'
 import { env } from '@/lib/env'
 import type { Connection } from '@/lib/validators/connections'
 import { listConnections, listShopifyOrderConnections } from '@/services/connections.service'
@@ -54,6 +55,7 @@ export default async function IntegrationsPage({
   searchParams,
 }: IntegrationsPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('integration:manage', `/dashboard/${brand}`)
   const { google, shopify_orders: shopifyOrders } = await searchParams
   const token = await getTokenSafe(await headers())
   let connections: Connection[] = []

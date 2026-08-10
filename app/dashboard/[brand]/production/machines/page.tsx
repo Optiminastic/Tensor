@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 
 import { FleetMachineTable } from '@/components/production/fleet-machine-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
 import { listFleetMachines, MachineFleetServiceError } from '@/services/machine-fleet.service'
@@ -17,6 +18,7 @@ export default async function MachineManagementPage({
   params,
 }: MachineManagementPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('machine:read', `/dashboard/${brand}`)
 
   let machines: FleetMachine[] = []
   let error: string | null = null

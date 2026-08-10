@@ -13,6 +13,7 @@ import {
   PRIMARY_SECTIONS,
   primarySegment,
   resolveActiveHref,
+  visibleItems,
   WORKSPACE_SECTIONS,
 } from './nav-config'
 
@@ -21,6 +22,8 @@ interface NavPanelProps {
   brands: BrandOption[]
   activeSlug: string | null
   email: string
+  canManageBrands: boolean
+  permissions: string[]
 }
 
 interface ActiveSection {
@@ -46,23 +49,38 @@ function resolveActiveSection(pathname: string): ActiveSection {
  * Column 2 of the double sidebar: the brand switcher, the active area's sub-items
  * (or a short description when it has none), and the signed-in user.
  */
-export function NavPanel({ base, brands, activeSlug, email }: NavPanelProps): JSX.Element {
+export function NavPanel({
+  base,
+  brands,
+  activeSlug,
+  email,
+  canManageBrands,
+  permissions,
+}: NavPanelProps): JSX.Element {
   const pathname = usePathname()
   const currentView = useSearchParams().get('view')
   const section = resolveActiveSection(pathname)
-  const activeHref = section.items
-    ? resolveActiveHref(
-        pathname,
-        currentView,
-        section.items.map(item => `${base}${item.href}`),
-      )
-    : null
+  // Only the sub-items this user may access, so the panel never lists a screen
+  // whose data the backend would refuse.
+  const items = visibleItems(permissions, section.items)
+  const activeHref =
+    items.length > 0
+      ? resolveActiveHref(
+          pathname,
+          currentView,
+          items.map(item => `${base}${item.href}`),
+        )
+      : null
 
   return (
     <aside className="border-border bg-surface sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r lg:flex">
       {brands.length > 0 ? (
         <div className="border-border border-b p-3">
-          <BrandSwitcher brands={brands} activeSlug={activeSlug} />
+          <BrandSwitcher
+            brands={brands}
+            activeSlug={activeSlug}
+            canManageBrands={canManageBrands}
+          />
         </div>
       ) : null}
 
@@ -71,8 +89,8 @@ export function NavPanel({ base, brands, activeSlug, email }: NavPanelProps): JS
           {section.label}
         </p>
 
-        {section.items ? (
-          section.items.map(item => {
+        {items.length > 0 ? (
+          items.map(item => {
             const href = `${base}${item.href}`
             const active = href === activeHref
             return (

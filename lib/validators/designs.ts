@@ -308,6 +308,57 @@ export const FailureRiskSchema = z.object({
 })
 export type FailureRisk = z.infer<typeof FailureRiskSchema>
 
+// The applied personalisation on a design: the customer's name plus how it sits
+// on the model and its intended colour. Saved by the interactive editor; the
+// backend bakes it into the model and re-slices. colour is a #rrggbb hex.
+export const DesignPersonalisationSchema = z.object({
+  text: z.string(),
+  font: z.string().default(''),
+  font_style: z.string().default(''),
+  size_mm: z.number(),
+  depth_mm: z.number(),
+  offset_x_mm: z.number(),
+  offset_y_mm: z.number(),
+  rotation_deg: z.number(),
+  colour: z.string().default(''),
+})
+export type DesignPersonalisation = z.infer<typeof DesignPersonalisationSchema>
+
+// What the editor submits to save (and re-slice). An empty text clears it. Font
+// family and style are allowlisted server-side, so they are plain strings here.
+export const DesignPersonalisationInputSchema = z.object({
+  text: z.string().max(48),
+  font: z.string().optional(),
+  font_style: z.string().optional(),
+  size_mm: z.number().min(3).max(40),
+  depth_mm: z.number().min(0.2).max(5),
+  offset_x_mm: z.number(),
+  offset_y_mm: z.number(),
+  rotation_deg: z.number(),
+  colour: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Colour must be a #rrggbb hex value')
+    .or(z.literal('')),
+})
+export type DesignPersonalisationInput = z.infer<typeof DesignPersonalisationInputSchema>
+
+// Per-product performance: unit economics from the pricing engine plus real
+// sales/production counts for the design's catalog SKU (GET /designs/:id/performance).
+export const DesignPerformanceSchema = z.object({
+  sku: z.string(),
+  has_pricing: z.boolean(),
+  design_cp: z.number(),
+  selling_price: z.number(),
+  margin_per_unit: z.number(),
+  margin_pct: z.number(),
+  units_ordered: z.number().int(),
+  units_completed: z.number().int(),
+  units_failed: z.number().int(),
+  revenue: z.number(),
+  profit: z.number(),
+})
+export type DesignPerformance = z.infer<typeof DesignPerformanceSchema>
+
 export const DesignDetailSchema = DesignSchema.extend({
   // nullish (not just nullable): tolerate a backend that predates the notes field,
   // so the detail page never crashes if the two repos are briefly out of step.
@@ -324,6 +375,8 @@ export const DesignDetailSchema = DesignSchema.extend({
   personalisation_rules: PersonalisationRulesSchema.nullish(),
   attributes: DesignAttributesSchema.nullish(),
   failure_risk: FailureRiskSchema.nullish(),
+  // The saved personalisation, so the editor rehydrates. null = none applied.
+  personalisation: DesignPersonalisationSchema.nullish(),
 })
 export type DesignDetail = z.infer<typeof DesignDetailSchema>
 

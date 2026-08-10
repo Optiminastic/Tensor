@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 
 import { PriceCalculator } from '@/components/costing/price-calculator'
 import { PricingRulesDialog } from '@/components/costing/pricing-rules-dialog'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { CostAssumption } from '@/lib/validators/config'
 import { ConfigServiceError, getDefaultCostAssumption } from '@/services/config.service'
@@ -24,6 +25,7 @@ export default async function CostingPage({
   searchParams,
 }: CostingPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('pricing:read', `/dashboard/${brand}`)
   const { view } = await searchParams
 
   if (view === 'rules') return <PricingRulesView />

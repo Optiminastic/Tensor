@@ -3,7 +3,7 @@
 import { Bounds, Grid, OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, type JSX } from 'react'
+import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import * as THREE from 'three'
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
@@ -12,6 +12,15 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Orientation } from '@/lib/validators/designs'
 
 import { type ClipState, ClipController, buildClipPlane } from './clip-plane'
+import { PersonalisationText, type TextTransform } from './personalisation-text'
+
+// The live name layer the viewer draws on top of the model, driven by the editor.
+export interface PersonalisationView {
+  // The extruded-text STL URL, or null when there is no name to show.
+  textUrl: string | null
+  colour: string
+  transform: TextTransform
+}
 
 // Above this triangle count a model is simplified for the preview so it stays
 // interactive (a 24 MB STL is ~480k triangles; parsing/painting that on the main
@@ -46,6 +55,8 @@ interface ModelViewerProps {
   // A filament colour to render the whole model in (hex). null shows the analysis
   // shading (base grey + amber overhangs) instead.
   tint?: string | null
+  // The live name layer drawn on the model's top face (the personalisation editor).
+  personalisation?: PersonalisationView
   // Reports how long the model took to fetch and build (parse + decimate).
   onTiming?: (t: LoadTiming) => void
 }
@@ -112,10 +123,14 @@ export function ModelViewer({
   onMeasure,
   clip,
   tint,
+  personalisation,
   onTiming,
 }: ModelViewerProps): JSX.Element {
   const { data, isError } = useModelGeometry(modelUrl)
   const geometry = data?.geometry ?? null
+  // The model's top-face Z in the centred viewer frame, reported by ModelMesh, so
+  // the name layer can rest on top of the model.
+  const [topZ, setTopZ] = useState<number | null>(null)
 
   // Report load timing once, when the (cached) data first becomes available. Kept
   // in a ref so a changing onTiming identity never re-runs the effect.
@@ -158,7 +173,16 @@ export function ModelViewer({
           onMeasure={onMeasure}
           clip={clip}
           tint={tint}
+          onBounds={(_, max) => setTopZ(max.z)}
         />
+        {personalisation?.textUrl && topZ !== null ? (
+          <PersonalisationText
+            url={personalisation.textUrl}
+            colour={personalisation.colour}
+            topZ={topZ}
+            transform={personalisation.transform}
+          />
+        ) : null}
       </Bounds>
       <Grid
         args={[600, 600]}
@@ -184,9 +208,19 @@ interface ModelMeshProps {
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
   tint?: string | null
+  // Reports the centred mesh's bounding-box corners, so a sibling (the name layer)
+  // can sit on the model's top face.
+  onBounds?: (min: THREE.Vector3, max: THREE.Vector3) => void
 }
 
-function ModelMesh({ geometry, quaternion, onMeasure, clip, tint }: ModelMeshProps): JSX.Element {
+function ModelMesh({
+  geometry,
+  quaternion,
+  onMeasure,
+  clip,
+  tint,
+  onBounds,
+}: ModelMeshProps): JSX.Element {
   const meshRef = useRef<THREE.Mesh>(null)
   const worldPlane = useMemo(() => new THREE.Plane(), [])
 
@@ -215,6 +249,7 @@ function ModelMesh({ geometry, quaternion, onMeasure, clip, tint }: ModelMeshPro
 
   useEffect(() => () => prepared.dispose(), [prepared])
   useEffect(() => onMeasure(measure), [measure, onMeasure])
+  useEffect(() => onBounds?.(boxMin, boxMax), [boxMin, boxMax, onBounds])
 
   return (
     <>

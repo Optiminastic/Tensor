@@ -5,12 +5,16 @@ import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from 'react'
 
 import { optimizeDesign } from '@/app/dashboard/[brand]/designs/optimization-actions'
-import { estimateDesignPersonalisation } from '@/app/dashboard/[brand]/designs/personalisation-actions'
+import {
+  estimateDesignPersonalisation,
+  saveDesignPersonalisationForBrand,
+} from '@/app/dashboard/[brand]/designs/personalisation-actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type {
   DesignOptimization,
+  DesignPersonalisation,
   Orientation,
   PersonalisationEstimate,
 } from '@/lib/validators/designs'
@@ -19,25 +23,22 @@ import { useCut } from './cut-controls'
 import { LayerStage } from './design-layer-preview'
 import { PreviewControls } from './design-preview-controls'
 import type { OrientationMeasure, RotateAxis } from './model-viewer'
+import type { TextTransform } from './personalisation-text'
 
 type PreviewMode = 'model' | 'layers'
-
-// The applied personalisation: what the backend renders into the model. Committed
-// from the live controls on Apply.
-interface PersonalisationSpec {
-  text: string
-  sizeMM: number
-  offsetXMM: number
-  offsetYMM: number
-}
 
 // How far the name is raised off the surface (mm). Fixed for now; the emboss reads
 // clearly and stays cheap to print. A control can expose it later.
 const PERSONALISE_DEPTH_MM = 1
+// The default text colour before the customer picks one.
+const DEFAULT_TEXT_COLOUR = '#1c1c1c'
+// The default font family/style; the full lists live in design-preview-controls
+// and mirror the backend's allowlist.
+const DEFAULT_FONT = 'Liberation Sans'
+const DEFAULT_FONT_STYLE = 'Regular'
 
-// Default filament palette for the whole-model colour preview. An STL has no
-// colour, so a swatch just re-tints the render; a per-design editable palette can
-// override this list later.
+// Default filament palette for the whole-model colour preview and the text colour
+// swatches. An STL has no colour, so a swatch just re-tints the render.
 const FILAMENT_COLORS: { name: string; hex: string }[] = [
   { name: 'White', hex: '#f2f2f0' },
   { name: 'Black', hex: '#1c1c1c' },
@@ -61,12 +62,18 @@ const ModelViewer = dynamic(() => import('./model-viewer').then(m => m.ModelView
 })
 
 interface DesignModelPreviewProps {
+  brand: string
   designId: string
   orientation: Orientation | null
   // design.updated_at - changes on re-slice so the layer view refetches.
   refreshKey: string
   // Whether a slice exists, i.e. the Layers mode has G-code to show.
   hasSlice: boolean
+  // The saved personalisation, so the editor rehydrates. null = none applied.
+  savedPersonalisation: DesignPersonalisation | null
+  // Called after a personalisation is saved (and the re-slice queued) so the
+  // detail page refetches and the Layers/cost catch up.
+  onPersonalised: () => void
 }
 
 /**
@@ -77,10 +84,13 @@ interface DesignModelPreviewProps {
  * swaps the mesh for the sliced-layers preview.
  */
 export function DesignModelPreview({
+  brand,
   designId,
   orientation,
   refreshKey,
   hasSlice,
+  savedPersonalisation,
+  onPersonalised,
 }: DesignModelPreviewProps): JSX.Element {
   const canRecommend = Boolean(orientation && !orientation.already_optimal)
   const [base, setBase] = useState<'uploaded' | 'recommended'>('uploaded')
@@ -89,16 +99,24 @@ export function DesignModelPreview({
   const { clip, controls } = useCut()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [mode, setMode] = useState<PreviewMode>('model')
-  // Personalisation: the customer types a name and, on Apply, the backend renders
-  // it as real embossed geometry (OpenSCAD extruded text) merged onto the model.
-  // The viewer then loads that personalised STL - the name is real, printable
-  // geometry, not a browser overlay. Size/Move commit with the name on Apply.
-  const [nameText, setNameText] = useState('')
-  const [nameSize, setNameSize] = useState(10)
-  const [nameOffsetX, setNameOffsetX] = useState(0)
-  const [nameOffsetY, setNameOffsetY] = useState(0)
-  const [appliedSpec, setAppliedSpec] = useState<PersonalisationSpec | null>(null)
+  // Personalisation: the name is a separate 3D object on the model's top face,
+  // rendered live in the viewer. Moving, rotating, recolouring and resizing all
+  // happen in the browser (no round-trip); only the extruded-text mesh is fetched,
+  // and only when the text or size changes. "Save & re-slice" bakes it into the
+  // model server-side and re-slices, so cost and Layers include the name.
+  const [nameText, setNameText] = useState(savedPersonalisation?.text ?? '')
+  const [nameSize, setNameSize] = useState(savedPersonalisation?.size_mm ?? 10)
+  const [transform, setTransform] = useState<TextTransform>({
+    x: savedPersonalisation?.offset_x_mm ?? 0,
+    y: savedPersonalisation?.offset_y_mm ?? 0,
+    rotationDeg: savedPersonalisation?.rotation_deg ?? 0,
+  })
+  const [textColour, setTextColour] = useState(savedPersonalisation?.colour || DEFAULT_TEXT_COLOUR)
+  const [fontFamily, setFontFamily] = useState(savedPersonalisation?.font || DEFAULT_FONT)
+  const [fontStyle, setFontStyle] = useState(savedPersonalisation?.font_style || DEFAULT_FONT_STYLE)
   const [estimate, setEstimate] = useState<PersonalisationEstimate | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   // AI optimization advisor (Optimizations tab): the report plus its loading/error.
   const [optimization, setOptimization] = useState<DesignOptimization | null>(null)
   const [optimizeLoading, setOptimizeLoading] = useState(false)
@@ -106,36 +124,79 @@ export function DesignModelPreview({
   // A filament colour to preview the whole model in (null = analysis shading).
   const [tint, setTint] = useState<string | null>(null)
 
-  const applyPersonalisation = useCallback(() => {
+  // The model URL is always the plain lite base model; the name rides on top as a
+  // separate object, so moving it never re-downloads the model.
+  const modelUrl = `/api/designs/${designId}/model-lite`
+
+  // The extruded-text STL for the name layer; null when there is no name. Depends
+  // only on the text and size, so nudging/rotating/recolouring never refetches.
+  const textUrl = useMemo(() => {
+    const name = nameText.trim()
+    if (name === '') return null
+    const q = new URLSearchParams({
+      text: name,
+      size_mm: String(nameSize),
+      depth_mm: String(PERSONALISE_DEPTH_MM),
+      font: fontFamily,
+      font_style: fontStyle,
+    })
+    return `/api/designs/${designId}/personalise-text?${q.toString()}`
+  }, [designId, nameText, nameSize, fontFamily, fontStyle])
+
+  // A live pre-slice estimate of the name's added grams/time/cost, debounced so it
+  // does not fire on every keystroke.
+  useEffect(() => {
     const name = nameText.trim()
     if (name === '') {
-      setAppliedSpec(null)
       setEstimate(null)
       return
     }
-    setAppliedSpec({ text: name, sizeMM: nameSize, offsetXMM: nameOffsetX, offsetYMM: nameOffsetY })
-    void estimateDesignPersonalisation(designId, { text: name, height_mm: nameSize }).then(res => {
-      setEstimate(res.ok && res.data ? res.data : null)
-    })
-  }, [nameText, nameSize, nameOffsetX, nameOffsetY, designId])
+    const handle = setTimeout(() => {
+      void estimateDesignPersonalisation(designId, { text: name, height_mm: nameSize }).then(res =>
+        setEstimate(res.ok && res.data ? res.data : null),
+      )
+    }, 500)
+    return () => clearTimeout(handle)
+  }, [designId, nameText, nameSize])
 
-  // The model URL: the plain lite model, or - once a name is applied - the
-  // personalised model (name baked in as real geometry). useModelGeometry caches
-  // per URL, so each distinct name/size/placement is generated by the backend once.
-  const modelUrl = useMemo(() => {
-    const base = `/api/designs/${designId}/model-lite`
-    if (!appliedSpec) {
-      return base
-    }
-    const q = new URLSearchParams({
-      text: appliedSpec.text,
-      size_mm: String(appliedSpec.sizeMM),
-      depth_mm: String(PERSONALISE_DEPTH_MM),
-      offset_x_mm: String(appliedSpec.offsetXMM),
-      offset_y_mm: String(appliedSpec.offsetYMM),
+  const savePersonalisation = useCallback(async () => {
+    setSaving(true)
+    setSaveError(null)
+    const res = await saveDesignPersonalisationForBrand(brand, designId, {
+      text: nameText.trim(),
+      font: fontFamily,
+      font_style: fontStyle,
+      size_mm: nameSize,
+      depth_mm: PERSONALISE_DEPTH_MM,
+      offset_x_mm: transform.x,
+      offset_y_mm: transform.y,
+      rotation_deg: transform.rotationDeg,
+      colour: textColour,
     })
-    return `/api/designs/${designId}/personalise-preview?${q.toString()}`
-  }, [designId, appliedSpec])
+    setSaving(false)
+    if (!res.ok) {
+      setSaveError(res.error ?? 'Could not save the personalisation.')
+      return
+    }
+    onPersonalised()
+  }, [
+    brand,
+    designId,
+    nameText,
+    nameSize,
+    fontFamily,
+    fontStyle,
+    transform,
+    textColour,
+    onPersonalised,
+  ])
+
+  // The live name layer handed to the viewer (editable only in the detailed view,
+  // where the gizmo and tools live).
+  const personalisation = useMemo(
+    () => ({ textUrl, colour: textColour, transform }),
+    [textUrl, textColour, transform],
+  )
   // Layers mode is offered whenever a slice exists, inline and in the detailed view.
   const showLayers = hasSlice && mode === 'layers'
   // The element promoted to full screen: the whole stage (controls + viewer), so
@@ -150,12 +211,13 @@ export function DesignModelPreview({
   const reset = useCallback(() => setBaseReset('uploaded'), [setBaseReset])
   const handleMeasure = useCallback((m: OrientationMeasure) => setMeasure(m), [])
   const nudgeName = useCallback((dx: number, dy: number) => {
-    setNameOffsetX(x => x + dx)
-    setNameOffsetY(y => y + dy)
+    setTransform(t => ({ ...t, x: t.x + dx, y: t.y + dy }))
   }, [])
   const centerName = useCallback(() => {
-    setNameOffsetX(0)
-    setNameOffsetY(0)
+    setTransform(t => ({ ...t, x: 0, y: 0 }))
+  }, [])
+  const setRotation = useCallback((deg: number) => {
+    setTransform(t => ({ ...t, rotationDeg: deg }))
   }, [])
   const runOptimize = useCallback(() => {
     setOptimizeLoading(true)
@@ -195,6 +257,7 @@ export function DesignModelPreview({
       onMeasure={handleMeasure}
       clip={clip}
       tint={tint}
+      personalisation={personalisation}
     />
   )
 
@@ -307,11 +370,22 @@ export function DesignModelPreview({
                   measure={measure}
                   nameText={nameText}
                   onNameChange={setNameText}
-                  onApply={applyPersonalisation}
+                  fontFamily={fontFamily}
+                  onFontFamilyChange={setFontFamily}
+                  fontStyle={fontStyle}
+                  onFontStyleChange={setFontStyle}
                   nameSize={nameSize}
                   onSizeChange={setNameSize}
+                  rotationDeg={transform.rotationDeg}
+                  onRotationChange={setRotation}
                   onNudge={nudgeName}
                   onCenter={centerName}
+                  textColour={textColour}
+                  onTextColourChange={setTextColour}
+                  colours={FILAMENT_COLORS}
+                  onSave={savePersonalisation}
+                  saving={saving}
+                  saveError={saveError}
                   estimate={estimate}
                   onOptimize={runOptimize}
                   optimization={optimization}

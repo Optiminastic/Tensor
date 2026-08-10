@@ -17,9 +17,15 @@ import {
 // brand (their `segment` is appended to /dashboard/<brand>); workspace areas use
 // absolute hrefs. `description` is the panel text for areas with no sub-items.
 
+// `permission` gates visibility: a node is shown only when the user holds that
+// permission key (a leaf with no permission inherits its section's visibility).
+// This is UX only - the backend still enforces every permission - but it stops a
+// role being shown areas whose data it cannot load (see the RBAC matrix in the
+// project docs).
 export interface NavLeaf {
   label: string
   href: string // brand-relative subpath, e.g. '/designs?view=upload'
+  permission?: string
 }
 
 export interface PrimarySection {
@@ -28,6 +34,7 @@ export interface PrimarySection {
   segment: string // '' for overview, 'designs', 'costing', ...
   items?: NavLeaf[]
   description?: string
+  permission?: string
 }
 
 export interface WorkspaceSection {
@@ -35,6 +42,7 @@ export interface WorkspaceSection {
   icon: LucideIcon
   href: string // absolute
   description?: string
+  permission?: string
 }
 
 // Static dashboard routes that must never be treated as a brand slug (Next
@@ -47,9 +55,10 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'Designs',
     icon: Box,
     segment: 'designs',
+    permission: 'design:read',
     items: [
       { label: 'All Designs', href: '/designs' },
-      { label: 'Upload Design', href: '/designs?view=upload' },
+      { label: 'Upload Design', href: '/designs?view=upload', permission: 'design:create' },
       { label: 'Drafts', href: '/designs?view=drafts' },
       { label: 'Submitted', href: '/designs?view=submitted' },
       { label: 'Approved', href: '/designs?view=approved' },
@@ -60,6 +69,7 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'Costing',
     icon: Coins,
     segment: 'costing',
+    permission: 'pricing:read',
     items: [
       { label: 'Cost Reports', href: '/costing' },
       { label: 'Price Calculator', href: '/costing?view=calculator' },
@@ -70,21 +80,23 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'Production',
     icon: Factory,
     segment: 'production',
+    permission: 'production:read',
     items: [
       { label: 'Overview', href: '/production' },
-      { label: 'Orders', href: '/production/orders' },
+      { label: 'Orders', href: '/production/orders', permission: 'order:read' },
       { label: 'Production Jobs', href: '/production/jobs' },
-      { label: 'Batch Management', href: '/production/batches' },
-      { label: 'Machine Management', href: '/production/machines' },
-      { label: 'Assembly', href: '/production/assembly' },
-      { label: 'QC/Packaging', href: '/production/qc-packaging' },
-      { label: 'Filament Inventory', href: '/production/inventory' },
+      { label: 'Batch Management', href: '/production/batches', permission: 'batch:read' },
+      { label: 'Machine Management', href: '/production/machines', permission: 'machine:read' },
+      { label: 'Assembly', href: '/production/assembly', permission: 'assembly:submit' },
+      { label: 'QC/Packaging', href: '/production/qc-packaging', permission: 'qc:submit' },
+      { label: 'Filament Inventory', href: '/production/inventory', permission: 'filament:read' },
     ],
   },
   {
     label: 'Commerce',
     icon: ShoppingBag,
     segment: 'commerce',
+    permission: 'shopify:publish',
     items: [
       { label: 'Shopify Products', href: '/commerce/products' },
       { label: 'Collections', href: '/commerce/collections' },
@@ -94,6 +106,7 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'Analytics',
     icon: TrendingUp,
     segment: 'analytics',
+    permission: 'pricing:read',
     items: [
       { label: 'Profitability', href: '/analytics' },
       { label: 'Machine Utilization', href: '/analytics?view=utilization' },
@@ -104,6 +117,7 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'AI Center',
     icon: Sparkles,
     segment: 'ai-center',
+    permission: 'design:read',
     items: [
       { label: 'Recommendations', href: '/ai-center' },
       { label: 'Design Optimizer', href: '/ai-center?view=optimizer' },
@@ -114,6 +128,7 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'Integrations',
     icon: Plug,
     segment: 'integrations',
+    permission: 'integration:manage',
     description: 'Shopify, Google Ads and Meta Ads for this brand.',
   },
 ]
@@ -123,6 +138,7 @@ export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
     label: 'Team',
     icon: Users,
     href: '/dashboard/users',
+    permission: 'user:read',
     description: 'Invite teammates and manage roles.',
   },
   {
@@ -132,6 +148,26 @@ export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
     description: 'Workspace and account settings.',
   },
 ]
+
+/** Whether a nav node is visible: no permission means always, else held. */
+export function navVisible(permissions: string[], permission?: string): boolean {
+  return !permission || permissions.includes(permission)
+}
+
+/** The primary sections the given permissions may see. */
+export function visiblePrimarySections(permissions: string[]): PrimarySection[] {
+  return PRIMARY_SECTIONS.filter(section => navVisible(permissions, section.permission))
+}
+
+/** The workspace sections the given permissions may see. */
+export function visibleWorkspaceSections(permissions: string[]): WorkspaceSection[] {
+  return WORKSPACE_SECTIONS.filter(section => navVisible(permissions, section.permission))
+}
+
+/** The visible sub-items of a section for the given permissions. */
+export function visibleItems(permissions: string[], items?: NavLeaf[]): NavLeaf[] {
+  return (items ?? []).filter(item => navVisible(permissions, item.permission))
+}
 
 /** Splits a nav href into its path and optional `view` query for active matching. */
 export function parseNavHref(href: string): { path: string; view: string | null } {

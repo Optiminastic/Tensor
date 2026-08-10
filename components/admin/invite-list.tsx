@@ -1,6 +1,7 @@
 'use client'
 import type { JSX } from 'react'
 
+import { RevokeInviteButton } from '@/components/admin/revoke-invite-button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -79,6 +80,7 @@ export function InviteList({ invites, loadError }: InviteListProps): JSX.Element
             <TableHeaderCell>Role</TableHeaderCell>
             <TableHeaderCell>Status</TableHeaderCell>
             <TableHeaderCell className="text-right">Expires</TableHeaderCell>
+            <TableHeaderCell className="text-right">Actions</TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -95,6 +97,9 @@ export function InviteList({ invites, loadError }: InviteListProps): JSX.Element
                 </TableCell>
                 <TableCell numeric className="text-muted-foreground">
                   {formatDate(invite.expires_at)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {status.label === 'Pending' ? <RevokeInviteButton inviteId={invite.id} /> : null}
                 </TableCell>
               </TableRow>
             )

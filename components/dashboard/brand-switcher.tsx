@@ -17,14 +17,19 @@ export interface BrandOption {
 interface BrandSwitcherProps {
   brands: BrandOption[]
   activeSlug: string | null
+  canManageBrands: boolean
 }
 
 /**
  * Switches the dashboard's active brand. Shows the current brand and, on select,
- * navigates to the same section under the chosen brand (or its overview). Also
- * links to create a new brand.
+ * navigates to the same section under the chosen brand (or its overview). Only
+ * members who can manage brands (`brand:manage`) see the "New brand" link.
  */
-export function BrandSwitcher({ brands, activeSlug }: BrandSwitcherProps): JSX.Element {
+export function BrandSwitcher({
+  brands,
+  activeSlug,
+  canManageBrands,
+}: BrandSwitcherProps): JSX.Element {
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -87,16 +92,18 @@ export function BrandSwitcher({ brands, activeSlug }: BrandSwitcherProps): JSX.E
                 )
               })}
             </ul>
-            <div className="border-border mt-1 border-t pt-1">
-              <Link
-                href="/create-brand"
-                onClick={() => setOpen(false)}
-                className="text-muted-foreground hover:bg-surface-muted hover:text-foreground flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
-              >
-                <Plus className="size-4 shrink-0" aria-hidden />
-                New brand
-              </Link>
-            </div>
+            {canManageBrands ? (
+              <div className="border-border mt-1 border-t pt-1">
+                <Link
+                  href="/create-brand"
+                  onClick={() => setOpen(false)}
+                  className="text-muted-foreground hover:bg-surface-muted hover:text-foreground flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
+                >
+                  <Plus className="size-4 shrink-0" aria-hidden />
+                  New brand
+                </Link>
+              </div>
+            ) : null}
           </div>
         </>
       ) : null}

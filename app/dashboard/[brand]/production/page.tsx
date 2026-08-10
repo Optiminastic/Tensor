@@ -10,6 +10,7 @@ import {
 import { ProductionOverview } from '@/components/production/production-overview'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { BatchRecord, OrderRecord } from '@/components/production/types'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
 import type { Machine } from '@/lib/validators/machines'
@@ -29,6 +30,7 @@ export default async function ProductionPage({
   params,
 }: ProductionPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  await requirePermission('production:read', `/dashboard/${brand}`)
 
   let jobs: ProductionJob[] = []
   let orders: OrderRecord[] = []
