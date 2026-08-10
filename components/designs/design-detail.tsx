@@ -18,6 +18,7 @@ import { DesignDetailTabs } from './design-detail-tabs'
 import { type ReviewCaps, DesignReviewActions } from './design-review-actions'
 import { DesignSkuDialog } from './design-sku-dialog'
 import { DesignStatusBadge } from './design-status-badge'
+import { EditShopifyListingDialog } from './edit-shopify-dialog'
 import { PublishShopifyDialog } from './publish-shopify-dialog'
 
 const POLL_MS = 2500
@@ -155,12 +156,19 @@ export function DesignDetailView({
               onPublished={() => void refetch()}
             />
           ) : null}
+          {design.shopify && canPublish ? (
+            <EditShopifyListingDialog
+              brand={brand}
+              designId={design.id}
+              onSaved={() => void refetch()}
+            />
+          ) : null}
           {design.shopify ? (
             <a
               href={design.shopify.admin_url}
               target="_blank"
               rel="noreferrer"
-              title="Open the draft in Shopify"
+              title="Open the listing in Shopify"
               className={buttonVariants({ variant: 'secondary', size: 'sm' })}
             >
               <ShoppingBag aria-hidden />
