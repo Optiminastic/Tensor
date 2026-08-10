@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
 import { DesignsView } from '@/components/designs/designs-view'
+import { ShopifyImportDialog } from '@/components/designs/shopify-import-dialog'
 import { UploadDesignDialog } from '@/components/designs/upload-design-dialog'
 import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
@@ -45,7 +46,10 @@ export default async function DesignsPage({ params }: DesignsPageProps): Promise
             Upload a model, get the Green/Yellow/Red pre-check, and iterate until it is green.
           </p>
         </div>
-        <UploadDesignDialog brand={brand} />
+        <div className="flex items-center gap-2">
+          <ShopifyImportDialog brand={brand} />
+          <UploadDesignDialog brand={brand} />
+        </div>
       </div>
 
       {error ? (

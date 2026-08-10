@@ -45,12 +45,22 @@ export default async function DesignDetailPage({
     canReject: can(authz, 'design:reject'),
   }
   // Assigning a SKU is a Project-Lead commerce action, gated by the same
-  // permission as publishing; the backend re-checks it.
+  // permission as publishing; renaming and deleting are the design owner's edits.
+  // The backend re-checks each against the verified token.
   const canManageSku = can(authz, 'shopify:publish')
+  const canEdit = can(authz, 'design:update')
+  const canDelete = can(authz, 'design:delete')
 
   return (
     <main className="flex w-full flex-col gap-8 px-6 py-10 lg:px-10">
-      <DesignDetailView brand={brand} initial={initial} caps={caps} canManageSku={canManageSku} />
+      <DesignDetailView
+        brand={brand}
+        initial={initial}
+        caps={caps}
+        canManageSku={canManageSku}
+        canEdit={canEdit}
+        canDelete={canDelete}
+      />
     </main>
   )
 }

@@ -124,7 +124,10 @@ export interface CreateDesignInput {
   specs: DesignSpecs
   machine: DesignMachineSpec
   file: File
-  preview: File
+  // preview is optional when previewUrl is supplied: the Shopify-import flow lets
+  // the backend fetch the product photo instead of an uploaded file.
+  preview?: File
+  previewUrl?: string
   notes?: string
   attributes?: Record<string, string>
 }
@@ -150,7 +153,8 @@ export async function createDesign(token: string, input: CreateDesignInput): Pro
     for (const [key, value] of Object.entries(input.attributes)) form.set(key, value)
   }
   form.set('file', input.file, input.file.name)
-  form.set('preview', input.preview, input.preview.name)
+  if (input.preview) form.set('preview', input.preview, input.preview.name)
+  else if (input.previewUrl) form.set('preview_url', input.previewUrl)
 
   return call(
     '/designs',
@@ -299,15 +303,9 @@ export async function publishToShopify(
   )
 }
 
-// Permanently deletes a design and its child records (backend cascades). The
-// backend enforces design:delete + brand access.
-export async function deleteDesign(token: string, id: string): Promise<void> {
-  await call(
-    `/designs/${encodeURIComponent(id)}`,
-    { method: 'DELETE', headers: authHeader(token) },
-    () => undefined,
-  )
-}
+// deleteDesign and renameDesign live in services/designs-lifecycle.service.ts
+// (split out to keep this file within the line budget); they reuse call/authHeader
+// from here.
 
 export async function resubmitDesign(
   token: string,

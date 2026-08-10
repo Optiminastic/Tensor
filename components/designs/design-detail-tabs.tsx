@@ -15,11 +15,20 @@ import { DesignOrientation } from './design-orientation'
 import { DesignOverview } from './design-overview'
 import { DesignPerformancePanel } from './design-performance'
 import { DesignResubmitForm } from './design-resubmit-form'
+import { type DesignSettingsCaps, DesignSettings } from './design-settings'
 import { DesignTimeline } from './design-timeline'
 import { DesignVerdict } from './design-verdict'
+import { ShopifyComparison } from './shopify-comparison'
 import { SliceSettingsForm } from './slice-settings-form'
 
-type TabValue = 'overview' | 'preview' | 'pricing' | 'performance' | 'machine' | 'timeline'
+type TabValue =
+  | 'overview'
+  | 'preview'
+  | 'pricing'
+  | 'performance'
+  | 'machine'
+  | 'timeline'
+  | 'settings'
 
 const TABS: TabItem[] = [
   { value: 'overview', label: 'Overview' },
@@ -28,12 +37,14 @@ const TABS: TabItem[] = [
   { value: 'performance', label: 'Performance' },
   { value: 'machine', label: 'Machine' },
   { value: 'timeline', label: 'Timeline' },
+  { value: 'settings', label: 'Settings' },
 ]
 
 interface DesignDetailTabsProps {
   brand: string
   design: DesignDetail
   specs: DesignSpecs
+  settingsCaps: DesignSettingsCaps
   onChanged: () => void
 }
 
@@ -44,6 +55,7 @@ export function DesignDetailTabs({
   brand,
   design,
   specs,
+  settingsCaps,
   onChanged,
 }: DesignDetailTabsProps): JSX.Element {
   const [tab, setTab] = useState<TabValue>('overview')
@@ -81,6 +93,9 @@ export function DesignDetailTabs({
         ) : null}
         {tab === 'timeline' ? (
           <TimelinePanel brand={brand} design={design} specs={specs} onChanged={onChanged} />
+        ) : null}
+        {tab === 'settings' ? (
+          <DesignSettings brand={brand} design={design} caps={settingsCaps} onChanged={onChanged} />
         ) : null}
       </div>
     </div>
@@ -146,7 +161,14 @@ function PricingPanel({ design }: { design: DesignDetail }): JSX.Element {
   if (!design.pricing) {
     return <EmptyPanel message="No pricing yet - re-slice to cost this design." />
   }
-  return <DesignVerdict pricing={design.pricing} />
+  return (
+    <>
+      {design.attributes?.shopify_product_gid ? (
+        <ShopifyComparison pricing={design.pricing} attributes={design.attributes} />
+      ) : null}
+      <DesignVerdict pricing={design.pricing} />
+    </>
+  )
 }
 
 interface MachinePanelProps {

@@ -80,15 +80,79 @@ const DEFAULTS: FormValues = {
   right_flow: 'standard',
 }
 
+/** A Shopify listing being imported into a design: its id + a price snapshot and
+ * its photo, so the backend can use that photo as the cover and the design detail
+ * can compare true cost against the listing price. */
+export interface ShopifyImportSource {
+  product_gid: string
+  handle: string
+  admin_url: string
+  image_url: string
+  min_price: string
+  max_price: string
+  currency: string
+}
+
 interface DesignUploadFormProps {
   brand: string
   onDone?: () => void
+  // Pre-fills the name; when set, this design is imported from a Shopify listing
+  // (the preview defaults to the listing photo and the snapshot rides along).
+  defaultName?: string
+  shopify?: ShopifyImportSource
 }
 
 /** Upload an STL and its answers; the backend slices it and returns the pre-check. */
 const MAX_PREVIEW_MB = 10
 
-export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.Element {
+interface BuildFormArgs {
+  values: FormValues
+  file: File
+  preview: File | null
+  shopify?: ShopifyImportSource
+}
+
+// buildDesignFormData assembles the multipart body. When importing, the preview
+// falls back to the Shopify photo URL and the snapshot fields ride along.
+function buildDesignFormData({ values, file, preview, shopify }: BuildFormArgs): FormData {
+  const form = new FormData()
+  form.set('name', values.name)
+  form.set('material', values.material)
+  if (values.colour) form.set('colour', values.colour)
+  form.set('finish', values.finish)
+  form.set('units_per_bed', String(values.units_per_bed))
+  form.set('quality', values.quality)
+  form.set('infill_pct', String(values.infill_pct))
+  if (values.notes) form.set('notes', values.notes)
+  if (values.product_type) form.set('product_type', values.product_type)
+  if (values.personalisation_type) form.set('personalisation_type', values.personalisation_type)
+  if (values.colour_count) form.set('colour_count', String(values.colour_count))
+  if (values.add_ons) form.set('add_ons', values.add_ons)
+  if (values.packaging_type) form.set('packaging_type', values.packaging_type)
+  form.set('left_nozzle_mm', String(values.left_nozzle_mm))
+  form.set('right_nozzle_mm', String(values.right_nozzle_mm))
+  form.set('left_flow', values.left_flow)
+  form.set('right_flow', values.right_flow)
+  form.set('file', file)
+  if (preview) form.set('preview', preview)
+  else if (shopify?.image_url) form.set('preview_url', shopify.image_url)
+  if (shopify) {
+    form.set('shopify_product_gid', shopify.product_gid)
+    form.set('shopify_handle', shopify.handle)
+    form.set('shopify_admin_url', shopify.admin_url)
+    form.set('shopify_min_price', shopify.min_price)
+    form.set('shopify_max_price', shopify.max_price)
+    form.set('shopify_currency', shopify.currency)
+  }
+  return form
+}
+
+export function DesignUploadForm({
+  brand,
+  onDone,
+  defaultName,
+  shopify,
+}: DesignUploadFormProps): JSX.Element {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<File | null>(null)
@@ -98,7 +162,10 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(FormSchema), defaultValues: DEFAULTS })
+  } = useForm<FormValues>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: { ...DEFAULTS, name: defaultName ?? DEFAULTS.name },
+  })
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>): void {
     setFile(event.target.files?.[0] ?? null)
@@ -118,35 +185,18 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
       setError(`The model is larger than the ${MAX_FILE_MB} MB limit.`)
       return
     }
-    if (!preview) {
+    // Importing from Shopify uses the listing photo as the cover, so a manual
+    // preview is optional when the listing has one; otherwise it is still required.
+    if (!preview && !shopify?.image_url) {
       setError('Upload a preview image for the design.')
       return
     }
-    if (preview.size > MAX_PREVIEW_MB * 1024 * 1024) {
+    if (preview && preview.size > MAX_PREVIEW_MB * 1024 * 1024) {
       setError(`The preview image is larger than the ${MAX_PREVIEW_MB} MB limit.`)
       return
     }
-    const form = new FormData()
-    form.set('name', values.name)
-    form.set('material', values.material)
-    if (values.colour) form.set('colour', values.colour)
-    form.set('finish', values.finish)
-    form.set('units_per_bed', String(values.units_per_bed))
-    form.set('quality', values.quality)
-    form.set('infill_pct', String(values.infill_pct))
-    if (values.notes) form.set('notes', values.notes)
-    if (values.product_type) form.set('product_type', values.product_type)
-    if (values.personalisation_type) form.set('personalisation_type', values.personalisation_type)
-    if (values.colour_count) form.set('colour_count', String(values.colour_count))
-    if (values.add_ons) form.set('add_ons', values.add_ons)
-    if (values.packaging_type) form.set('packaging_type', values.packaging_type)
-    form.set('left_nozzle_mm', String(values.left_nozzle_mm))
-    form.set('right_nozzle_mm', String(values.right_nozzle_mm))
-    form.set('left_flow', values.left_flow)
-    form.set('right_flow', values.right_flow)
-    form.set('file', file)
-    form.set('preview', preview)
 
+    const form = buildDesignFormData({ values, file, preview, shopify })
     const outcome = await uploadDesign(brand, form)
     if (!outcome.ok || !outcome.data) {
       setError(outcome.error ?? 'Could not upload this design.')
@@ -169,7 +219,11 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
       <Field
         label="Preview image"
         htmlFor="preview"
-        hint={`PNG, JPG, WEBP or GIF, up to ${MAX_PREVIEW_MB} MB - shown as the cover`}
+        hint={
+          shopify
+            ? 'Optional - defaults to the Shopify listing photo'
+            : `PNG, JPG, WEBP or GIF, up to ${MAX_PREVIEW_MB} MB - shown as the cover`
+        }
       >
         <Input id="preview" type="file" accept="image/*" onChange={onPreviewChange} />
       </Field>
