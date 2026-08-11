@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import type { JSX } from 'react'
 
 import { AttentionCard } from '@/components/dashboard/attention-card'
+import { isAllBrands } from '@/components/dashboard/nav-config'
 import { ProductionTrendCard } from '@/components/dashboard/production-trend-card'
 import { RevenueCard } from '@/components/dashboard/revenue-card'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -70,11 +71,11 @@ export default async function BrandOverviewPage({
     <main className="flex w-full flex-col gap-4 px-6 py-8 lg:px-10">
       <header className="flex flex-col gap-1">
         <p className="text-subtle-foreground text-xs font-medium tracking-wide uppercase">
-          {brand.replace(/-/g, ' ')}
+          {isAllBrands(brand) ? 'All brands' : brand.replace(/-/g, ' ')}
         </p>
         <h1 className="text-display text-3xl">Overview</h1>
         <p className="text-muted-foreground text-sm">
-          Revenue, production and machine health at a glance.
+          Revenue, production and machine health across the workspace.
         </p>
       </header>
 

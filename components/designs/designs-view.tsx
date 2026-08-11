@@ -3,6 +3,7 @@
 import { LayoutGrid, List } from 'lucide-react'
 import { useEffect, useState, type JSX } from 'react'
 
+import { isAllBrands } from '@/components/dashboard/nav-config'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { Design } from '@/lib/validators/designs'
@@ -26,6 +27,7 @@ interface DesignsViewProps {
  * browser; the grid is the default (cover-forward, like the reference). */
 export function DesignsView({ brand, designs, canDelete }: DesignsViewProps): JSX.Element {
   const [view, setView] = useState<View>('grid')
+  const showBrand = isAllBrands(brand)
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -68,9 +70,9 @@ export function DesignsView({ brand, designs, canDelete }: DesignsViewProps): JS
         </div>
       </div>
       {view === 'grid' ? (
-        <DesignGrid brand={brand} designs={designs} canDelete={canDelete} />
+        <DesignGrid designs={designs} canDelete={canDelete} showBrand={showBrand} />
       ) : (
-        <DesignList brand={brand} designs={designs} canDelete={canDelete} />
+        <DesignList designs={designs} canDelete={canDelete} showBrand={showBrand} />
       )}
     </div>
   )

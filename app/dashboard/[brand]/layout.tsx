@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import type { JSX, ReactNode } from 'react'
 
+import { isAllBrands } from '@/components/dashboard/nav-config'
 import { getTokenSafe } from '@/lib/auth'
 import { listBrands } from '@/services/brands.service'
 
@@ -21,6 +22,8 @@ export default async function BrandLayout({
   params,
 }: BrandLayoutProps): Promise<JSX.Element> {
   const { brand } = await params
+  // The global "All brands" sentinel is a valid virtual brand, not a real slug.
+  if (isAllBrands(brand)) return <>{children}</>
   const token = await getTokenSafe(await headers())
   if (token?.token) {
     const brands = await listBrands(token.token).catch(() => null)

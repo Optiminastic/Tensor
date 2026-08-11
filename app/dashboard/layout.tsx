@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import type { JSX, ReactNode } from 'react'
 
 import type { BrandOption } from '@/components/dashboard/brand-switcher'
+import { ALL_BRANDS, isAllBrands } from '@/components/dashboard/nav-config'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import { can, currentAuthz } from '@/lib/authz'
@@ -35,10 +36,13 @@ export default async function DashboardLayout({
       .catch(() => [])
   }
 
+  // The sidebar's active brand on workspace pages (Team/Settings) and the switcher
+  // default. Global "All brands" is the default; a remembered real brand wins.
   const lastBrand = (await cookies()).get('last_brand')?.value ?? null
   const fallbackBrand =
-    (lastBrand && brands.some(brand => brand.slug === lastBrand) ? lastBrand : brands[0]?.slug) ??
-    null
+    lastBrand && (isAllBrands(lastBrand) || brands.some(brand => brand.slug === lastBrand))
+      ? lastBrand
+      : ALL_BRANDS
 
   const authz = await currentAuthz()
   const canManageBrands = can(authz, 'brand:manage')

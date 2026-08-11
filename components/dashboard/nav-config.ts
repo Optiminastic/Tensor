@@ -49,6 +49,18 @@ export interface WorkspaceSection {
 // resolves these before the dynamic [brand] segment).
 export const RESERVED_SEGMENTS = ['users', 'settings', 'brands', 'projects']
 
+// The sentinel brand slug for the global "all brands" view. It flows through the
+// same /dashboard/[brand]/... routes as a real brand, but every data fetch reads
+// it as "aggregate across every brand the user can access". No real brand may be
+// named this (enforced by the backend reserved-slug list and the create-brand
+// validator), so it can never collide with a genuine slug.
+export const ALL_BRANDS = 'all'
+
+/** Whether a brand route param / active slug is the global sentinel. */
+export function isAllBrands(brand: string | null | undefined): boolean {
+  return brand === ALL_BRANDS
+}
+
 export const PRIMARY_SECTIONS: PrimarySection[] = [
   { label: 'Overview', icon: LayoutDashboard, segment: '', description: 'This brand at a glance.' },
   {

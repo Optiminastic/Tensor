@@ -8,18 +8,22 @@ import { createLogger } from '@/lib/logger'
 import {
   type Design,
   type DesignDetail,
-  type DesignMachineSpec,
   type DesignReview,
-  type DesignSpecs,
   type DesignTimelineEntry,
   type PublishResult,
-  DesignMachineSpecSchema,
+  DesignAttributesInputSchema,
   DesignSkuInputSchema,
   DesignSpecsSchema,
   PublishInputSchema,
   ResubmitInputSchema,
 } from '@/lib/validators/designs'
 import type { Machine } from '@/lib/validators/machines'
+import {
+  editDesignAttributes as editAttributesRequest,
+  editDesignNotes as editNotesRequest,
+  renameDesign as renameRequest,
+  replaceDesignPreview as replacePreviewRequest,
+} from '@/services/designs-lifecycle.service'
 import {
   DesignServiceError,
   approveDesign as approveRequest,
@@ -35,6 +39,8 @@ import {
 } from '@/services/designs.service'
 import { MachineServiceError, listMachines } from '@/services/machines.service'
 
+import { parseUploadForm } from './upload-parse'
+
 const log = createLogger('DesignActions')
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -49,102 +55,6 @@ function describe(error: unknown): string {
   if (error instanceof DesignServiceError) return error.message
   log.error({ err: error }, 'Unexpected error in a design action')
   return 'Something went wrong. Please try again.'
-}
-
-interface ParsedUpload {
-  name: string
-  specs: DesignSpecs
-  machine: DesignMachineSpec
-  file: File
-  preview: File
-  notes?: string
-  attributes?: Record<string, string>
-}
-
-// readUploadFiles validates the two required uploads (model + preview image).
-function readUploadFiles(formData: FormData): { file?: File; preview?: File; error?: string } {
-  const file = formData.get('file')
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: 'Choose an STL, 3MF or STEP file.' }
-  }
-  const preview = formData.get('preview')
-  if (!(preview instanceof File) || preview.size === 0) {
-    return { error: 'Upload a preview image for the design.' }
-  }
-  return { file, preview }
-}
-
-// parseMachineSpec pulls the dual-nozzle slicing config off the multipart
-// form (auto-linked to a machine_profiles row server-side - see
-// internal/httpapi/design_machine_link.go).
-function parseMachineSpec(formData: FormData): { value?: DesignMachineSpec; error?: string } {
-  const machine = DesignMachineSpecSchema.safeParse({
-    left_nozzle_mm: Number(formData.get('left_nozzle_mm')),
-    right_nozzle_mm: Number(formData.get('right_nozzle_mm')),
-    left_flow: formData.get('left_flow'),
-    right_flow: formData.get('right_flow'),
-  })
-  if (!machine.success) {
-    return {
-      error: machine.error.issues[0]?.message ?? 'Check the nozzle/flow answers and try again.',
-    }
-  }
-  return { value: machine.data }
-}
-
-// parseUploadForm pulls the model file, preview image and answers out of the
-// multipart form and validates them, keeping uploadDesign's own branching small.
-function parseUploadForm(formData: FormData): { value?: ParsedUpload; error?: string } {
-  const files = readUploadFiles(formData)
-  if (!files.file || !files.preview) return { error: files.error }
-
-  const name = String(formData.get('name') ?? '').trim()
-  if (!name) return { error: 'Give the design a name.' }
-
-  const specs = DesignSpecsSchema.safeParse({
-    material: formData.get('material'),
-    colour: formData.get('colour') || undefined,
-    finish: formData.get('finish'),
-    units_per_bed: Number(formData.get('units_per_bed')),
-    quality: formData.get('quality'),
-    infill_pct: Number(formData.get('infill_pct')),
-  })
-  if (!specs.success) {
-    return { error: specs.error.issues[0]?.message ?? 'Check the answers and try again.' }
-  }
-  const machine = parseMachineSpec(formData)
-  if (!machine.value) return { error: machine.error }
-
-  return {
-    value: {
-      name,
-      specs: specs.data,
-      machine: machine.value,
-      file: files.file,
-      preview: files.preview,
-      notes: readNotes(formData),
-      attributes: readAttributes(formData),
-    },
-  }
-}
-
-// readAttributes collects the optional upload-metadata fields (spec Step 1). The
-// backend validates and stores them; empty fields are dropped.
-function readAttributes(formData: FormData): Record<string, string> | undefined {
-  const keys = ['product_type', 'personalisation_type', 'colour_count', 'add_ons', 'packaging_type']
-  const out: Record<string, string> = {}
-  for (const key of keys) {
-    const value = String(formData.get(key) ?? '').trim()
-    if (value) out[key] = value
-  }
-  return Object.keys(out).length > 0 ? out : undefined
-}
-
-// readNotes pulls the optional "Notes for Project Lead" off the form. The length
-// is bounded by the upload form (Zod) and re-enforced by the backend (422).
-function readNotes(formData: FormData): string | undefined {
-  const notes = String(formData.get('notes') ?? '').trim()
-  return notes || undefined
 }
 
 // uploadDesign receives the multipart form: the answers plus the model file. The
@@ -368,6 +278,90 @@ export async function setDesignSkuForBrand(
     const design = await setSkuRequest(token, id, parsed.data.sku)
     revalidatePath(`/dashboard/${brand}/designs/${id}`)
     return { ok: true, data: design }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// renameDesignForBrand changes a design's display name (design:update). The
+// backend re-validates; the frontend only hides the control.
+export async function renameDesignForBrand(
+  brand: string,
+  id: string,
+  name: string,
+): Promise<ActionResult> {
+  const trimmed = name.trim()
+  if (!trimmed || trimmed.length > 160) {
+    return { ok: false, error: 'Name must be 1 to 160 characters.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    await renameRequest(token, id, trimmed)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// editNotesForBrand updates the designer notes (design:update). Empty clears them.
+export async function editNotesForBrand(
+  brand: string,
+  id: string,
+  notes: string,
+): Promise<ActionResult> {
+  if (notes.length > 2000) return { ok: false, error: 'Notes must be 2000 characters or fewer.' }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    await editNotesRequest(token, id, notes)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// editAttributesForBrand updates the upload-metadata attributes (design:update).
+export async function editAttributesForBrand(
+  brand: string,
+  id: string,
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = DesignAttributesInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Check the details and try again.',
+    }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    await editAttributesRequest(token, id, parsed.data)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// replacePreviewForBrand swaps the design's cover image (design:update). The file
+// is re-checked server-side (an image, under 10 MB).
+export async function replacePreviewForBrand(
+  brand: string,
+  id: string,
+  file: File,
+): Promise<ActionResult> {
+  if (!file.type.startsWith('image/')) return { ok: false, error: 'Choose an image file.' }
+  if (file.size > 10 * 1024 * 1024) return { ok: false, error: 'The image must be under 10 MB.' }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    await replacePreviewRequest(token, id, file)
+    revalidatePath(`/dashboard/${brand}/designs/${id}`)
+    return { ok: true }
   } catch (err) {
     return { ok: false, error: describe(err) }
   }

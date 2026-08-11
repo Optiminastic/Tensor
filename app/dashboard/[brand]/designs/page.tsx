@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
+import { isAllBrands } from '@/components/dashboard/nav-config'
+import type { BrandChoice } from '@/components/designs/design-upload-form'
 import { DesignsView } from '@/components/designs/designs-view'
+import { ShopifyImportDialog } from '@/components/designs/shopify-import-dialog'
 import { UploadDesignDialog } from '@/components/designs/upload-design-dialog'
 import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Design } from '@/lib/validators/designs'
+import { listBrands } from '@/services/brands.service'
 import { DesignServiceError, listDesigns } from '@/services/designs.service'
 
 export const metadata: Metadata = { title: 'Designs' }
@@ -22,8 +26,10 @@ export default async function DesignsPage({ params }: DesignsPageProps): Promise
   const { brand } = await params
   await requirePermission('design:read', `/dashboard/${brand}`)
   const canDelete = can(await currentAuthz(), 'design:delete')
+  const global = isAllBrands(brand)
 
   let designs: Design[] = []
+  let brandOptions: BrandChoice[] = []
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
@@ -31,6 +37,13 @@ export default async function DesignsPage({ params }: DesignsPageProps): Promise
   } else {
     try {
       designs = await listDesigns(token, brand)
+      // In the global view, offer the caller's brands so a new design has a home.
+      if (global) {
+        brandOptions = (await listBrands(token)).map(item => ({
+          slug: item.slug,
+          name: item.name,
+        }))
+      }
     } catch (err) {
       error = err instanceof DesignServiceError ? err.message : 'Could not load designs.'
     }
@@ -45,7 +58,11 @@ export default async function DesignsPage({ params }: DesignsPageProps): Promise
             Upload a model, get the Green/Yellow/Red pre-check, and iterate until it is green.
           </p>
         </div>
-        <UploadDesignDialog brand={brand} />
+        <div className="flex items-center gap-2">
+          {/* Importing a Shopify listing needs one brand's store; offered per brand only. */}
+          {global ? null : <ShopifyImportDialog brand={brand} />}
+          <UploadDesignDialog brand={brand} brandOptions={global ? brandOptions : undefined} />
+        </div>
       </div>
 
       {error ? (
