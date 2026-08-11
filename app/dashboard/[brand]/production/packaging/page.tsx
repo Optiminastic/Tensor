@@ -8,6 +8,7 @@ import {
 } from '@/components/production/packaging-station-tabs'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { DispatchReadyOrder } from '@/components/production/types'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Batch } from '@/lib/validators/batches'
 import type { DispatchOrder } from '@/lib/validators/dispatch'
@@ -33,6 +34,10 @@ interface PackagingPageProps {
  * record (internal/httpapi/dispatch.go). */
 export default async function PackagingPage({ params }: PackagingPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  // The four stations are all production-job queues, so the page gates on
+  // production:read; each tab's write actions are gated separately by the
+  // backend (assembly:submit / qc:submit / packaging:submit / dispatch:manage).
+  await requirePermission('production:read', `/dashboard/${brand}`)
 
   let jobs: ProductionJob[] = []
   let batches: Batch[] = []
