@@ -7,6 +7,7 @@ import { type FieldError, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { uploadDesign } from '@/app/dashboard/[brand]/designs/actions'
+import { isAllBrands } from '@/components/dashboard/nav-config'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -93,6 +94,13 @@ export interface ShopifyImportSource {
   currency: string
 }
 
+/** A brand the user may create a design under, offered in the global view where
+ * the route brand is the "all" sentinel. */
+export interface BrandChoice {
+  slug: string
+  name: string
+}
+
 interface DesignUploadFormProps {
   brand: string
   onDone?: () => void
@@ -100,6 +108,9 @@ interface DesignUploadFormProps {
   // (the preview defaults to the listing photo and the snapshot rides along).
   defaultName?: string
   shopify?: ShopifyImportSource
+  // In the global "all brands" view the route brand is the "all" sentinel, so the
+  // user must choose a real target brand. Absent in a single-brand context.
+  brandOptions?: BrandChoice[]
 }
 
 /** Upload an STL and its answers; the backend slices it and returns the pre-check. */
@@ -152,11 +163,16 @@ export function DesignUploadForm({
   onDone,
   defaultName,
   shopify,
+  brandOptions,
 }: DesignUploadFormProps): JSX.Element {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // In the global view the design must be created under a chosen brand.
+  const needsBrandChoice = isAllBrands(brand)
+  const [targetBrand, setTargetBrand] = useState(brandOptions?.[0]?.slug ?? '')
+  const effectiveBrand = needsBrandChoice ? targetBrand : brand
 
   const {
     register,
@@ -177,6 +193,10 @@ export function DesignUploadForm({
 
   async function onSubmit(values: FormValues): Promise<void> {
     setError(null)
+    if (needsBrandChoice && !effectiveBrand) {
+      setError('Choose a brand for this design.')
+      return
+    }
     if (!file) {
       setError('Choose an STL, 3MF or STEP file.')
       return
@@ -197,17 +217,38 @@ export function DesignUploadForm({
     }
 
     const form = buildDesignFormData({ values, file, preview, shopify })
-    const outcome = await uploadDesign(brand, form)
+    const outcome = await uploadDesign(effectiveBrand, form)
     if (!outcome.ok || !outcome.data) {
       setError(outcome.error ?? 'Could not upload this design.')
       return
     }
     onDone?.()
-    router.push(`/dashboard/${brand}/designs/${outcome.data.id}`)
+    router.push(`/dashboard/${effectiveBrand}/designs/${outcome.data.id}`)
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+      {needsBrandChoice ? (
+        <Field
+          label="Brand"
+          htmlFor="target-brand"
+          required
+          hint="Which brand this design belongs to"
+        >
+          <Select
+            id="target-brand"
+            value={targetBrand}
+            onChange={event => setTargetBrand(event.target.value)}
+          >
+            {(brandOptions ?? []).map(option => (
+              <option key={option.slug} value={option.slug}>
+                {option.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
+
       <Field label="Name" htmlFor="name" required error={errors.name?.message}>
         <Input id="name" placeholder="e.g. Hexagon planter" {...register('name')} />
       </Field>

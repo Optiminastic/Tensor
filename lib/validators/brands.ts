@@ -1,11 +1,18 @@
 import { z } from 'zod'
 
+// Slugs that collide with the dashboard's static routes or the global "all
+// brands" sentinel. The backend rejects these too; mirrored here for an inline
+// error instead of a round-trip 422. Keep in sync with the backend's
+// reservedBrandSlugs.
+const RESERVED_BRAND_SLUGS = ['users', 'settings', 'brands', 'projects', 'all']
+
 /** Lowercase slug: alphanumerics joined by single hyphens. Mirrors the backend. */
 export const BrandSlugSchema = z
   .string()
   .min(1, 'Give the brand a slug')
   .max(120)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens')
+  .refine(slug => !RESERVED_BRAND_SLUGS.includes(slug), 'That name is reserved; choose another')
 
 const AscendingLadder = z
   .array(z.number().int().positive())

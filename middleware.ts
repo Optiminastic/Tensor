@@ -10,6 +10,8 @@ const authRoutes = ['/login']
 const reservedSegments = ['users', 'settings', 'brands', 'projects']
 
 // Remembers the brand the admin is viewing so bare /dashboard can return to it.
+// The global "all brands" sentinel ('all') is deliberately NOT a reserved segment,
+// so choosing it is remembered like any brand; do not add 'all' to reservedSegments.
 function rememberBrand(request: NextRequest, response: NextResponse): void {
   const segments = request.nextUrl.pathname.split('/').filter(Boolean)
   if (segments[0] !== 'dashboard') return

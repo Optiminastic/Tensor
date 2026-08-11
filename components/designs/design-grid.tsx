@@ -3,25 +3,28 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { JSX } from 'react'
 
+import { Badge } from '@/components/ui/badge'
 import type { Design } from '@/lib/validators/designs'
 
 import { DeleteDesignButton } from './delete-design-button'
 import { DesignStatusBadge } from './design-status-badge'
 
 interface DesignGridProps {
-  brand: string
   designs: Design[]
   canDelete: boolean
+  // In the global "all brands" view, label each card with the brand it belongs to.
+  showBrand: boolean
 }
 
-/** The brand's designs as a cover-image grid, each card linking to its pre-check. */
-export function DesignGrid({ brand, designs, canDelete }: DesignGridProps): JSX.Element {
+/** The designs as a cover-image grid, each card linking to its pre-check under
+ * its own brand. In the global view each card is labelled with its brand. */
+export function DesignGrid({ designs, canDelete, showBrand }: DesignGridProps): JSX.Element {
   return (
     <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {designs.map(design => (
         <li key={design.id} className="relative">
           <Link
-            href={`/dashboard/${brand}/designs/${design.id}`}
+            href={`/dashboard/${design.brand_slug}/designs/${design.id}`}
             className="group flex flex-col gap-2"
           >
             <div className="border-border bg-surface-muted relative aspect-[4/3] overflow-hidden rounded-lg border">
@@ -44,6 +47,11 @@ export function DesignGrid({ brand, designs, canDelete }: DesignGridProps): JSX.
               </span>
             </div>
             <div className="min-w-0">
+              {showBrand ? (
+                <Badge tone="outline" className="mb-1 capitalize">
+                  {design.brand_slug.replace(/-/g, ' ')}
+                </Badge>
+              ) : null}
               <p className="text-foreground truncate text-sm font-medium">{design.name}</p>
               <p className="text-muted-foreground truncate font-mono text-xs tabular-nums">
                 {design.material} / {design.quality} / {design.infill_pct}% infill
@@ -57,7 +65,11 @@ export function DesignGrid({ brand, designs, canDelete }: DesignGridProps): JSX.
           </Link>
           {canDelete ? (
             <div className="absolute top-2 right-2">
-              <DeleteDesignButton brand={brand} designId={design.id} name={design.name} />
+              <DeleteDesignButton
+                brand={design.brand_slug}
+                designId={design.id}
+                name={design.name}
+              />
             </div>
           ) : null}
         </li>
