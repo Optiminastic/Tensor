@@ -2,6 +2,7 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { ALL_BRANDS, isAllBrands } from '@/components/dashboard/nav-config'
 import { RetryButton } from '@/components/dashboard/retry-button'
 import { getTokenSafe } from '@/lib/auth'
 import { can, currentAuthz } from '@/lib/authz'
@@ -40,9 +41,13 @@ export default async function DashboardPage(): Promise<JSX.Element> {
     return <NoBrandAccess />
   }
 
+  // Global "All brands" by default; a remembered specific brand wins so returning
+  // users land back where they left off.
   const lastBrand = (await cookies()).get('last_brand')?.value ?? null
   const target =
-    lastBrand && brands.some(brand => brand.slug === lastBrand) ? lastBrand : brands[0].slug
+    lastBrand && (isAllBrands(lastBrand) || brands.some(brand => brand.slug === lastBrand))
+      ? lastBrand
+      : ALL_BRANDS
   redirect(`/dashboard/${target}`)
 }
 

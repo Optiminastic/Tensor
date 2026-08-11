@@ -312,15 +312,34 @@ export const DesignMachineSchema = z.object({
 })
 export type DesignMachine = z.infer<typeof DesignMachineSchema>
 
-// Upload metadata captured on the design (spec Step 1).
+// Upload metadata captured on the design (spec Step 1). The shopify_* fields are
+// the Shopify-import snapshot: the source product id + a price snapshot, present
+// only on designs imported from a Shopify listing (drives the cost-vs-price card).
 export const DesignAttributesSchema = z.object({
   product_type: z.string().optional(),
   personalisation_type: z.string().optional(),
   colour_count: z.number().int().optional(),
   add_ons: z.string().array().optional(),
   packaging_type: z.string().optional(),
+  shopify_product_gid: z.string().optional(),
+  shopify_handle: z.string().optional(),
+  shopify_admin_url: z.string().optional(),
+  shopify_min_price: z.string().optional(),
+  shopify_max_price: z.string().optional(),
+  shopify_currency: z.string().optional(),
 })
 export type DesignAttributes = z.infer<typeof DesignAttributesSchema>
+
+// What the Settings editor submits to update the upload metadata. The backend
+// merges these, preserving other attribute keys (e.g. the Shopify snapshot).
+export const DesignAttributesInputSchema = z.object({
+  product_type: z.string().max(80).optional(),
+  personalisation_type: z.string().max(80).optional(),
+  colour_count: z.coerce.number().int().min(1).max(20).optional(),
+  add_ons: z.string().array().optional(),
+  packaging_type: z.string().max(80).optional(),
+})
+export type DesignAttributesInput = z.infer<typeof DesignAttributesInputSchema>
 
 // Advisory print-reliability signal derived from the slice metrics (spec section 2).
 export const FailureRiskSchema = z.object({

@@ -9,20 +9,40 @@ import {
   type ShopifyListingState,
   ShopifyListingEditSchema,
 } from '@/lib/validators/shopify-listing'
+import type { ShopifyProduct } from '@/lib/validators/shopify-products'
 import {
   editShopifyListing as editShopifyListingRequest,
   getShopifyListing as getShopifyListingRequest,
 } from '@/services/designs-shopify.service'
 import { DesignServiceError } from '@/services/designs.service'
+import {
+  ShopifyProductsServiceError,
+  listShopifyProducts,
+} from '@/services/shopify-products.service'
 
 import type { ActionResult } from './actions'
 
 const log = createLogger('ShopifyListingActions')
 
 function describe(error: unknown): string {
-  if (error instanceof DesignServiceError) return error.message
+  if (error instanceof DesignServiceError || error instanceof ShopifyProductsServiceError) {
+    return error.message
+  }
   log.error({ err: error }, 'Unexpected error in a Shopify listing action')
   return 'Something went wrong. Please try again.'
+}
+
+// loadShopifyCatalog lists the brand's live Shopify catalog for the import flow.
+// The backend 409s when the brand's Shopify isn't connected.
+export async function loadShopifyCatalog(brand: string): Promise<ActionResult<ShopifyProduct[]>> {
+  try {
+    const { token, error } = await resolveBackendToken()
+    if (!token) return { ok: false, error }
+    const data = await listShopifyProducts(token, brand)
+    return { ok: true, data }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
 }
 
 // loadShopifyListing reads the design's live Shopify product so the edit dialog

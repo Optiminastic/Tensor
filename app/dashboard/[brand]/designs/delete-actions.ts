@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
-import { DesignServiceError, deleteDesign } from '@/services/designs.service'
+import { deleteDesign } from '@/services/designs-lifecycle.service'
+import { DesignServiceError } from '@/services/designs.service'
 
 import type { ActionResult } from './actions'
 

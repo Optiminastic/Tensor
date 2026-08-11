@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react'
 import { useState, type JSX } from 'react'
 
-import { DesignUploadForm } from '@/components/designs/design-upload-form'
+import { type BrandChoice, DesignUploadForm } from '@/components/designs/design-upload-form'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,10 +15,13 @@ import {
 
 interface UploadDesignDialogProps {
   brand: string
+  // Present in the global "all brands" view, so the form can ask which brand to
+  // create the design under. Absent in a single-brand context.
+  brandOptions?: BrandChoice[]
 }
 
 /** Opens the design upload form in a dialog, keeping the designs page uncluttered. */
-export function UploadDesignDialog({ brand }: UploadDesignDialogProps): JSX.Element {
+export function UploadDesignDialog({ brand, brandOptions }: UploadDesignDialogProps): JSX.Element {
   const [open, setOpen] = useState(false)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -33,7 +36,7 @@ export function UploadDesignDialog({ brand }: UploadDesignDialogProps): JSX.Elem
           <DialogTitle>Upload a design</DialogTitle>
         </DialogHeader>
         {/* The form navigates to the new design on success; closing here covers cancel. */}
-        <DesignUploadForm brand={brand} onDone={() => setOpen(false)} />
+        <DesignUploadForm brand={brand} brandOptions={brandOptions} onDone={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   )

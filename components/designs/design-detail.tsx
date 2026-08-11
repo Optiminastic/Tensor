@@ -16,7 +16,6 @@ import {
 
 import { DesignDetailTabs } from './design-detail-tabs'
 import { type ReviewCaps, DesignReviewActions } from './design-review-actions'
-import { DesignSkuDialog } from './design-sku-dialog'
 import { DesignStatusBadge } from './design-status-badge'
 import { EditShopifyListingDialog } from './edit-shopify-dialog'
 import { PublishShopifyDialog } from './publish-shopify-dialog'
@@ -28,6 +27,8 @@ interface DesignDetailViewProps {
   initial: DesignDetail
   caps: ReviewCaps
   canManageSku: boolean
+  canEdit: boolean
+  canDelete: boolean
 }
 
 // attributesSummary renders the optional upload metadata as one compact line.
@@ -70,6 +71,8 @@ export function DesignDetailView({
   initial,
   caps,
   canManageSku,
+  canEdit,
+  canDelete,
 }: DesignDetailViewProps): JSX.Element {
   const { data: design, refetch } = useQuery({
     queryKey: ['design', initial.id],
@@ -137,14 +140,6 @@ export function DesignDetailView({
             <FileText aria-hidden />
             Report
           </a>
-          {canManageSku ? (
-            <DesignSkuDialog
-              brand={brand}
-              designId={design.id}
-              currentSku={design.sku ?? null}
-              onSaved={() => void refetch()}
-            />
-          ) : null}
           {canPublish ? (
             <PublishShopifyDialog
               brand={brand}
@@ -223,6 +218,7 @@ export function DesignDetailView({
           brand={brand}
           design={design}
           specs={currentSpecs(design)}
+          settingsCaps={{ canEdit, canManageSku, canDelete }}
           onChanged={() => void refetch()}
         />
       ) : null}
