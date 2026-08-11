@@ -10,6 +10,7 @@ import {
   type OrderDetail,
   type PackagingInput,
   type PersonalisationValidateInput,
+  type PolishingInput,
   type ProductionJob,
   type QcInput,
   type QcSubmitResult,
@@ -200,6 +201,26 @@ export async function submitAssembly(
 export async function skipAssembly(token: string, jobId: string): Promise<ProductionJob> {
   return call(
     `/production-jobs/${encodeURIComponent(jobId)}/assembly/skip`,
+    { method: 'POST', headers: jsonHeaders(token) },
+    data => ProductionJobSchema.parse(data),
+  )
+}
+
+export async function submitPolishing(
+  token: string,
+  jobId: string,
+  input: PolishingInput,
+): Promise<ProductionJob> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/polishing`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => ProductionJobSchema.parse(data),
+  )
+}
+
+export async function skipPolishing(token: string, jobId: string): Promise<ProductionJob> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/polishing/skip`,
     { method: 'POST', headers: jsonHeaders(token) },
     data => ProductionJobSchema.parse(data),
   )

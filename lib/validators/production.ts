@@ -14,6 +14,7 @@ export const ProductionJobSchema = z.object({
   quantity: z.number(),
   status: z.string(),
   assembly_status: z.string(),
+  polishing_status: z.string(),
   qc_status: z.string(),
   packaging_status: z.string(),
   personalisation_status: z.string(),
@@ -61,6 +62,7 @@ export type ProductionJob = z.infer<typeof ProductionJobSchema>
 export const JobPatchInputSchema = z.object({
   status: z.enum(['queued', 'in_production', 'completed']).optional(),
   assembly_status: z.enum(['pending', 'completed', 'not_required']).optional(),
+  polishing_status: z.enum(['pending', 'completed', 'not_required']).optional(),
   qc_status: z.enum(['pending', 'passed', 'failed']).optional(),
   packaging_status: z.enum(['pending', 'packaged']).optional(),
   priority: z.number().int().optional(),
@@ -87,6 +89,19 @@ export type PersonalisationValidateInput = z.infer<typeof PersonalisationValidat
 
 // assemblyRequest (internal/httpapi/production_qc.go#submitAssembly). POST
 // /production-jobs/:id/assembly.
+// polishingRequest (internal/httpapi/production_qc.go#submitPolishing). The
+// finishing station between assembly and QC - the backend rejects it until
+// assembly is completed or skipped, and refuses QC until this one is resolved.
+export const PolishingInputSchema = z.object({
+  supports_removed: z.boolean(),
+  sanded: z.boolean(),
+  seams_cleaned: z.boolean(),
+  surface_finish_ok: z.boolean(),
+  photo_file_id: z.string().nullish(),
+  notes: z.string().max(2000).nullish(),
+})
+export type PolishingInput = z.infer<typeof PolishingInputSchema>
+
 export const AssemblyInputSchema = z.object({
   parts_combined: z.boolean(),
   hardware_attached: z.boolean(),
