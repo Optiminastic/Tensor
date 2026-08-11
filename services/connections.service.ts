@@ -7,6 +7,8 @@ import {
   type ConnectionUpsertInput,
   type ShopifyOrderConnection,
   ShopifyOrderConnectionSchema,
+  type ShopifySyncResult,
+  ShopifySyncResultSchema,
 } from '@/lib/validators/connections'
 
 const log = createLogger('ConnectionService')
@@ -99,6 +101,23 @@ export async function listShopifyOrderConnections(
 ): Promise<ShopifyOrderConnection[]> {
   return request('/integrations/shopify', { headers: bearer(accessToken) }, data =>
     ShopifyOrderConnectionSchema.array().parse(data),
+  )
+}
+
+// syncShopifyOrders imports the brand's most recent Shopify orders (POST
+// /brands/:slug/connections/shopify/sync), using the access token already
+// stored on the brand's Shopify connection - the same one the existing
+// product-catalog OAuth flow wrote. No separate order-import grant needed.
+// This is the only ongoing path orders take into Tensor: the Orders page's
+// "Sync from Shopify" button calls it, and nothing imports on its own.
+export async function syncShopifyOrders(
+  accessToken: string,
+  brandSlug: string,
+): Promise<ShopifySyncResult> {
+  return request(
+    `/brands/${encodeURIComponent(brandSlug)}/connections/shopify/sync`,
+    { method: 'POST', headers: bearer(accessToken) },
+    data => ShopifySyncResultSchema.parse(data),
   )
 }
 

@@ -6,6 +6,7 @@ import { resolveBackendToken } from '@/lib/backend-token'
 import {
   type AutoCreateBatchesResult,
   type Batch,
+  AddJobsToBatchInputSchema,
   BatchApproveInputSchema,
   BatchPatchInputSchema,
 } from '@/lib/validators/batches'
@@ -22,10 +23,13 @@ import {
   QcInputSchema,
 } from '@/lib/validators/production'
 import {
+  addJobsToBatch as addJobsToBatchCall,
   approveBatch as approveBatchCall,
   autoCreateBatches as autoCreateBatchesCall,
   BatchServiceError,
+  listCompatibleJobsForBatch as listCompatibleJobsForBatchCall,
   patchBatch as patchBatchCall,
+  removeJobFromBatch as removeJobFromBatchCall,
 } from '@/services/batches.service'
 import { MachineServiceError, updateMachine } from '@/services/machines.service'
 import {
@@ -219,6 +223,67 @@ export async function patchBatchAction(
   }
 }
 
+// listCompatibleJobsForBatchAction feeds AddJobsToBatchDialog's picker - a
+// read-only lookup, so it revalidates nothing.
+export async function listCompatibleJobsForBatchAction(
+  batchId: string,
+): Promise<ActionResult<ProductionJob[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const jobs = await listCompatibleJobsForBatchCall(token, batchId)
+    return { ok: true, data: jobs }
+  } catch (err) {
+    const message =
+      err instanceof BatchServiceError ? err.message : 'Could not load compatible jobs.'
+    return { ok: false, error: message }
+  }
+}
+
+// addJobsToBatchAction assigns compatible jobs onto a Draft batch and
+// re-merges its plate preview.
+export async function addJobsToBatchAction(
+  brand: string,
+  batchId: string,
+  input: unknown,
+): Promise<ActionResult<Batch>> {
+  const parsed = AddJobsToBatchInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Select at least one job.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const batch = await addJobsToBatchCall(token, batchId, parsed.data)
+    revalidatePath(`/dashboard/${brand}/production/batches`)
+    revalidatePath(`/dashboard/${brand}/production/batches/${batchId}`)
+    return { ok: true, data: batch }
+  } catch (err) {
+    const message = err instanceof BatchServiceError ? err.message : 'Could not add the jobs.'
+    return { ok: false, error: message }
+  }
+}
+
+// removeJobFromBatchAction detaches one job from a Draft batch and re-merges
+// its plate preview, freeing up room for a different job.
+export async function removeJobFromBatchAction(
+  brand: string,
+  batchId: string,
+  jobId: string,
+): Promise<ActionResult<Batch>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const batch = await removeJobFromBatchCall(token, batchId, jobId)
+    revalidatePath(`/dashboard/${brand}/production/batches`)
+    revalidatePath(`/dashboard/${brand}/production/batches/${batchId}`)
+    return { ok: true, data: batch }
+  } catch (err) {
+    const message = err instanceof BatchServiceError ? err.message : 'Could not remove the job.'
+    return { ok: false, error: message }
+  }
+}
+
 // The three post-print station actions - each revalidates the job's queue
 // page, its own list page, and its detail page, mirroring the other job
 // actions above.
@@ -236,7 +301,7 @@ export async function submitJobAssembly(
   if (!token) return { ok: false, error }
   try {
     const job = await submitAssemblyCall(token, jobId, parsed.data)
-    revalidatePath(`/dashboard/${brand}/production/assembly`)
+    revalidatePath(`/dashboard/${brand}/production/packaging`)
     revalidatePath(`/dashboard/${brand}/production/jobs/${jobId}`)
     return { ok: true, data: job }
   } catch (err) {
@@ -256,7 +321,7 @@ export async function skipJobAssembly(
   if (!token) return { ok: false, error }
   try {
     const job = await skipAssemblyCall(token, jobId)
-    revalidatePath(`/dashboard/${brand}/production/assembly`)
+    revalidatePath(`/dashboard/${brand}/production/packaging`)
     revalidatePath(`/dashboard/${brand}/production/jobs/${jobId}`)
     return { ok: true, data: job }
   } catch (err) {
@@ -280,7 +345,7 @@ export async function submitJobQc(
   if (!token) return { ok: false, error }
   try {
     const result = await submitQcCall(token, jobId, parsed.data)
-    revalidatePath(`/dashboard/${brand}/production/qc-packaging`)
+    revalidatePath(`/dashboard/${brand}/production/packaging`)
     revalidatePath(`/dashboard/${brand}/production/jobs/${jobId}`)
     revalidatePath(`/dashboard/${brand}/production/jobs`)
     return { ok: true, data: result }
@@ -306,7 +371,7 @@ export async function submitJobPackaging(
   if (!token) return { ok: false, error }
   try {
     const job = await submitPackagingCall(token, jobId, parsed.data)
-    revalidatePath(`/dashboard/${brand}/production/qc-packaging`)
+    revalidatePath(`/dashboard/${brand}/production/packaging`)
     revalidatePath(`/dashboard/${brand}/production/jobs/${jobId}`)
     return { ok: true, data: job }
   } catch (err) {

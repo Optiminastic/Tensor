@@ -59,3 +59,10 @@ export const ShopifyOrderConnectionSchema = z.object({
   connected_at: z.string(),
 })
 export type ShopifyOrderConnection = z.infer<typeof ShopifyOrderConnectionSchema>
+
+// syncShopifyConnection's response (internal/httpapi/shopify_oauth.go) - how
+// many orders the on-demand catch-up import just pulled in from Shopify.
+export const ShopifySyncResultSchema = z.object({
+  imported: z.number(),
+})
+export type ShopifySyncResult = z.infer<typeof ShopifySyncResultSchema>

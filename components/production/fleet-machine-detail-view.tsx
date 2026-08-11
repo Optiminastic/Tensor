@@ -18,8 +18,8 @@ export function FleetMachineDetailView({
   queuedBatches,
 }: FleetMachineDetailViewProps): JSX.Element {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-6 md:grid-cols-[320px_1fr]">
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 md:grid-cols-[260px_1fr]">
         <MachinePhotoCard
           src={machine.image_url ?? '/production/h2c-printer.png'}
           alt={`${machine.name} printer`}

@@ -10,6 +10,10 @@ import { Separator } from '@/components/ui/separator'
 import type { Machine } from '@/lib/validators/machines'
 import type { ProductionJob } from '@/lib/validators/production'
 
+// Matches production.TargetBedUtilisationPercent (internal/production/planner.go) -
+// the same "full" threshold the backend enforces server-side on POST /jobs.
+const FULL_BATCH_UTILIZATION_PERCENT = 80
+
 interface BatchDetailViewProps {
   brand: string
   batch: BatchRecord
@@ -23,21 +27,34 @@ export function BatchDetailView({
   jobs,
   machines,
 }: BatchDetailViewProps): JSX.Element {
+  const canEditJobs = batch.status === 'pending_approval'
+  const isFull = (batch.bedUtilizationPercent ?? 0) >= FULL_BATCH_UTILIZATION_PERCENT
+
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <BatchDetailHeader brand={brand} batch={batch} machines={machines} />
-        <Separator />
-        <BatchDetailGrid batch={batch} />
-      </Card>
-      <BatchPlatePreview
-        batchId={batch.id}
-        batchNumber={batch.batchNumber}
-        plateBboxXMm={batch.plateBboxXMm}
-        plateBboxYMm={batch.plateBboxYMm}
-        plateBboxZMm={batch.plateBboxZMm}
-      />
-      <BatchJobsTable brand={brand} jobs={jobs} />
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_520px] lg:items-start">
+      <div className="flex flex-col gap-6">
+        <Card>
+          <BatchDetailHeader batch={batch} machines={machines} />
+          <Separator />
+          <BatchDetailGrid batch={batch} />
+        </Card>
+        <BatchJobsTable
+          brand={brand}
+          batchId={batch.id}
+          jobs={jobs}
+          canEdit={canEditJobs}
+          isFull={isFull}
+        />
+      </div>
+      <div className="lg:sticky lg:top-6">
+        <BatchPlatePreview
+          batchId={batch.id}
+          batchNumber={batch.batchNumber}
+          plateBboxXMm={batch.plateBboxXMm}
+          plateBboxYMm={batch.plateBboxYMm}
+          plateBboxZMm={batch.plateBboxZMm}
+        />
+      </div>
     </div>
   )
 }

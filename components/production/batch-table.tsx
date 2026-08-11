@@ -2,19 +2,10 @@
 
 import { useMemo, useState, type JSX } from 'react'
 
-import { BatchRow } from '@/components/production/batch-row'
+import { BatchTableGrid } from '@/components/production/batch-table-grid'
 import { FilterBar } from '@/components/production/filter-bar'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
 import type { BatchRecord, BatchStatus } from '@/components/production/types'
-import { Card } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-} from '@/components/ui/table'
 import type { TabItem } from '@/components/ui/tabs'
 
 interface BatchTableProps {
@@ -22,8 +13,6 @@ interface BatchTableProps {
   batches: BatchRecord[]
 }
 
-const LEFT_COLUMNS = ['Batch', 'Status']
-const NUMERIC_COLUMNS = ['Jobs', 'Units/Bed', 'Print Time', 'Filament', 'Utilisation']
 const STATUSES = Object.keys(BATCH_STATUS_CONFIG) as BatchStatus[]
 const SHORTAGE_OPTIONS = [
   { value: 'yes', label: 'Shortage' },
@@ -82,36 +71,7 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
         onSearchChange={setSearch}
         searchPlaceholder="Search batch #"
       />
-      <Card>
-        <Table>
-          <TableHead>
-            <TableRow>
-              {LEFT_COLUMNS.map(column => (
-                <TableHeaderCell key={column}>{column}</TableHeaderCell>
-              ))}
-              {NUMERIC_COLUMNS.map(column => (
-                <TableHeaderCell key={column} className="text-right">
-                  {column}
-                </TableHeaderCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={LEFT_COLUMNS.length + NUMERIC_COLUMNS.length}
-                  className="text-muted-foreground text-center text-sm"
-                >
-                  No batches match these filters.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map(batch => <BatchRow key={batch.id} brand={brand} batch={batch} />)
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      <BatchTableGrid brand={brand} batches={filtered} />
     </div>
   )
 }

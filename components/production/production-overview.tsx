@@ -4,10 +4,10 @@ import { useMemo, useState, type JSX } from 'react'
 
 import { type OverviewStat, OverviewStats } from '@/components/dashboard/overview-stats'
 import {
-  DEFAULT_DATE_RANGE,
-  type DateRangeValue,
+  DEFAULT_PERIOD,
   isWithinDateRange,
-  resolveDateRange,
+  type PeriodValue,
+  resolvePeriod,
 } from '@/components/production/date-range'
 import { MachineStatusTable } from '@/components/production/machine-status-table'
 import { MachinesPanel } from '@/components/production/machines-panel'
@@ -45,8 +45,8 @@ export function ProductionOverview({
   recentJobs,
   machines,
 }: ProductionOverviewProps): JSX.Element {
-  const [dateRange, setDateRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE)
-  const range = useMemo(() => resolveDateRange(dateRange, new Date()), [dateRange])
+  const [dateRange, setDateRange] = useState<PeriodValue>(DEFAULT_PERIOD)
+  const range = useMemo(() => resolvePeriod(dateRange, new Date()), [dateRange])
 
   const ordersInRange = useMemo(
     () => orders.filter(o => isWithinDateRange(o.submittedAt, range)),

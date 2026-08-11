@@ -1,6 +1,12 @@
-import Link from 'next/link'
-import type { JSX } from 'react'
+'use client'
 
+import { Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState, type JSX } from 'react'
+
+import { removeJobFromBatchAction } from '@/app/dashboard/[brand]/production/actions'
+import { AddJobsToBatchDialog } from '@/components/production/add-jobs-to-batch-dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -14,16 +20,42 @@ import type { ProductionJob } from '@/lib/validators/production'
 
 interface BatchJobsTableProps {
   brand: string
+  batchId: string
   jobs: ProductionJob[]
+  canEdit: boolean
+  isFull: boolean
 }
 
-export function BatchJobsTable({ brand, jobs }: BatchJobsTableProps): JSX.Element {
+export function BatchJobsTable({
+  brand,
+  batchId,
+  jobs,
+  canEdit,
+  isFull,
+}: BatchJobsTableProps): JSX.Element {
+  const router = useRouter()
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function remove(jobId: string): Promise<void> {
+    setRemovingId(jobId)
+    setError(null)
+    const res = await removeJobFromBatchAction(brand, batchId, jobId)
+    setRemovingId(null)
+    if (!res.ok) {
+      setError(res.error ?? 'Could not remove the job.')
+      return
+    }
+    router.refresh()
+  }
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Jobs in this batch</CardTitle>
+        <AddJobsToBatchDialog brand={brand} batchId={batchId} canEdit={canEdit} isFull={isFull} />
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="flex flex-col gap-2 p-0">
         <Table>
           <TableHead>
             <TableRow>
@@ -32,6 +64,7 @@ export function BatchJobsTable({ brand, jobs }: BatchJobsTableProps): JSX.Elemen
               <TableHeaderCell>SKU</TableHeaderCell>
               <TableHeaderCell className="text-right">Quantity</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
+              {canEdit ? <TableHeaderCell className="text-right">{''}</TableHeaderCell> : null}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -51,10 +84,28 @@ export function BatchJobsTable({ brand, jobs }: BatchJobsTableProps): JSX.Elemen
                 </TableCell>
                 <TableCell numeric>{job.quantity}</TableCell>
                 <TableCell className="text-muted-foreground">{job.status}</TableCell>
+                {canEdit ? (
+                  <TableCell className="text-right">
+                    <button
+                      type="button"
+                      disabled={removingId === job.id}
+                      onClick={() => void remove(job.id)}
+                      aria-label={`Remove ${job.job_number} from this batch`}
+                      className="text-muted-foreground hover:text-danger inline-flex size-7 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3.5" aria-hidden />
+                    </button>
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        {error ? (
+          <p role="alert" className="text-danger px-4 pb-3 text-sm">
+            {error}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   )

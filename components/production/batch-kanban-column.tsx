@@ -16,8 +16,10 @@ interface BatchKanbanColumnProps {
 }
 
 /** One status column, 25% of the board's width (four columns total - matches
- * BatchStatus having exactly four values). Accepts drops unless it's the
- * Draft column (see BatchKanbanCard for why). */
+ * BatchStatus having exactly four values). Every card is draggable, including
+ * Draft's - but Draft itself doesn't accept drops: the backend has no way to
+ * set a batch back to pending_approval, it's only ever the auto-created
+ * starting state. */
 export function BatchKanbanColumn({
   brand,
   status,
@@ -31,7 +33,7 @@ export function BatchKanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        'border-border bg-surface-muted flex min-h-40 w-1/4 flex-col gap-2 rounded-lg border p-3 transition-colors',
+        'border-border bg-surface-muted flex min-h-28 w-1/4 flex-col gap-2 rounded-lg border p-2.5 transition-colors',
         droppable && isOver && 'border-accent bg-accent-subtle',
       )}
     >
@@ -47,14 +49,7 @@ export function BatchKanbanColumn({
         {batches.length === 0 ? (
           <p className="text-muted-foreground px-1 text-xs">No batches.</p>
         ) : (
-          batches.map(batch => (
-            <BatchKanbanCard
-              key={batch.id}
-              brand={brand}
-              batch={batch}
-              draggable={status !== 'pending_approval'}
-            />
-          ))
+          batches.map(batch => <BatchKanbanCard key={batch.id} brand={brand} batch={batch} />)
         )}
       </div>
     </div>

@@ -25,15 +25,15 @@ export function FleetMachineSummaryCard({ machine }: FleetMachineSummaryCardProp
 
   return (
     <Card>
-      <div className="flex items-start justify-between px-5 py-4">
-        <div className="flex flex-col gap-1">
+      <div className="flex items-start justify-between px-4 py-3">
+        <div className="flex flex-col gap-0.5">
           <span className="text-foreground text-base font-semibold">{machine.name}</span>
           <p className="text-muted-foreground text-xs">Machine ID {machine.machine_id}</p>
         </div>
         <TonePill label={status.label} tone={status.tone} />
       </div>
       <Separator />
-      <div className="grid grid-cols-2 gap-x-6 gap-y-5 px-5 py-5 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 px-4 py-3 md:grid-cols-3">
         <DetailField label="Current batch" value={machine.current_batch_id ?? '—'} mono />
         <DetailField
           label="Layer"
@@ -69,12 +69,12 @@ export function FleetMachineSummaryCard({ machine }: FleetMachineSummaryCardProp
         <DetailField label="Total waste" value={`${machine.total_waste_grams.toFixed(0)} g`} mono />
       </div>
       <Separator />
-      <div className="px-5 py-4">
+      <div className="px-4 py-3">
         <span className="text-muted-foreground text-xs font-semibold">Loaded filaments</span>
         {machine.filaments.length === 0 ? (
-          <p className="text-muted-foreground mt-2 text-sm">No filament loaded.</p>
+          <p className="text-muted-foreground mt-1.5 text-sm">No filament loaded.</p>
         ) : (
-          <Table className="mt-2">
+          <Table className="mt-1.5">
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Colour</TableHeaderCell>

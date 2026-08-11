@@ -12,9 +12,11 @@ interface OrdersLiveToggleProps {
 
 /**
  * Switches the Orders table between the 20 seeded dummy orders (default) and
- * real orders Tensor-Core has imported from Shopify's order webhooks. Drives
- * the view through the `live` search param so the page stays a server
- * component and re-fetches from Tensor-Core on toggle.
+ * real orders Tensor-Core has imported from Shopify. Drives the view through
+ * the `live` search param so the page stays a server component and re-fetches
+ * from Tensor-Core on toggle. Pulling fresh orders from Shopify is a separate,
+ * explicit action - see OrdersSyncButton - since a toggle that's already on
+ * has nothing to react to on a page revisit.
  */
 export function OrdersLiveToggle({ brand, live }: OrdersLiveToggleProps): JSX.Element {
   const router = useRouter()

@@ -27,11 +27,13 @@ interface FilterBarProps {
 }
 
 /**
- * A standalone filter strip shown above a table (its own bordered bar, not a
- * section inside the table's card): the primary status split as counted tabs
- * (same Tabs primitive as the QC/Packaging queues), any secondary column
- * dropdowns, and a search box pinned to the right. Stays one row - filters
- * scroll horizontally on overflow rather than wrapping to a second line.
+ * A standalone filter strip shown above a table (not a section inside the
+ * table's card): the primary status split as counted tabs (same Tabs
+ * primitive as the QC/Packaging queues), any secondary column dropdowns, and
+ * a search box pinned to the right - each its own control with its own
+ * border, laid out in a plain row rather than nested inside a shared outer
+ * box. Stays one row - filters scroll horizontally on overflow rather than
+ * wrapping to a second line.
  */
 export function FilterBar({
   tabs,
@@ -44,7 +46,7 @@ export function FilterBar({
   searchPlaceholder,
 }: FilterBarProps): JSX.Element {
   return (
-    <div className="border-border bg-surface flex flex-nowrap items-center gap-2 overflow-x-auto rounded-lg border p-2 shadow-xs">
+    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
       <Tabs
         tabs={tabs}
         value={tabValue}

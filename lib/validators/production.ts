@@ -137,7 +137,8 @@ export type PackagingInput = z.infer<typeof PackagingInputSchema>
 
 // orderResponse (internal/httpapi/orders.go). source is "shopify_webhook" for a
 // real imported order or "seed" for a dummy one - what the live/dummy toggle
-// filters the /orders?source= request on.
+// filters the /orders?source= request on. "shopify_webhook" is a stored legacy
+// label: orders are now only ever pulled by an explicit sync, never pushed.
 export const OrderSchema = z.object({
   id: z.string(),
   shopify_order_id: z.number(),

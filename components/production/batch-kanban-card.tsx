@@ -13,17 +13,15 @@ import { cn } from '@/lib/utils'
 interface BatchKanbanCardProps {
   brand: string
   batch: BatchRecord
-  draggable: boolean
 }
 
-/** One batch on the board. Draggable unless it's still a Draft (pending_approval
- * isn't a PATCH-settable target - promoting a Draft needs the approve flow's
- * side effects, filament reservation in particular, so it can't be a plain drag). */
-export function BatchKanbanCard({ brand, batch, draggable }: BatchKanbanCardProps): JSX.Element {
+/** One batch on the board - always draggable, including out of Draft (see
+ * machine-queue-board.tsx's handleDragEnd for how a Draft card's drop is
+ * routed through the real approve flow rather than a plain status PATCH). */
+export function BatchKanbanCard({ brand, batch }: BatchKanbanCardProps): JSX.Element {
   const router = useRouter()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: batch.id,
-    disabled: !draggable,
   })
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined
 
@@ -35,8 +33,7 @@ export function BatchKanbanCard({ brand, batch, draggable }: BatchKanbanCardProp
       {...attributes}
       onClick={() => router.push(`/dashboard/${brand}/production/batches/${batch.id}`)}
       className={cn(
-        'border-border bg-surface flex flex-col gap-2 rounded-md border p-3 shadow-xs transition-colors',
-        draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+        'border-border bg-surface flex cursor-grab flex-col gap-2 rounded-md border p-3 shadow-xs transition-colors active:cursor-grabbing',
         'hover:border-border-strong',
         isDragging && 'z-10 opacity-60',
       )}

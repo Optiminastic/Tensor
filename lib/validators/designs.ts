@@ -3,11 +3,33 @@ import { z } from 'zod'
 import { FlowSchema, NozzleSchema } from '@/lib/validators/machines'
 
 // The slice answers. Materials/qualities must match what the backend accepts
-// (internal/httpapi/designs.go validMaterials/validQualities -> the H2S slicer
-// profiles in internal/slicing/profiles.go). The backend re-validates these.
-export const MaterialSchema = z.enum(['PLA', 'PETG', 'ABS'])
-export const QualitySchema = z.enum(['draft', 'standard', 'fine'])
+// (internal/httpapi/designs.go validMaterials/validQualities -> the H2C
+// slicer profiles in internal/slicing/profiles.go's materialFilament /
+// qualityProcess maps). The backend re-validates these.
+export const MaterialSchema = z.enum(['PLA Basics', 'PA-CF'])
+export const QualitySchema = z.enum([
+  '0.08-high',
+  '0.12-high',
+  '0.16-high',
+  '0.16-standard',
+  '0.20-high',
+  '0.20-standard',
+  '0.24-standard',
+])
 export const FinishSchema = z.enum(['none', 'sanded', 'painted'])
+
+// Human labels for QualitySchema's values, shared by the upload and resubmit
+// forms so the two can't drift apart from each other (or from the backend)
+// the way the raw value lists once did.
+export const QUALITY_OPTIONS: { value: z.infer<typeof QualitySchema>; label: string }[] = [
+  { value: '0.08-high', label: '0.08mm - High quality, slowest' },
+  { value: '0.12-high', label: '0.12mm - High quality' },
+  { value: '0.16-high', label: '0.16mm - High quality' },
+  { value: '0.16-standard', label: '0.16mm - Standard' },
+  { value: '0.20-high', label: '0.20mm - High quality' },
+  { value: '0.20-standard', label: '0.20mm - Standard (default)' },
+  { value: '0.24-standard', label: '0.24mm - Standard, fastest' },
+]
 
 export const DesignSpecsSchema = z.object({
   material: MaterialSchema,

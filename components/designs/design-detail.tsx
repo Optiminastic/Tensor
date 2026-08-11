@@ -55,10 +55,10 @@ function currentSpecs(design: DesignDetail): DesignSpecs {
   return parsed.success
     ? parsed.data
     : {
-        material: 'PLA',
+        material: 'PLA Basics',
         finish: 'none',
         units_per_bed: 1,
-        quality: 'standard',
+        quality: '0.20-standard',
         infill_pct: 15,
       }
 }

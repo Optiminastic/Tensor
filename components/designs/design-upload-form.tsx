@@ -16,6 +16,7 @@ import {
   DesignMachineSpecSchema,
   FinishSchema,
   MaterialSchema,
+  QUALITY_OPTIONS,
   QualitySchema,
 } from '@/lib/validators/designs'
 
@@ -27,13 +28,6 @@ const FINISHES: { value: string; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'sanded', label: 'Sanded' },
   { value: 'painted', label: 'Painted' },
-]
-// Values are the backend's quality slugs (internal/httpapi/designs.go
-// validQualities -> internal/slicing/profiles.go H2S process presets).
-const QUALITIES: { value: (typeof QualitySchema.options)[number]; label: string }[] = [
-  { value: 'draft', label: 'Draft - 0.24mm, fastest' },
-  { value: 'standard', label: 'Standard - 0.20mm' },
-  { value: 'fine', label: 'Fine - 0.12mm, best detail' },
 ]
 const NOZZLES_MM = [0.2, 0.4, 0.6, 0.8] as const
 const FLOWS: { value: 'standard' | 'high_flow'; label: string }[] = [
@@ -62,11 +56,11 @@ type FormValues = z.infer<typeof FormSchema>
 
 const DEFAULTS: FormValues = {
   name: '',
-  material: 'PLA',
+  material: 'PLA Basics',
   colour: '',
   finish: 'none',
   units_per_bed: 1,
-  quality: 'standard',
+  quality: '0.20-standard',
   infill_pct: 15,
   notes: '',
   product_type: '',
@@ -186,7 +180,7 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
         </Field>
         <Field label="Quality" htmlFor="quality" error={errors.quality?.message}>
           <Select id="quality" {...register('quality')}>
-            {QUALITIES.map(q => (
+            {QUALITY_OPTIONS.map(q => (
               <option key={q.value} value={q.value}>
                 {q.label}
               </option>

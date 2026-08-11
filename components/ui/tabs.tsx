@@ -49,7 +49,7 @@ export function Tabs({ tabs, value, onValueChange, label, className }: TabsProps
       role="tablist"
       aria-label={label}
       className={cn(
-        'border-border bg-surface-muted inline-flex items-center gap-1 rounded-lg border p-1',
+        'border-border bg-surface-muted inline-flex h-9 items-center gap-1 rounded-lg border p-1',
         className,
       )}
     >
@@ -70,7 +70,7 @@ export function Tabs({ tabs, value, onValueChange, label, className }: TabsProps
             onClick={() => onValueChange(tab.value)}
             onKeyDown={event => move(event, index)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              'inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors',
               active
                 ? 'bg-surface text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground',

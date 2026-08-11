@@ -12,7 +12,7 @@ interface MachineQueueSectionProps {
  * linked profile - not just what it's printing right now. */
 export function MachineQueueSection({ brand, batches }: MachineQueueSectionProps): JSX.Element {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <h2 className="text-foreground text-sm font-semibold">Queued batches</h2>
       <MachineQueueBoard brand={brand} batches={batches} />
     </div>

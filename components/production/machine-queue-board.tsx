@@ -5,14 +5,14 @@ import { Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type JSX } from 'react'
 
-import { patchBatchAction } from '@/app/dashboard/[brand]/production/actions'
+import { approveBatchAction, patchBatchAction } from '@/app/dashboard/[brand]/production/actions'
+import { BatchGroupedList } from '@/components/production/batch-grouped-list'
 import { BatchKanbanColumn } from '@/components/production/batch-kanban-column'
-import { BatchTable } from '@/components/production/batch-table'
 import {
-  DEFAULT_DATE_RANGE,
-  type DateRangeValue,
+  DEFAULT_PERIOD,
   isWithinDateRange,
-  resolveDateRange,
+  type PeriodValue,
+  resolvePeriod,
 } from '@/components/production/date-range'
 import { OverviewDateRange } from '@/components/production/overview-date-range'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
@@ -39,7 +39,7 @@ function FilterField({
   children: React.ReactNode
 }): JSX.Element {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-0.5">
       <span className="text-subtle-foreground text-[10px] font-medium tracking-wide uppercase">
         {label}
       </span>
@@ -50,21 +50,23 @@ function FilterField({
 
 /** The queued-batches board: a drag-and-drop Kanban across the four batch
  * statuses (equal-width columns), with search/period filters and a Board/List
- * toggle above. Dragging a card into a different column PATCHes that batch's
- * status - optimistic locally, reverted if the backend rejects it. Draft
- * (pending_approval) batches aren't draggable: promoting one is the approve
- * flow's job (filament reservation, machine assignment), not a plain PATCH. */
+ * toggle above. Every card is draggable, including Draft's - dropping it
+ * elsewhere goes through the real approve flow (filament reservation, machine
+ * assignment) rather than a plain PATCH, then advances further if the drop
+ * target was Printing/Completed. Optimistic locally, reverted if the backend
+ * rejects it. Draft itself never accepts a drop - the backend has no way to
+ * set a batch back to pending_approval. */
 export function MachineQueueBoard({ brand, batches }: MachineQueueBoardProps): JSX.Element {
   const router = useRouter()
   const [localBatches, setLocalBatches] = useState(batches)
   const [search, setSearch] = useState('')
-  const [period, setPeriod] = useState<DateRangeValue>(DEFAULT_DATE_RANGE)
+  const [period, setPeriod] = useState<PeriodValue>(DEFAULT_PERIOD)
   const [view, setView] = useState<'board' | 'list'>('board')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => setLocalBatches(batches), [batches])
 
-  const periodRange = useMemo(() => resolveDateRange(period, new Date()), [period])
+  const periodRange = useMemo(() => resolvePeriod(period, new Date()), [period])
 
   const filtered = useMemo(
     () =>
@@ -83,17 +85,37 @@ export function MachineQueueBoard({ brand, batches }: MachineQueueBoardProps): J
     return map
   }, [filtered])
 
-  async function handleDragEnd(event: DragEndEvent): Promise<void> {
-    const { active, over } = event
-    if (!over) return
-    const batchId = String(active.id)
-    const newStatus = over.id as BatchStatus
+  // Shared by dragging a card (Board) and picking a status from a row's
+  // Select (List) - both surfaces enforce the same rule set.
+  async function changeStatus(batchId: string, newStatus: BatchStatus): Promise<void> {
     const batch = localBatches.find(b => b.id === batchId)
-    if (!batch || batch.status === newStatus || newStatus === 'pending_approval') return
+    if (!batch || batch.status === newStatus) return
+    if (newStatus === 'pending_approval') {
+      setError("Batches can't be moved back to Draft.")
+      return
+    }
 
     setError(null)
     const previous = localBatches
     setLocalBatches(bs => bs.map(b => (b.id === batchId ? { ...b, status: newStatus } : b)))
+
+    // Promoting out of Draft has to go through the approve flow (filament
+    // reservation, machine assignment) rather than a bare PATCH - which the
+    // backend wouldn't accept anyway, pending_approval -> anything is only
+    // ever done via /approve, never a plain status PATCH.
+    if (batch.status === 'pending_approval') {
+      const approveRes = await approveBatchAction(brand, batchId, {})
+      if (!approveRes.ok) {
+        setLocalBatches(previous)
+        setError(approveRes.error ?? 'Could not approve the batch.')
+        return
+      }
+      if (newStatus === 'open') {
+        router.refresh()
+        return
+      }
+    }
+
     const res = await patchBatchAction(brand, batchId, { status: newStatus })
     if (!res.ok) {
       setLocalBatches(previous)
@@ -103,9 +125,15 @@ export function MachineQueueBoard({ brand, batches }: MachineQueueBoardProps): J
     router.refresh()
   }
 
+  async function handleDragEnd(event: DragEndEvent): Promise<void> {
+    const { active, over } = event
+    if (!over) return
+    await changeStatus(String(active.id), over.id as BatchStatus)
+  }
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-nowrap items-end gap-4 overflow-x-auto">
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-nowrap items-end gap-3 overflow-x-auto">
         <FilterField label="Search">
           <div className="relative w-56">
             <Search
@@ -144,7 +172,11 @@ export function MachineQueueBoard({ brand, batches }: MachineQueueBoardProps): J
       ) : null}
 
       {view === 'list' ? (
-        <BatchTable brand={brand} batches={filtered} />
+        <BatchGroupedList
+          brand={brand}
+          batches={filtered}
+          onStatusChange={(batchId, status) => void changeStatus(batchId, status)}
+        />
       ) : (
         <DndContext onDragEnd={event => void handleDragEnd(event)}>
           <div className="flex gap-3">

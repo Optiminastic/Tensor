@@ -109,8 +109,8 @@ export function BrandOnboarding({
     if (shopify.connected && shopify.domain) {
       // The onboarding connect above only pulled brand details (a separate
       // Shopify app/scope, see shopify-order-import.tsx) - chain straight into
-      // the real order-import OAuth grant for the same store so paid/COD
-      // orders start flowing in via webhook without a second manual step.
+      // the real order-import OAuth grant for the same store, so the Orders
+      // page's Sync button has a token to pull orders with.
       // A top-level navigation, not router.push: this leaves the app for
       // Shopify's consent screen and returns via Tensor-Core's callback.
       window.location.href = `/api/shopify/orders/connect?brand=${encodeURIComponent(slug)}&shop_domain=${encodeURIComponent(shopify.domain)}`

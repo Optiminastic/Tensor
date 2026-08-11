@@ -1,60 +1,105 @@
 'use client'
 
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { JSX } from 'react'
 
-import { type DateRangePreset, type DateRangeValue } from '@/components/production/date-range'
+import {
+  periodLabel,
+  stepPeriod,
+  type PeriodUnit,
+  type PeriodValue,
+} from '@/components/production/date-range'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 
 interface OverviewDateRangeProps {
-  value: DateRangeValue
-  onChange: (value: DateRangeValue) => void
+  value: PeriodValue
+  onChange: (value: PeriodValue) => void
 }
 
-const PRESET_OPTIONS: { value: DateRangePreset; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'Last 7 days' },
-  { value: 'month', label: 'Last 30 days' },
-  { value: 'custom', label: 'Custom range' },
+interface Preset {
+  label: string
+  unit: PeriodUnit
+  anchor: (now: Date) => string
+}
+
+const PRESETS: Preset[] = [
+  { label: 'This week', unit: 'week', anchor: now => now.toISOString().slice(0, 10) },
+  {
+    label: 'Last week',
+    unit: 'week',
+    anchor: now => new Date(now.getTime() - 7 * 86_400_000).toISOString().slice(0, 10),
+  },
+  { label: 'This month', unit: 'month', anchor: now => now.toISOString().slice(0, 10) },
+  { label: 'All time', unit: 'all', anchor: () => '' },
 ]
 
-/** The Overview's top-right date filter: a preset select, plus a from/to date
- * pair that only appears for 'custom'. Every stat and table on the page reads
- * from this one control. */
+/** The period control shared by the Overview and the machine queue board: a
+ * prev/label/next pill (matching the reference), opening a popover with
+ * quick presets and a "jump to week" date picker. */
 export function OverviewDateRange({ value, onChange }: OverviewDateRangeProps): JSX.Element {
+  const now = new Date()
+  const label = periodLabel(value, now)
+
   return (
-    <div className="flex flex-nowrap items-center gap-2">
-      <Select
-        aria-label="Date range"
-        value={value.preset}
-        onChange={e => onChange({ ...value, preset: e.target.value as DateRangePreset })}
-        className="w-40 shrink-0"
-      >
-        {PRESET_OPTIONS.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </Select>
-      {value.preset === 'custom' ? (
-        <>
+    <Popover>
+      <div className="border-border bg-surface inline-flex items-center rounded-md border shadow-xs">
+        <button
+          type="button"
+          onClick={() => onChange(stepPeriod(value, now, -1))}
+          disabled={value.unit === 'all'}
+          aria-label="Previous period"
+          className="text-muted-foreground hover:text-foreground hover:bg-surface-muted flex h-9 w-8 items-center justify-center rounded-l-md disabled:opacity-40"
+        >
+          <ChevronLeft className="size-4" aria-hidden />
+        </button>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="text-foreground hover:bg-surface-muted flex h-9 items-center gap-1.5 px-2 text-sm font-medium"
+          >
+            <CalendarDays className="size-3.5" aria-hidden />
+            {label}
+          </button>
+        </PopoverTrigger>
+        <button
+          type="button"
+          onClick={() => onChange(stepPeriod(value, now, 1))}
+          disabled={value.unit === 'all'}
+          aria-label="Next period"
+          className="text-muted-foreground hover:text-foreground hover:bg-surface-muted flex h-9 w-8 items-center justify-center rounded-r-md disabled:opacity-40"
+        >
+          <ChevronRight className="size-4" aria-hidden />
+        </button>
+      </div>
+      <PopoverContent align="start" className="w-72">
+        <div className="grid grid-cols-2 gap-1.5">
+          {PRESETS.map(preset => (
+            <Button
+              key={preset.label}
+              type="button"
+              variant={preset.label === label ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => onChange({ unit: preset.unit, anchor: preset.anchor(now) })}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-col gap-1">
+          <span className="text-subtle-foreground text-[10px] font-medium tracking-wide uppercase">
+            Jump to week
+          </span>
           <Input
             type="date"
-            aria-label="From date"
-            value={value.from}
-            onChange={e => onChange({ ...value, from: e.target.value })}
-            className="w-36 shrink-0"
+            value={value.unit === 'week' ? value.anchor : ''}
+            onChange={e => onChange({ unit: 'week', anchor: e.target.value })}
+            className={cn(value.unit !== 'week' && 'text-muted-foreground')}
           />
-          <span className="text-muted-foreground text-sm">to</span>
-          <Input
-            type="date"
-            aria-label="To date"
-            value={value.to}
-            onChange={e => onChange({ ...value, to: e.target.value })}
-            className="w-36 shrink-0"
-          />
-        </>
-      ) : null}
-    </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
