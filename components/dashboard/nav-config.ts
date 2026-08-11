@@ -99,10 +99,11 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       { label: 'Production Jobs', href: '/production/jobs' },
       { label: 'Batch Management', href: '/production/batches', permission: 'batch:read' },
       { label: 'Machine Management', href: '/production/machines', permission: 'machine:read' },
-      // Assembly, QC and packaging are tabs on one page now, so no single
-      // station permission fits - it inherits the section's production:read,
-      // which every station role holds. Each tab's actions are still gated by
-      // the backend (assembly:submit / qc:submit / packaging:submit).
+      // Assembly, polishing, QC and packaging are tabs on one page now, so no
+      // single station permission fits - it inherits the section's
+      // production:read, which every station role holds. Each tab's actions
+      // are still gated by the backend (assembly:submit / polishing:submit /
+      // qc:submit / packaging:submit).
       { label: 'Packaging', href: '/production/packaging' },
       { label: 'Filament Inventory', href: '/production/inventory', permission: 'filament:read' },
     ],
