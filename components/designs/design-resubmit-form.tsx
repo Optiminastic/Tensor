@@ -17,21 +17,14 @@ import {
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { DesignSpecsSchema, MaterialSchema } from '@/lib/validators/designs'
-import type { DesignSpecs, QualitySchema } from '@/lib/validators/designs'
+import { DesignSpecsSchema, MaterialSchema, QUALITY_OPTIONS } from '@/lib/validators/designs'
+import type { DesignSpecs } from '@/lib/validators/designs'
 
 const MATERIALS = MaterialSchema.options
 const FINISHES: { value: string; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'sanded', label: 'Sanded' },
   { value: 'painted', label: 'Painted' },
-]
-// Values are the backend's quality slugs (internal/httpapi/designs.go
-// validQualities -> internal/slicing/profiles.go H2S process presets).
-const QUALITIES: { value: (typeof QualitySchema.options)[number]; label: string }[] = [
-  { value: 'draft', label: 'Draft - 0.24mm, fastest' },
-  { value: 'standard', label: 'Standard - 0.20mm' },
-  { value: 'fine', label: 'Fine - 0.12mm, best detail' },
 ]
 
 interface DesignResubmitFormProps {
@@ -94,7 +87,7 @@ export function DesignResubmitForm({
             </Field>
             <Field label="Quality" htmlFor="rs-quality" error={errors.quality?.message}>
               <Select id="rs-quality" {...register('quality')}>
-                {QUALITIES.map(q => (
+                {QUALITY_OPTIONS.map(q => (
                   <option key={q.value} value={q.value}>
                     {q.label}
                   </option>

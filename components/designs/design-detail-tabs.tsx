@@ -13,25 +13,38 @@ import { DesignMetricsPanel } from './design-metrics'
 import { DesignModelPreview } from './design-model-preview'
 import { DesignOrientation } from './design-orientation'
 import { DesignOverview } from './design-overview'
+import { DesignPerformancePanel } from './design-performance'
 import { DesignResubmitForm } from './design-resubmit-form'
+import { type DesignSettingsCaps, DesignSettings } from './design-settings'
 import { DesignTimeline } from './design-timeline'
 import { DesignVerdict } from './design-verdict'
+import { ShopifyComparison } from './shopify-comparison'
 import { SliceSettingsForm } from './slice-settings-form'
 
-type TabValue = 'overview' | 'preview' | 'pricing' | 'machine' | 'timeline'
+type TabValue =
+  | 'overview'
+  | 'preview'
+  | 'pricing'
+  | 'performance'
+  | 'machine'
+  | 'timeline'
+  | 'settings'
 
 const TABS: TabItem[] = [
   { value: 'overview', label: 'Overview' },
   { value: 'preview', label: '3D Preview' },
   { value: 'pricing', label: 'Cost & Pricing' },
+  { value: 'performance', label: 'Performance' },
   { value: 'machine', label: 'Machine' },
   { value: 'timeline', label: 'Timeline' },
+  { value: 'settings', label: 'Settings' },
 ]
 
 interface DesignDetailTabsProps {
   brand: string
   design: DesignDetail
   specs: DesignSpecs
+  settingsCaps: DesignSettingsCaps
   onChanged: () => void
 }
 
@@ -42,6 +55,7 @@ export function DesignDetailTabs({
   brand,
   design,
   specs,
+  settingsCaps,
   onChanged,
 }: DesignDetailTabsProps): JSX.Element {
   const [tab, setTab] = useState<TabValue>('overview')
@@ -67,11 +81,21 @@ export function DesignDetailTabs({
           <PreviewPanel brand={brand} design={design} specs={specs} onChanged={onChanged} />
         ) : null}
         {tab === 'pricing' ? <PricingPanel design={design} /> : null}
+        {tab === 'performance' ? (
+          <DesignPerformancePanel
+            designId={design.id}
+            sku={design.sku ?? null}
+            shopifyAdminUrl={design.shopify?.admin_url ?? null}
+          />
+        ) : null}
         {tab === 'machine' ? (
           <MachinePanel brand={brand} design={design} onChanged={onChanged} />
         ) : null}
         {tab === 'timeline' ? (
           <TimelinePanel brand={brand} design={design} specs={specs} onChanged={onChanged} />
+        ) : null}
+        {tab === 'settings' ? (
+          <DesignSettings brand={brand} design={design} caps={settingsCaps} onChanged={onChanged} />
         ) : null}
       </div>
     </div>
@@ -137,7 +161,14 @@ function PricingPanel({ design }: { design: DesignDetail }): JSX.Element {
   if (!design.pricing) {
     return <EmptyPanel message="No pricing yet - re-slice to cost this design." />
   }
-  return <DesignVerdict pricing={design.pricing} />
+  return (
+    <>
+      {design.attributes?.shopify_product_gid ? (
+        <ShopifyComparison pricing={design.pricing} attributes={design.attributes} />
+      ) : null}
+      <DesignVerdict pricing={design.pricing} />
+    </>
+  )
 }
 
 interface MachinePanelProps {
@@ -220,7 +251,7 @@ interface TimelinePanelProps {
 function TimelinePanel({ brand, design, specs, onChanged }: TimelinePanelProps): JSX.Element {
   return (
     <>
-      <DesignTimeline designId={design.id} refreshKey={design.updated_at} />
+      <DesignTimeline designId={design.id} status={design.status} refreshKey={design.updated_at} />
       <DesignResubmitForm
         brand={brand}
         designId={design.id}

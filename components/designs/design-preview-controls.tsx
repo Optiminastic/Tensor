@@ -9,10 +9,22 @@ import type { DesignOptimization, PersonalisationEstimate } from '@/lib/validato
 
 import { CutControls, type CutControlsState } from './cut-controls'
 import type { OrientationMeasure, RotateAxis } from './model-viewer'
-import type { GizmoMode } from './personalisation-text'
 
 const MAX_NAME_LENGTH = 24
 const NUDGE_MM = 2
+
+// Font families + styles, mirroring the backend allowlist (internal/personalise).
+// Only fonts installed in the API image are offered, so the choice always renders.
+const FONT_FAMILIES = [
+  'Liberation Sans',
+  'Liberation Serif',
+  'Liberation Mono',
+  'DejaVu Sans',
+  'DejaVu Serif',
+  'FreeSans',
+  'FreeSerif',
+]
+const FONT_STYLES = ['Regular', 'Bold', 'Italic', 'Bold Italic']
 
 type SidebarTab = 'personalize' | 'optimize'
 
@@ -28,14 +40,16 @@ interface PreviewControlsProps {
   measure: OrientationMeasure | null
   nameText: string
   onNameChange: (value: string) => void
+  fontFamily: string
+  onFontFamilyChange: (value: string) => void
+  fontStyle: string
+  onFontStyleChange: (value: string) => void
   nameSize: number
   onSizeChange: (value: number) => void
   rotationDeg: number
   onRotationChange: (value: number) => void
   onNudge: (dx: number, dy: number) => void
   onCenter: () => void
-  gizmo: GizmoMode
-  onGizmoChange: (mode: GizmoMode) => void
   textColour: string
   onTextColourChange: (hex: string) => void
   colours: Swatch[]
@@ -76,14 +90,16 @@ export function PreviewControls(props: PreviewControlsProps): JSX.Element {
 function PersonalizeTab({
   nameText,
   onNameChange,
+  fontFamily,
+  onFontFamilyChange,
+  fontStyle,
+  onFontStyleChange,
   nameSize,
   onSizeChange,
   rotationDeg,
   onRotationChange,
   onNudge,
   onCenter,
-  gizmo,
-  onGizmoChange,
   textColour,
   onTextColourChange,
   colours,
@@ -93,6 +109,8 @@ function PersonalizeTab({
   estimate,
 }: PreviewControlsProps): JSX.Element {
   const hasName = nameText.trim() !== ''
+  const selectClass =
+    'border-border bg-surface text-foreground focus-visible:ring-ring w-full rounded-md border px-2 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none'
   return (
     <div className="flex flex-col gap-3">
       <input
@@ -102,6 +120,39 @@ function PersonalizeTab({
         aria-label="Personalisation name"
         className="border-border bg-surface text-foreground focus-visible:ring-ring w-full rounded-md border px-2.5 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
       />
+
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-1 text-xs">
+          <span className="text-muted-foreground">Font</span>
+          <select
+            value={fontFamily}
+            onChange={e => onFontFamilyChange(e.target.value)}
+            aria-label="Font family"
+            className={selectClass}
+          >
+            {FONT_FAMILIES.map(family => (
+              <option key={family} value={family}>
+                {family}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs">
+          <span className="text-muted-foreground">Style</span>
+          <select
+            value={fontStyle}
+            onChange={e => onFontStyleChange(e.target.value)}
+            aria-label="Font style"
+            className={selectClass}
+          >
+            {FONT_STYLES.map(style => (
+              <option key={style} value={style}>
+                {style}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <label className="flex items-center gap-2 text-xs">
         <span className="text-muted-foreground w-14">Size</span>
@@ -148,18 +199,6 @@ function PersonalizeTab({
           ↓
         </PadButton>
         <PadButton onClick={onCenter}>Center</PadButton>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground text-xs">Drag gizmo</span>
-        <div className="border-border flex rounded-md border p-0.5">
-          <TabButton active={gizmo === 'move'} onClick={() => onGizmoChange('move')}>
-            Move
-          </TabButton>
-          <TabButton active={gizmo === 'rotate'} onClick={() => onGizmoChange('rotate')}>
-            Rotate
-          </TabButton>
-        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">

@@ -10,6 +10,7 @@ import type {
   QcStatus,
   QueueStatus,
 } from '@/components/production/types'
+import type { DispatchStatus } from '@/lib/validators/dispatch'
 import type { FleetMachineStatus } from '@/lib/validators/machine-fleet'
 
 export const JOB_STATUS_CONFIG: Record<JobStatus, { label: string; tone: PillTone }> = {
@@ -57,6 +58,11 @@ export const QC_STATUS_CONFIG: Record<QcStatus, { label: string; tone: PillTone 
 export const PACKAGING_STATUS_CONFIG: Record<PackagingStatus, { label: string; tone: PillTone }> = {
   pending: { label: 'Pending', tone: 'warning' },
   packed: { label: 'Packed', tone: 'success' },
+}
+
+export const DISPATCH_STATUS_CONFIG: Record<DispatchStatus, { label: string; tone: PillTone }> = {
+  pending: { label: 'Booked', tone: 'warning' },
+  dispatched: { label: 'Dispatched', tone: 'success' },
 }
 
 export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; tone: PillTone }> = {

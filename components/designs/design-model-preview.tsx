@@ -23,7 +23,7 @@ import { useCut } from './cut-controls'
 import { LayerStage } from './design-layer-preview'
 import { PreviewControls } from './design-preview-controls'
 import type { OrientationMeasure, RotateAxis } from './model-viewer'
-import type { GizmoMode, TextTransform } from './personalisation-text'
+import type { TextTransform } from './personalisation-text'
 
 type PreviewMode = 'model' | 'layers'
 
@@ -32,6 +32,10 @@ type PreviewMode = 'model' | 'layers'
 const PERSONALISE_DEPTH_MM = 1
 // The default text colour before the customer picks one.
 const DEFAULT_TEXT_COLOUR = '#1c1c1c'
+// The default font family/style; the full lists live in design-preview-controls
+// and mirror the backend's allowlist.
+const DEFAULT_FONT = 'Liberation Sans'
+const DEFAULT_FONT_STYLE = 'Regular'
 
 // Default filament palette for the whole-model colour preview and the text colour
 // swatches. An STL has no colour, so a swatch just re-tints the render.
@@ -108,7 +112,8 @@ export function DesignModelPreview({
     rotationDeg: savedPersonalisation?.rotation_deg ?? 0,
   })
   const [textColour, setTextColour] = useState(savedPersonalisation?.colour || DEFAULT_TEXT_COLOUR)
-  const [gizmo, setGizmo] = useState<GizmoMode>('move')
+  const [fontFamily, setFontFamily] = useState(savedPersonalisation?.font || DEFAULT_FONT)
+  const [fontStyle, setFontStyle] = useState(savedPersonalisation?.font_style || DEFAULT_FONT_STYLE)
   const [estimate, setEstimate] = useState<PersonalisationEstimate | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -132,9 +137,11 @@ export function DesignModelPreview({
       text: name,
       size_mm: String(nameSize),
       depth_mm: String(PERSONALISE_DEPTH_MM),
+      font: fontFamily,
+      font_style: fontStyle,
     })
     return `/api/designs/${designId}/personalise-text?${q.toString()}`
-  }, [designId, nameText, nameSize])
+  }, [designId, nameText, nameSize, fontFamily, fontStyle])
 
   // A live pre-slice estimate of the name's added grams/time/cost, debounced so it
   // does not fire on every keystroke.
@@ -157,6 +164,8 @@ export function DesignModelPreview({
     setSaveError(null)
     const res = await saveDesignPersonalisationForBrand(brand, designId, {
       text: nameText.trim(),
+      font: fontFamily,
+      font_style: fontStyle,
       size_mm: nameSize,
       depth_mm: PERSONALISE_DEPTH_MM,
       offset_x_mm: transform.x,
@@ -170,20 +179,23 @@ export function DesignModelPreview({
       return
     }
     onPersonalised()
-  }, [brand, designId, nameText, nameSize, transform, textColour, onPersonalised])
+  }, [
+    brand,
+    designId,
+    nameText,
+    nameSize,
+    fontFamily,
+    fontStyle,
+    transform,
+    textColour,
+    onPersonalised,
+  ])
 
   // The live name layer handed to the viewer (editable only in the detailed view,
   // where the gizmo and tools live).
   const personalisation = useMemo(
-    () => ({
-      textUrl,
-      colour: textColour,
-      transform,
-      editable: isFullscreen,
-      gizmo,
-      onTransform: setTransform,
-    }),
-    [textUrl, textColour, transform, isFullscreen, gizmo],
+    () => ({ textUrl, colour: textColour, transform }),
+    [textUrl, textColour, transform],
   )
   // Layers mode is offered whenever a slice exists, inline and in the detailed view.
   const showLayers = hasSlice && mode === 'layers'
@@ -358,14 +370,16 @@ export function DesignModelPreview({
                   measure={measure}
                   nameText={nameText}
                   onNameChange={setNameText}
+                  fontFamily={fontFamily}
+                  onFontFamilyChange={setFontFamily}
+                  fontStyle={fontStyle}
+                  onFontStyleChange={setFontStyle}
                   nameSize={nameSize}
                   onSizeChange={setNameSize}
                   rotationDeg={transform.rotationDeg}
                   onRotationChange={setRotation}
                   onNudge={nudgeName}
                   onCenter={centerName}
-                  gizmo={gizmo}
-                  onGizmoChange={setGizmo}
                   textColour={textColour}
                   onTextColourChange={setTextColour}
                   colours={FILAMENT_COLORS}

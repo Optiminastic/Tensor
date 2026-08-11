@@ -4,10 +4,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
-import { toJobDetail } from '@/components/production/adapters'
+import { toBatchRecord, toJobDetail } from '@/components/production/adapters'
 import { JobDetailView } from '@/components/production/job-detail-view'
-import type { ProductionJobDetail } from '@/components/production/types'
+import type { BatchRecord, ProductionJobDetail } from '@/components/production/types'
+import { currentAuthz } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
+import type { Role } from '@/lib/validators/authz'
+import { listBatches } from '@/services/batches.service'
 import { getProductionJob } from '@/services/production.service'
 
 export const metadata: Metadata = { title: 'Production Job' }
@@ -24,8 +27,17 @@ export default async function ProductionJobPage({
   if (!token) notFound()
 
   let job: ProductionJobDetail
+  let batches: BatchRecord[] = []
+  let roles: Role[] = []
   try {
-    job = toJobDetail(await getProductionJob(token, jobId))
+    const [rawJob, authz, rawBatches] = await Promise.all([
+      getProductionJob(token, jobId),
+      currentAuthz(),
+      listBatches(token).catch(() => []),
+    ])
+    job = toJobDetail(rawJob)
+    batches = rawBatches.map(toBatchRecord)
+    roles = authz.roles
   } catch {
     notFound()
   }
@@ -45,7 +57,7 @@ export default async function ProductionJobPage({
           <p className="text-muted-foreground text-sm">Full production job detail.</p>
         </div>
       </div>
-      <JobDetailView brand={brand} job={job} />
+      <JobDetailView brand={brand} job={job} batches={batches} roles={roles} />
     </main>
   )
 }

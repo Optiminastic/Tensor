@@ -31,6 +31,15 @@ export type AssemblyStatus = 'pending' | 'completed' | 'not_required'
 export type QcStatus = 'pending' | 'passed' | 'failed'
 export type PackagingStatus = 'pending' | 'packed'
 
+// An order that has cleared packaging (every one of its jobs is packaged) and
+// has no dispatch_orders row yet - the Dispatch tab's "book a shipment" list.
+export interface DispatchReadyOrder {
+  id: string
+  orderNumber: string
+  customerName: string | null
+  jobCount: number
+}
+
 export interface ProductionJobQueueItem {
   id: string
   jobNumber: string
@@ -139,6 +148,14 @@ export interface BatchRecord {
 }
 
 export interface ProductionJobDetail extends ProductionJobQueueItem {
+  // The raw backend status ('queued' | 'in_production' | 'completed' |
+  // 'failed'), distinct from `status` (QueueStatus above, which folds in
+  // `held` as a pseudo-status) - needed to prefill an edit form with the
+  // actual PATCH-able value.
+  statusRaw: string
+  assemblyStatus: AssemblyStatus
+  held: boolean
+  batchId: string | null
   shopifyOrderId: string
   sku: string
   material: string

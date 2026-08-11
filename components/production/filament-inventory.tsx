@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, type JSX } from 'react'
+import { useMemo, useState, type JSX } from 'react'
 
 import { addFilament } from '@/app/dashboard/[brand]/production/actions'
+import { FilterBar } from '@/components/production/filter-bar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -24,6 +25,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/ui/table'
+import type { TabItem } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import type { Filament } from '@/lib/validators/production'
 
@@ -32,9 +34,51 @@ interface FilamentInventoryProps {
   filaments: Filament[]
 }
 
+function isLow(filament: Filament): boolean {
+  return filament.grams_available < filament.reorder_level_grams
+}
+
+function matchesSearch(filament: Filament, search: string): boolean {
+  if (!search) return true
+  const haystack = `${filament.material} ${filament.colour ?? ''}`.trim().toLowerCase()
+  return haystack.includes(search.trim().toLowerCase())
+}
+
 /** Filament stock, one line per (material, colour), with a reorder threshold and a
  * low-stock indicator. Wired to Tensor-Core's /filament-inventory. */
 export function FilamentInventory({ brand, filaments }: FilamentInventoryProps): JSX.Element {
+  const [search, setSearch] = useState('')
+  const [stock, setStock] = useState('')
+  const [material, setMaterial] = useState('')
+
+  const materialOptions = useMemo(
+    () =>
+      Array.from(new Set(filaments.map(f => f.material)))
+        .sort((a, b) => a.localeCompare(b))
+        .map(m => ({ value: m, label: m })),
+    [filaments],
+  )
+
+  const tabs: TabItem[] = useMemo(
+    () => [
+      { value: '', label: 'All', count: filaments.length },
+      { value: 'in_stock', label: 'In stock', count: filaments.filter(f => !isLow(f)).length },
+      { value: 'low', label: 'Low', count: filaments.filter(isLow).length },
+    ],
+    [filaments],
+  )
+
+  const filtered = useMemo(
+    () =>
+      filaments.filter(
+        filament =>
+          matchesSearch(filament, search) &&
+          (!stock || (stock === 'low' ? isLow(filament) : !isLow(filament))) &&
+          (!material || filament.material === material),
+      ),
+    [filaments, search, stock, material],
+  )
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -54,50 +98,79 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
           </p>
         </Card>
       ) : (
-        <Card>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>Material</TableHeaderCell>
-                <TableHeaderCell>Colour</TableHeaderCell>
-                <TableHeaderCell className="text-right">Available (kg)</TableHeaderCell>
-                <TableHeaderCell className="text-right">Reorder at (kg)</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filaments.map(filament => {
-                const low = filament.grams_available < filament.reorder_level_grams
-                return (
-                  <TableRow key={filament.id}>
-                    <TableCell className="font-medium">{filament.material}</TableCell>
-                    <TableCell>{filament.colour ?? '-'}</TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {(filament.grams_available / 1000).toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {(filament.reorder_level_grams / 1000).toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
-                          low ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success',
-                        )}
-                      >
-                        {low ? 'Low' : 'In stock'}
-                      </span>
+        <>
+          <FilterBar
+            tabs={tabs}
+            tabValue={stock}
+            onTabChange={setStock}
+            tabsLabel="Filter filament by stock level"
+            filters={[
+              {
+                label: 'Material',
+                value: material,
+                onChange: setMaterial,
+                options: materialOptions,
+              },
+            ]}
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search material, colour"
+          />
+          <Card>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>Material</TableHeaderCell>
+                  <TableHeaderCell>Colour</TableHeaderCell>
+                  <TableHeaderCell className="text-right">Available (kg)</TableHeaderCell>
+                  <TableHeaderCell className="text-right">Reorder at (kg)</TableHeaderCell>
+                  <TableHeaderCell>Status</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-muted-foreground text-center text-sm">
+                      No filament matches these filters.
                     </TableCell>
                   </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+                ) : (
+                  filtered.map(filament => {
+                    const low = isLow(filament)
+                    return (
+                      <TableRow key={filament.id}>
+                        <TableCell className="font-medium">{filament.material}</TableCell>
+                        <TableCell>{filament.colour ?? '-'}</TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">
+                          {(filament.grams_available / 1000).toLocaleString(undefined, {
+                            maximumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">
+                          {(filament.reorder_level_grams / 1000).toLocaleString(undefined, {
+                            maximumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={cn(
+                              'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                              low
+                                ? 'bg-warning-subtle text-warning'
+                                : 'bg-success-subtle text-success',
+                            )}
+                          >
+                            {low ? 'Low' : 'In stock'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
       )}
     </div>
   )

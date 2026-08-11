@@ -66,3 +66,11 @@ export const BatchPatchInputSchema = z.object({
   machine_id: z.string().nullish(),
 })
 export type BatchPatchInput = z.infer<typeof BatchPatchInputSchema>
+
+// addJobsToBatchRequest - only unassigned jobs matching the batch's material/
+// nozzle/machine-family configuration are accepted (see
+// GET /batches/:id/compatible-jobs), and only while the batch is still Draft.
+export const AddJobsToBatchInputSchema = z.object({
+  job_ids: z.string().min(1).array().min(1),
+})
+export type AddJobsToBatchInput = z.infer<typeof AddJobsToBatchInputSchema>

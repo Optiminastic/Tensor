@@ -7,6 +7,7 @@ import { type FieldError, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { uploadDesign } from '@/app/dashboard/[brand]/designs/actions'
+import { isAllBrands } from '@/components/dashboard/nav-config'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ import {
   DesignMachineSpecSchema,
   FinishSchema,
   MaterialSchema,
+  QUALITY_OPTIONS,
   QualitySchema,
 } from '@/lib/validators/designs'
 
@@ -27,13 +29,6 @@ const FINISHES: { value: string; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'sanded', label: 'Sanded' },
   { value: 'painted', label: 'Painted' },
-]
-// Values are the backend's quality slugs (internal/httpapi/designs.go
-// validQualities -> internal/slicing/profiles.go H2S process presets).
-const QUALITIES: { value: (typeof QualitySchema.options)[number]; label: string }[] = [
-  { value: 'draft', label: 'Draft - 0.24mm, fastest' },
-  { value: 'standard', label: 'Standard - 0.20mm' },
-  { value: 'fine', label: 'Fine - 0.12mm, best detail' },
 ]
 const NOZZLES_MM = [0.2, 0.4, 0.6, 0.8] as const
 const FLOWS: { value: 'standard' | 'high_flow'; label: string }[] = [
@@ -62,11 +57,11 @@ type FormValues = z.infer<typeof FormSchema>
 
 const DEFAULTS: FormValues = {
   name: '',
-  material: 'PLA',
+  material: 'PLA Basics',
   colour: '',
   finish: 'none',
   units_per_bed: 1,
-  quality: 'standard',
+  quality: '0.20-standard',
   infill_pct: 15,
   notes: '',
   product_type: '',
@@ -80,25 +75,107 @@ const DEFAULTS: FormValues = {
   right_flow: 'standard',
 }
 
+/** A Shopify listing being imported into a design: its id + a price snapshot and
+ * its photo, so the backend can use that photo as the cover and the design detail
+ * can compare true cost against the listing price. */
+export interface ShopifyImportSource {
+  product_gid: string
+  handle: string
+  admin_url: string
+  image_url: string
+  min_price: string
+  max_price: string
+  currency: string
+}
+
+/** A brand the user may create a design under, offered in the global view where
+ * the route brand is the "all" sentinel. */
+export interface BrandChoice {
+  slug: string
+  name: string
+}
+
 interface DesignUploadFormProps {
   brand: string
   onDone?: () => void
+  // Pre-fills the name; when set, this design is imported from a Shopify listing
+  // (the preview defaults to the listing photo and the snapshot rides along).
+  defaultName?: string
+  shopify?: ShopifyImportSource
+  // In the global "all brands" view the route brand is the "all" sentinel, so the
+  // user must choose a real target brand. Absent in a single-brand context.
+  brandOptions?: BrandChoice[]
 }
 
 /** Upload an STL and its answers; the backend slices it and returns the pre-check. */
 const MAX_PREVIEW_MB = 10
 
-export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.Element {
+interface BuildFormArgs {
+  values: FormValues
+  file: File
+  preview: File | null
+  shopify?: ShopifyImportSource
+}
+
+// buildDesignFormData assembles the multipart body. When importing, the preview
+// falls back to the Shopify photo URL and the snapshot fields ride along.
+function buildDesignFormData({ values, file, preview, shopify }: BuildFormArgs): FormData {
+  const form = new FormData()
+  form.set('name', values.name)
+  form.set('material', values.material)
+  if (values.colour) form.set('colour', values.colour)
+  form.set('finish', values.finish)
+  form.set('units_per_bed', String(values.units_per_bed))
+  form.set('quality', values.quality)
+  form.set('infill_pct', String(values.infill_pct))
+  if (values.notes) form.set('notes', values.notes)
+  if (values.product_type) form.set('product_type', values.product_type)
+  if (values.personalisation_type) form.set('personalisation_type', values.personalisation_type)
+  if (values.colour_count) form.set('colour_count', String(values.colour_count))
+  if (values.add_ons) form.set('add_ons', values.add_ons)
+  if (values.packaging_type) form.set('packaging_type', values.packaging_type)
+  form.set('left_nozzle_mm', String(values.left_nozzle_mm))
+  form.set('right_nozzle_mm', String(values.right_nozzle_mm))
+  form.set('left_flow', values.left_flow)
+  form.set('right_flow', values.right_flow)
+  form.set('file', file)
+  if (preview) form.set('preview', preview)
+  else if (shopify?.image_url) form.set('preview_url', shopify.image_url)
+  if (shopify) {
+    form.set('shopify_product_gid', shopify.product_gid)
+    form.set('shopify_handle', shopify.handle)
+    form.set('shopify_admin_url', shopify.admin_url)
+    form.set('shopify_min_price', shopify.min_price)
+    form.set('shopify_max_price', shopify.max_price)
+    form.set('shopify_currency', shopify.currency)
+  }
+  return form
+}
+
+export function DesignUploadForm({
+  brand,
+  onDone,
+  defaultName,
+  shopify,
+  brandOptions,
+}: DesignUploadFormProps): JSX.Element {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // In the global view the design must be created under a chosen brand.
+  const needsBrandChoice = isAllBrands(brand)
+  const [targetBrand, setTargetBrand] = useState(brandOptions?.[0]?.slug ?? '')
+  const effectiveBrand = needsBrandChoice ? targetBrand : brand
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(FormSchema), defaultValues: DEFAULTS })
+  } = useForm<FormValues>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: { ...DEFAULTS, name: defaultName ?? DEFAULTS.name },
+  })
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>): void {
     setFile(event.target.files?.[0] ?? null)
@@ -110,6 +187,10 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
 
   async function onSubmit(values: FormValues): Promise<void> {
     setError(null)
+    if (needsBrandChoice && !effectiveBrand) {
+      setError('Choose a brand for this design.')
+      return
+    }
     if (!file) {
       setError('Choose an STL, 3MF or STEP file.')
       return
@@ -118,46 +199,50 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
       setError(`The model is larger than the ${MAX_FILE_MB} MB limit.`)
       return
     }
-    if (!preview) {
+    // Importing from Shopify uses the listing photo as the cover, so a manual
+    // preview is optional when the listing has one; otherwise it is still required.
+    if (!preview && !shopify?.image_url) {
       setError('Upload a preview image for the design.')
       return
     }
-    if (preview.size > MAX_PREVIEW_MB * 1024 * 1024) {
+    if (preview && preview.size > MAX_PREVIEW_MB * 1024 * 1024) {
       setError(`The preview image is larger than the ${MAX_PREVIEW_MB} MB limit.`)
       return
     }
-    const form = new FormData()
-    form.set('name', values.name)
-    form.set('material', values.material)
-    if (values.colour) form.set('colour', values.colour)
-    form.set('finish', values.finish)
-    form.set('units_per_bed', String(values.units_per_bed))
-    form.set('quality', values.quality)
-    form.set('infill_pct', String(values.infill_pct))
-    if (values.notes) form.set('notes', values.notes)
-    if (values.product_type) form.set('product_type', values.product_type)
-    if (values.personalisation_type) form.set('personalisation_type', values.personalisation_type)
-    if (values.colour_count) form.set('colour_count', String(values.colour_count))
-    if (values.add_ons) form.set('add_ons', values.add_ons)
-    if (values.packaging_type) form.set('packaging_type', values.packaging_type)
-    form.set('left_nozzle_mm', String(values.left_nozzle_mm))
-    form.set('right_nozzle_mm', String(values.right_nozzle_mm))
-    form.set('left_flow', values.left_flow)
-    form.set('right_flow', values.right_flow)
-    form.set('file', file)
-    form.set('preview', preview)
 
-    const outcome = await uploadDesign(brand, form)
+    const form = buildDesignFormData({ values, file, preview, shopify })
+    const outcome = await uploadDesign(effectiveBrand, form)
     if (!outcome.ok || !outcome.data) {
       setError(outcome.error ?? 'Could not upload this design.')
       return
     }
     onDone?.()
-    router.push(`/dashboard/${brand}/designs/${outcome.data.id}`)
+    router.push(`/dashboard/${effectiveBrand}/designs/${outcome.data.id}`)
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+      {needsBrandChoice ? (
+        <Field
+          label="Brand"
+          htmlFor="target-brand"
+          required
+          hint="Which brand this design belongs to"
+        >
+          <Select
+            id="target-brand"
+            value={targetBrand}
+            onChange={event => setTargetBrand(event.target.value)}
+          >
+            {(brandOptions ?? []).map(option => (
+              <option key={option.slug} value={option.slug}>
+                {option.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
+
       <Field label="Name" htmlFor="name" required error={errors.name?.message}>
         <Input id="name" placeholder="e.g. Hexagon planter" {...register('name')} />
       </Field>
@@ -169,7 +254,11 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
       <Field
         label="Preview image"
         htmlFor="preview"
-        hint={`PNG, JPG, WEBP or GIF, up to ${MAX_PREVIEW_MB} MB - shown as the cover`}
+        hint={
+          shopify
+            ? 'Optional - defaults to the Shopify listing photo'
+            : `PNG, JPG, WEBP or GIF, up to ${MAX_PREVIEW_MB} MB - shown as the cover`
+        }
       >
         <Input id="preview" type="file" accept="image/*" onChange={onPreviewChange} />
       </Field>
@@ -186,7 +275,7 @@ export function DesignUploadForm({ brand, onDone }: DesignUploadFormProps): JSX.
         </Field>
         <Field label="Quality" htmlFor="quality" error={errors.quality?.message}>
           <Select id="quality" {...register('quality')}>
-            {QUALITIES.map(q => (
+            {QUALITY_OPTIONS.map(q => (
               <option key={q.value} value={q.value}>
                 {q.label}
               </option>

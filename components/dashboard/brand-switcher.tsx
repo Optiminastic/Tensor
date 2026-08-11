@@ -1,13 +1,13 @@
 'use client'
 
-import { Check, ChevronsUpDown, Plus } from 'lucide-react'
+import { Check, ChevronsUpDown, Globe, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, type JSX } from 'react'
+import { useState, type JSX, type ReactNode } from 'react'
 
 import { cn } from '@/lib/utils'
 
-import { brandFromPathname } from './nav-config'
+import { ALL_BRANDS, brandFromPathname } from './nav-config'
 
 export interface BrandOption {
   slug: string
@@ -20,9 +20,42 @@ interface BrandSwitcherProps {
   canManageBrands: boolean
 }
 
+const ALL_BRANDS_LABEL = 'All brands'
+
+interface SwitcherRowProps {
+  label: string
+  selected: boolean
+  onSelect: () => void
+  icon?: ReactNode
+}
+
+/** One selectable row in the switcher: the global "All brands" entry or a brand. */
+function SwitcherRow({ label, selected, onSelect, icon }: SwitcherRowProps): JSX.Element {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+        selected
+          ? 'bg-accent-subtle text-foreground font-medium'
+          : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
+      )}
+    >
+      {icon ? <span className="shrink-0">{icon}</span> : null}
+      <span className="flex-1 truncate">{label}</span>
+      {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
+    </button>
+  )
+}
+
 /**
- * Switches the dashboard's active brand. Shows the current brand and, on select,
- * navigates to the same section under the chosen brand (or its overview). Only
+ * Switches the dashboard's active brand. The first entry is always the global
+ * "All brands" view (the sentinel {@link ALL_BRANDS}); selecting it aggregates
+ * across every brand the user can access. Selecting a specific brand scopes down.
+ * On select, it keeps the current section and swaps only the brand segment. Only
  * members who can manage brands (`brand:manage`) see the "New brand" link.
  */
 export function BrandSwitcher({
@@ -34,11 +67,14 @@ export function BrandSwitcher({
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
-  const active = brands.find(brand => brand.slug === activeSlug) ?? brands[0]
+  const isAll = activeSlug === ALL_BRANDS
+  const activeName = isAll
+    ? ALL_BRANDS_LABEL
+    : (brands.find(brand => brand.slug === activeSlug)?.name ?? ALL_BRANDS_LABEL)
 
   function switchTo(slug: string): void {
     setOpen(false)
-    if (slug === active?.slug) return
+    if (slug === activeSlug) return
     // Keep the current section, swapping the brand segment.
     const rest = brandFromPathname(pathname) ? pathname.split('/').slice(3).join('/') : ''
     router.push(rest ? `/dashboard/${slug}/${rest}` : `/dashboard/${slug}`)
@@ -53,7 +89,8 @@ export function BrandSwitcher({
         aria-expanded={open}
         className="border-border hover:bg-surface-muted flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors"
       >
-        <span className="flex-1 truncate font-medium">{active?.name ?? 'Select brand'}</span>
+        {isAll ? <Globe className="text-subtle-foreground size-4 shrink-0" aria-hidden /> : null}
+        <span className="flex-1 truncate font-medium">{activeName}</span>
         <ChevronsUpDown className="text-subtle-foreground size-4 shrink-0" aria-hidden />
       </button>
 
@@ -67,30 +104,23 @@ export function BrandSwitcher({
           />
           <div className="border-border bg-surface absolute top-full left-0 z-20 mt-1 flex w-full flex-col rounded-md border p-1 shadow-md">
             <ul role="listbox" className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-              {brands.map(brand => {
-                const selected = brand.slug === active?.slug
-                return (
-                  <li key={brand.slug}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={selected}
-                      onClick={() => switchTo(brand.slug)}
-                      className={cn(
-                        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                        selected
-                          ? 'bg-accent-subtle text-foreground font-medium'
-                          : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
-                      )}
-                    >
-                      <span className="flex-1 truncate">{brand.name}</span>
-                      {selected ? (
-                        <Check className="text-accent size-4 shrink-0" aria-hidden />
-                      ) : null}
-                    </button>
-                  </li>
-                )
-              })}
+              <li>
+                <SwitcherRow
+                  label={ALL_BRANDS_LABEL}
+                  selected={isAll}
+                  onSelect={() => switchTo(ALL_BRANDS)}
+                  icon={<Globe className="size-4" aria-hidden />}
+                />
+              </li>
+              {brands.map(brand => (
+                <li key={brand.slug}>
+                  <SwitcherRow
+                    label={brand.name}
+                    selected={!isAll && brand.slug === activeSlug}
+                    onSelect={() => switchTo(brand.slug)}
+                  />
+                </li>
+              ))}
             </ul>
             {canManageBrands ? (
               <div className="border-border mt-1 border-t pt-1">

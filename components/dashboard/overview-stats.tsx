@@ -1,11 +1,12 @@
 import type { JSX } from 'react'
 
-import { Stat } from '@/components/ui/stat'
+import { Stat, type StatSubCount } from '@/components/ui/stat'
 
 export interface OverviewStat {
   label: string
   value: string
   hint?: string
+  subCounts?: StatSubCount[]
 }
 
 interface OverviewStatsProps {
@@ -21,7 +22,13 @@ export function OverviewStats({ stats }: OverviewStatsProps): JSX.Element {
   return (
     <section aria-label="Overview metrics" className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
       {stats.map(stat => (
-        <Stat key={stat.label} label={stat.label} value={stat.value} hint={stat.hint} />
+        <Stat
+          key={stat.label}
+          label={stat.label}
+          value={stat.value}
+          hint={stat.hint}
+          subCounts={stat.subCounts}
+        />
       ))}
     </section>
   )

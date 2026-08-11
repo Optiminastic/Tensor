@@ -3,11 +3,33 @@ import { z } from 'zod'
 import { FlowSchema, NozzleSchema } from '@/lib/validators/machines'
 
 // The slice answers. Materials/qualities must match what the backend accepts
-// (internal/httpapi/designs.go validMaterials/validQualities -> the H2S slicer
-// profiles in internal/slicing/profiles.go). The backend re-validates these.
-export const MaterialSchema = z.enum(['PLA', 'PETG', 'ABS'])
-export const QualitySchema = z.enum(['draft', 'standard', 'fine'])
+// (internal/httpapi/designs.go validMaterials/validQualities -> the H2C
+// slicer profiles in internal/slicing/profiles.go's materialFilament /
+// qualityProcess maps). The backend re-validates these.
+export const MaterialSchema = z.enum(['PLA Basics', 'PA-CF'])
+export const QualitySchema = z.enum([
+  '0.08-high',
+  '0.12-high',
+  '0.16-high',
+  '0.16-standard',
+  '0.20-high',
+  '0.20-standard',
+  '0.24-standard',
+])
 export const FinishSchema = z.enum(['none', 'sanded', 'painted'])
+
+// Human labels for QualitySchema's values, shared by the upload and resubmit
+// forms so the two can't drift apart from each other (or from the backend)
+// the way the raw value lists once did.
+export const QUALITY_OPTIONS: { value: z.infer<typeof QualitySchema>; label: string }[] = [
+  { value: '0.08-high', label: '0.08mm - High quality, slowest' },
+  { value: '0.12-high', label: '0.12mm - High quality' },
+  { value: '0.16-high', label: '0.16mm - High quality' },
+  { value: '0.16-standard', label: '0.16mm - Standard' },
+  { value: '0.20-high', label: '0.20mm - High quality' },
+  { value: '0.20-standard', label: '0.20mm - Standard (default)' },
+  { value: '0.24-standard', label: '0.24mm - Standard, fastest' },
+]
 
 export const DesignSpecsSchema = z.object({
   material: MaterialSchema,
@@ -290,15 +312,34 @@ export const DesignMachineSchema = z.object({
 })
 export type DesignMachine = z.infer<typeof DesignMachineSchema>
 
-// Upload metadata captured on the design (spec Step 1).
+// Upload metadata captured on the design (spec Step 1). The shopify_* fields are
+// the Shopify-import snapshot: the source product id + a price snapshot, present
+// only on designs imported from a Shopify listing (drives the cost-vs-price card).
 export const DesignAttributesSchema = z.object({
   product_type: z.string().optional(),
   personalisation_type: z.string().optional(),
   colour_count: z.number().int().optional(),
   add_ons: z.string().array().optional(),
   packaging_type: z.string().optional(),
+  shopify_product_gid: z.string().optional(),
+  shopify_handle: z.string().optional(),
+  shopify_admin_url: z.string().optional(),
+  shopify_min_price: z.string().optional(),
+  shopify_max_price: z.string().optional(),
+  shopify_currency: z.string().optional(),
 })
 export type DesignAttributes = z.infer<typeof DesignAttributesSchema>
+
+// What the Settings editor submits to update the upload metadata. The backend
+// merges these, preserving other attribute keys (e.g. the Shopify snapshot).
+export const DesignAttributesInputSchema = z.object({
+  product_type: z.string().max(80).optional(),
+  personalisation_type: z.string().max(80).optional(),
+  colour_count: z.coerce.number().int().min(1).max(20).optional(),
+  add_ons: z.string().array().optional(),
+  packaging_type: z.string().max(80).optional(),
+})
+export type DesignAttributesInput = z.infer<typeof DesignAttributesInputSchema>
 
 // Advisory print-reliability signal derived from the slice metrics (spec section 2).
 export const FailureRiskSchema = z.object({
@@ -314,6 +355,7 @@ export type FailureRisk = z.infer<typeof FailureRiskSchema>
 export const DesignPersonalisationSchema = z.object({
   text: z.string(),
   font: z.string().default(''),
+  font_style: z.string().default(''),
   size_mm: z.number(),
   depth_mm: z.number(),
   offset_x_mm: z.number(),
@@ -323,10 +365,12 @@ export const DesignPersonalisationSchema = z.object({
 })
 export type DesignPersonalisation = z.infer<typeof DesignPersonalisationSchema>
 
-// What the editor submits to save (and re-slice). An empty text clears it.
+// What the editor submits to save (and re-slice). An empty text clears it. Font
+// family and style are allowlisted server-side, so they are plain strings here.
 export const DesignPersonalisationInputSchema = z.object({
   text: z.string().max(48),
   font: z.string().optional(),
+  font_style: z.string().optional(),
   size_mm: z.number().min(3).max(40),
   depth_mm: z.number().min(0.2).max(5),
   offset_x_mm: z.number(),
@@ -338,6 +382,23 @@ export const DesignPersonalisationInputSchema = z.object({
     .or(z.literal('')),
 })
 export type DesignPersonalisationInput = z.infer<typeof DesignPersonalisationInputSchema>
+
+// Per-product performance: unit economics from the pricing engine plus real
+// sales/production counts for the design's catalog SKU (GET /designs/:id/performance).
+export const DesignPerformanceSchema = z.object({
+  sku: z.string(),
+  has_pricing: z.boolean(),
+  design_cp: z.number(),
+  selling_price: z.number(),
+  margin_per_unit: z.number(),
+  margin_pct: z.number(),
+  units_ordered: z.number().int(),
+  units_completed: z.number().int(),
+  units_failed: z.number().int(),
+  revenue: z.number(),
+  profit: z.number(),
+})
+export type DesignPerformance = z.infer<typeof DesignPerformanceSchema>
 
 export const DesignDetailSchema = DesignSchema.extend({
   // nullish (not just nullable): tolerate a backend that predates the notes field,

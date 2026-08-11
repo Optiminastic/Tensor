@@ -3,6 +3,7 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
+  type AddJobsToBatchInput,
   type AutoCreateBatchesResult,
   type Batch,
   type BatchApproveInput,
@@ -10,6 +11,7 @@ import {
   AutoCreateBatchesResultSchema,
   BatchSchema,
 } from '@/lib/validators/batches'
+import { type ProductionJob, ProductionJobSchema } from '@/lib/validators/production'
 
 const log = createLogger('BatchService')
 const TIMEOUT_MS = 15_000
@@ -92,6 +94,49 @@ export async function approveBatch(
 export async function autoCreateBatches(token: string): Promise<AutoCreateBatchesResult> {
   return call('/batches/auto-create', { method: 'POST', headers: jsonHeaders(token) }, data =>
     AutoCreateBatchesResultSchema.parse(data),
+  )
+}
+
+// listCompatibleJobsForBatch offers only unassigned jobs sharing the batch's
+// material/nozzle/machine-family - the picker for addJobsToBatch below.
+export async function listCompatibleJobsForBatch(
+  token: string,
+  batchId: string,
+): Promise<ProductionJob[]> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}/compatible-jobs`,
+    { headers: jsonHeaders(token) },
+    data => ProductionJobSchema.array().parse(data),
+  )
+}
+
+// addJobsToBatch assigns compatible, currently-unassigned jobs onto a Draft
+// batch and re-merges its plate preview. Only pending_approval batches accept
+// this (409 otherwise); rejected (422) if the batch is already at/over the
+// full threshold or a job doesn't match its configuration.
+export async function addJobsToBatch(
+  token: string,
+  batchId: string,
+  input: AddJobsToBatchInput,
+): Promise<Batch> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}/jobs`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => BatchSchema.parse(data),
+  )
+}
+
+// removeJobFromBatch detaches one job from a Draft batch and re-merges its
+// plate preview - the counterpart that frees up room for addJobsToBatch.
+export async function removeJobFromBatch(
+  token: string,
+  batchId: string,
+  jobId: string,
+): Promise<Batch> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}/jobs/${encodeURIComponent(jobId)}`,
+    { method: 'DELETE', headers: jsonHeaders(token) },
+    data => BatchSchema.parse(data),
   )
 }
 

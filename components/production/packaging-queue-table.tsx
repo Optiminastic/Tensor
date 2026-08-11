@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 
+import { batchLabel, type BatchNumbers } from '@/components/production/batch-label'
 import { PackagingFormDialog } from '@/components/production/packaging-form-dialog'
 import { QC_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
@@ -16,17 +17,21 @@ import {
 import { dateTime } from '@/lib/format'
 import type { ProductionJob } from '@/lib/validators/production'
 
-const COLUMNS = ['Job', 'Description', 'Qty', 'QC', 'Customer', 'Created']
+const COLUMNS = ['Job', 'Batch', 'Description', 'Qty', 'QC', 'Customer', 'Created']
 
 interface PackagingQueueTableProps {
   brand: string
   jobs: ProductionJob[]
+  batchNumbers: BatchNumbers
 }
 
 /** Jobs that passed QC and are waiting to be packed - qc_status = passed,
- * packaging_status = pending (see the QC/Packaging page's "Pending Packaging"
- * tab). */
-export function PackagingQueueTable({ brand, jobs }: PackagingQueueTableProps): JSX.Element {
+ * packaging_status = pending (see the Packaging page's Packaging tab). */
+export function PackagingQueueTable({
+  brand,
+  jobs,
+  batchNumbers,
+}: PackagingQueueTableProps): JSX.Element {
   return (
     <Card>
       <Table>
@@ -43,6 +48,9 @@ export function PackagingQueueTable({ brand, jobs }: PackagingQueueTableProps): 
             <TableRow key={job.id}>
               <TableCell className="font-mono text-sm whitespace-nowrap">
                 {job.job_number}
+              </TableCell>
+              <TableCell className="text-muted-foreground font-mono text-sm whitespace-nowrap">
+                {batchLabel(job.batch_id, batchNumbers)}
               </TableCell>
               <TableCell>{job.description}</TableCell>
               <TableCell numeric>{job.quantity}</TableCell>

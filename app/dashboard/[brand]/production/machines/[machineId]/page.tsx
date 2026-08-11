@@ -33,20 +33,14 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
   }
 
   return (
-    <main className="flex w-full flex-col gap-6 px-6 py-10 md:px-8">
-      <div className="flex flex-col gap-3">
-        <Link
-          href={`/dashboard/${brand}/production/machines`}
-          className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Back to Machine Management
-        </Link>
-        <div className="flex flex-col gap-2">
-          <h1 className="text-display text-3xl">{machine.name}</h1>
-          <p className="text-muted-foreground text-sm">Printer detail and live status.</p>
-        </div>
-      </div>
+    <main className="flex w-full flex-col gap-3 px-6 py-6 md:px-8">
+      <Link
+        href={`/dashboard/${brand}/production/machines`}
+        aria-label="Back to Machine Management"
+        className="text-muted-foreground hover:text-foreground hover:bg-surface-muted -ml-1.5 inline-flex w-fit items-center rounded-md p-1.5"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+      </Link>
       <FleetMachineDetailView brand={brand} machine={machine} queuedBatches={queuedBatches} />
     </main>
   )

@@ -1,22 +1,18 @@
 'use client'
 
-import { TransformControls } from '@react-three/drei'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, type JSX } from 'react'
+import { useEffect, useMemo, type JSX } from 'react'
 import * as THREE from 'three'
 
 import { parseModel } from './model-viewer'
 
 // How the name sits on the model: an in-plane XY nudge from the model centre and
-// an in-plane rotation. Shared with the editor so the gizmo and the sliders drive
-// exactly the same values.
+// an in-plane rotation. Driven by the editor's sliders / move pad.
 export interface TextTransform {
   x: number
   y: number
   rotationDeg: number
 }
-
-export type GizmoMode = 'move' | 'rotate'
 
 interface PersonalisationTextProps {
   // /api/designs/:id/personalise-text?... - the extruded name as its own STL.
@@ -25,28 +21,21 @@ interface PersonalisationTextProps {
   // The model's top-face Z (in the centred viewer frame): the name rests here.
   topZ: number
   transform: TextTransform
-  editable: boolean
-  gizmo: GizmoMode
-  onTransform: (next: TextTransform) => void
 }
 
 /**
  * The customer's name as a real, separate 3D object sitting on the model's top
  * face. It loads the extruded-text STL once per (text, size), then is moved,
- * rotated and coloured live - no server round-trip. In edit mode a drag gizmo
- * (translate on the surface plane, or spin about the vertical) writes the same
- * transform the sliders do, so the two stay in lock-step.
+ * rotated and recoloured live from the editor controls - no server round-trip. It
+ * is a plain mesh (no in-scene gizmo) so the viewer's auto-framing still fits the
+ * whole model, not just the tiny text.
  */
 export function PersonalisationText({
   url,
   colour,
   topZ,
   transform,
-  editable,
-  gizmo,
-  onTransform,
 }: PersonalisationTextProps): JSX.Element | null {
-  const meshRef = useRef<THREE.Mesh>(null)
   const { data: geometry } = useQuery({
     queryKey: ['personalise-text-geometry', url],
     queryFn: async () => {
@@ -64,36 +53,13 @@ export function PersonalisationText({
 
   if (!rendered) return null
 
-  const rotation: [number, number, number] = [0, 0, (transform.rotationDeg * Math.PI) / 180]
-  const position: [number, number, number] = [transform.x, transform.y, topZ]
-
-  const mesh = (
-    <mesh ref={meshRef} geometry={rendered} position={position} rotation={rotation}>
+  return (
+    <mesh
+      geometry={rendered}
+      position={[transform.x, transform.y, topZ]}
+      rotation={[0, 0, (transform.rotationDeg * Math.PI) / 180]}
+    >
       <meshStandardMaterial color={colour} roughness={0.55} metalness={0} flatShading />
     </mesh>
-  )
-
-  if (!editable) return mesh
-
-  function syncFromGizmo(): void {
-    const o = meshRef.current
-    if (!o) return
-    onTransform({
-      x: o.position.x,
-      y: o.position.y,
-      rotationDeg: THREE.MathUtils.radToDeg(o.rotation.z),
-    })
-  }
-
-  return (
-    <TransformControls
-      mode={gizmo === 'move' ? 'translate' : 'rotate'}
-      showX={gizmo === 'move'}
-      showY={gizmo === 'move'}
-      showZ={gizmo === 'rotate'}
-      onObjectChange={syncFromGizmo}
-    >
-      {mesh}
-    </TransformControls>
   )
 }

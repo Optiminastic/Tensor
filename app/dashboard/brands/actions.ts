@@ -8,6 +8,7 @@ import { clearPendingCookie, readPendingCookie } from '@/lib/shopify/pending'
 import { type BrandProfile, BrandCreateSchema, BrandUpdateSchema } from '@/lib/validators/brands'
 import {
   type Connection,
+  type ShopifySyncResult,
   ConnectionProviderSchema,
   ConnectionUpsertSchema,
 } from '@/lib/validators/connections'
@@ -20,6 +21,7 @@ import {
 import {
   ConnectionServiceError,
   deleteConnection as deleteConnectionRequest,
+  syncShopifyOrders as syncShopifyOrdersRequest,
   upsertConnection as upsertConnectionRequest,
 } from '@/services/connections.service'
 
@@ -154,6 +156,25 @@ export async function saveConnection(
       input: parsed.data,
     })
     return { ok: true, data: connection }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+// syncShopifyOrders pulls in the brand's most recent Shopify orders on
+// demand, using the access token its existing product-catalog connection
+// already stored - no separate order-import OAuth grant needed. It runs only
+// when someone presses "Sync from Shopify" on the Orders page: there is no
+// webhook and no background poll behind it.
+export async function syncShopifyOrders(
+  brandSlug: string,
+): Promise<ActionResult<ShopifySyncResult>> {
+  const { token, error } = await resolveToken()
+  if (!token) return { ok: false, error }
+
+  try {
+    const result = await syncShopifyOrdersRequest(token, brandSlug)
+    return { ok: true, data: result }
   } catch (err) {
     return { ok: false, error: describe(err) }
   }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { updateProductionJob } from '@/app/dashboard/[brand]/production/actions'
+import { PriorityTag } from '@/components/production/priority-tag'
 import {
   PACKAGING_STATUS_CONFIG,
   PERSONALISATION_STATUS_CONFIG,
@@ -15,10 +16,6 @@ import type { ProductionJobQueueItem } from '@/components/production/types'
 import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { dateTime } from '@/lib/format'
-
-// Matches internal/production/planner.go's urgentPriority - priority 1 (or
-// lower) is the same-day/urgent tier the batch optimizer places first.
-const URGENT_PRIORITY = 1
 
 interface JobQueueRowProps {
   brand: string
@@ -82,15 +79,8 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
       <TableCell>
         <TonePill {...PACKAGING_STATUS_CONFIG[job.packaging]} />
       </TableCell>
-      <TableCell numeric>
-        <span className="inline-flex items-center justify-end gap-1">
-          {job.priority <= URGENT_PRIORITY ? (
-            <span className="text-danger" title="Urgent (same-day)" aria-hidden>
-              !
-            </span>
-          ) : null}
-          {job.priority}
-        </span>
+      <TableCell className="text-right">
+        <PriorityTag priority={job.priority} />
       </TableCell>
       <TableCell className="text-muted-foreground whitespace-nowrap">
         {dateTime(job.createdAt)}
