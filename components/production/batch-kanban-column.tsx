@@ -49,7 +49,14 @@ export function BatchKanbanColumn({
         {batches.length === 0 ? (
           <p className="text-muted-foreground px-1 text-xs">No batches.</p>
         ) : (
-          batches.map(batch => <BatchKanbanCard key={batch.id} brand={brand} batch={batch} />)
+          batches.map(batch => (
+            <BatchKanbanCard
+              key={batch.id}
+              brand={brand}
+              batch={batch}
+              expandable={status === 'completed'}
+            />
+          ))
         )}
       </div>
     </div>

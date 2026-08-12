@@ -88,6 +88,7 @@ export function toOrderRecord(order: Order): OrderRecord {
     status: toOrderStatus(order.financial_status),
     lineItems: [],
     products: [],
+    jobCreationError: order.job_creation_error ?? null,
   }
 }
 

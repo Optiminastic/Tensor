@@ -5,15 +5,15 @@ import { useState, type JSX } from 'react'
 import { AssemblyQueueTable } from '@/components/production/assembly-queue-table'
 import type { BatchNumbers } from '@/components/production/batch-label'
 import { DispatchQueueTable } from '@/components/production/dispatch-queue-table'
+import { FinishingQueueTable } from '@/components/production/finishing-queue-table'
 import { PackagingQueueTable } from '@/components/production/packaging-queue-table'
-import { PolishingQueueTable } from '@/components/production/polishing-queue-table'
 import { QcQueueTable } from '@/components/production/qc-queue-table'
 import type { DispatchReadyOrder } from '@/components/production/types'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import type { DispatchOrder } from '@/lib/validators/dispatch'
 import type { ProductionJob } from '@/lib/validators/production'
 
-type TabValue = 'assembly' | 'polishing' | 'qc' | 'packaging' | 'dispatch'
+type TabValue = 'assembly' | 'finishing' | 'qc' | 'packaging' | 'dispatch'
 
 export interface DispatchPanelData {
   dispatches: DispatchOrder[]
@@ -28,7 +28,7 @@ interface PackagingStationTabsProps {
   brand: string
   queues: {
     assembly: ProductionJob[]
-    polishing: ProductionJob[]
+    finishing: ProductionJob[]
     qc: ProductionJob[]
     packaging: ProductionJob[]
   }
@@ -39,7 +39,7 @@ interface PackagingStationTabsProps {
   dispatch: DispatchPanelData
 }
 
-/** The post-print stations in pipeline order - Assembly -> Polishing -> Quality
+/** The post-print stations in pipeline order - Assembly -> Finishing -> Quality
  * Check -> Packaging -> Dispatch - switched by one tab bar. Each panel is the
  * queue of work waiting at that station. */
 export function PackagingStationTabs({
@@ -51,7 +51,7 @@ export function PackagingStationTabs({
   const [tab, setTab] = useState<TabValue>('assembly')
   const tabs: TabItem[] = [
     { value: 'assembly', label: 'Assembly', count: queues.assembly.length },
-    { value: 'polishing', label: 'Polishing', count: queues.polishing.length },
+    { value: 'finishing', label: 'Finishing', count: queues.finishing.length },
     { value: 'qc', label: 'Quality Check', count: queues.qc.length },
     { value: 'packaging', label: 'Packaging', count: queues.packaging.length },
     { value: 'dispatch', label: 'Dispatch', count: dispatch.readyOrders.length },
@@ -69,8 +69,8 @@ export function PackagingStationTabs({
         {tab === 'assembly' ? (
           <AssemblyQueueTable brand={brand} jobs={queues.assembly} batchNumbers={batchNumbers} />
         ) : null}
-        {tab === 'polishing' ? (
-          <PolishingQueueTable brand={brand} jobs={queues.polishing} batchNumbers={batchNumbers} />
+        {tab === 'finishing' ? (
+          <FinishingQueueTable brand={brand} jobs={queues.finishing} batchNumbers={batchNumbers} />
         ) : null}
         {tab === 'qc' ? (
           <QcQueueTable brand={brand} jobs={queues.qc} batchNumbers={batchNumbers} />

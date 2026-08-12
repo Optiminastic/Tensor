@@ -6,6 +6,7 @@ import { useState, type JSX } from 'react'
 import { skipJobAssembly } from '@/app/dashboard/[brand]/production/actions'
 import { AssemblyCheckDialog } from '@/components/production/assembly-check-dialog'
 import { batchLabel, type BatchNumbers } from '@/components/production/batch-label'
+import { StationIssueDialog } from '@/components/production/station-issue-dialog'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -102,6 +103,11 @@ function AssemblyQueueRow({ brand, job, batchNumber }: AssemblyQueueRowProps): J
             <Button variant="secondary" size="sm" disabled={pending} onClick={() => void skip()}>
               Skip
             </Button>
+            <StationIssueDialog
+              brand={brand}
+              stage="assembly"
+              job={{ id: job.id, jobNumber: job.job_number, quantity: job.quantity }}
+            />
             <AssemblyCheckDialog brand={brand} jobId={job.id} jobNumber={job.job_number} />
           </div>
           {error ? (

@@ -101,15 +101,15 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
               return job.batch_id ? completedBatchIds.has(job.batch_id) : false
             }),
             // Assembly resolved, finishing not done yet. The backend enforces
-            // the same order: it rejects a polishing check while assembly is
+            // the same order: it rejects a finishing check while assembly is
             // still pending.
-            polishing: jobs.filter(
+            finishing: jobs.filter(
               job =>
                 job.status === 'completed' &&
-                job.polishing_status === 'pending' &&
+                job.finishing_status === 'pending' &&
                 job.assembly_status !== 'pending',
             ),
-            // Assembly and polishing must each be completed or not_required
+            // Assembly and finishing must each be completed or not_required
             // before a job is QC-ready - the backend's qc_status filter alone
             // can't express those "one of two values" conditions.
             qc: jobs.filter(
@@ -117,7 +117,7 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
                 job.status === 'completed' &&
                 job.qc_status === 'pending' &&
                 job.assembly_status !== 'pending' &&
-                job.polishing_status !== 'pending',
+                job.finishing_status !== 'pending',
             ),
             packaging: jobs.filter(
               job => job.qc_status === 'passed' && job.packaging_status === 'pending',

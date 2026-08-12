@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus } from 'lucide-react'
+import { AlertTriangle, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
@@ -53,7 +53,20 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
       className="cursor-pointer"
       aria-label={`Open ${order.orderNumber}`}
     >
-      <TableCell className="font-mono text-sm">{order.orderNumber}</TableCell>
+      <TableCell className="font-mono text-sm">
+        <span className="flex items-center gap-1.5">
+          {order.orderNumber}
+          {/* This order produced no production jobs and never will on its own -
+              the backend's import worker exhausted its retries. Create Job is
+              the retry, so the warning belongs next to it, not hidden. */}
+          {order.jobCreationError ? (
+            <span title={`Job creation failed: ${order.jobCreationError}`} className="text-danger">
+              <AlertTriangle className="size-3.5" aria-hidden />
+              <span className="sr-only">Job creation failed</span>
+            </span>
+          ) : null}
+        </span>
+      </TableCell>
       <TableCell className="text-accent">{order.store}</TableCell>
       <TableCell className={order.customer ? undefined : 'text-muted-foreground'}>
         {order.customer ?? '—'}

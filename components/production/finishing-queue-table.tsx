@@ -3,9 +3,10 @@
 import { useRouter } from 'next/navigation'
 import { useState, type JSX } from 'react'
 
-import { skipJobPolishing } from '@/app/dashboard/[brand]/production/polishing-actions'
+import { skipJobFinishing } from '@/app/dashboard/[brand]/production/finishing-actions'
 import { batchLabel, type BatchNumbers } from '@/components/production/batch-label'
-import { PolishingCheckDialog } from '@/components/production/polishing-check-dialog'
+import { FinishingCheckDialog } from '@/components/production/finishing-check-dialog'
+import { StationIssueDialog } from '@/components/production/station-issue-dialog'
 import { ASSEMBLY_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { AssemblyStatus } from '@/components/production/types'
@@ -24,21 +25,21 @@ import type { ProductionJob } from '@/lib/validators/production'
 
 const COLUMNS = ['Job', 'Batch', 'Description', 'Qty', 'Assembly', 'Customer', 'Created']
 
-interface PolishingQueueTableProps {
+interface FinishingQueueTableProps {
   brand: string
   jobs: ProductionJob[]
   batchNumbers: BatchNumbers
 }
 
 /** Jobs whose assembly is resolved and that are waiting on finishing -
- * polishing_status = pending (see the Packaging page's Polishing tab). The
- * Assembly column is shown because polishing only unlocks once assembly is
+ * finishing_status = pending (see the Packaging page's Finishing tab). The
+ * Assembly column is shown because finishing only unlocks once assembly is
  * completed or marked not required. */
-export function PolishingQueueTable({
+export function FinishingQueueTable({
   brand,
   jobs,
   batchNumbers,
-}: PolishingQueueTableProps): JSX.Element {
+}: FinishingQueueTableProps): JSX.Element {
   return (
     <Card>
       <Table>
@@ -52,7 +53,7 @@ export function PolishingQueueTable({
         </TableHead>
         <TableBody>
           {jobs.map(job => (
-            <PolishingQueueRow
+            <FinishingQueueRow
               key={job.id}
               brand={brand}
               job={job}
@@ -65,13 +66,13 @@ export function PolishingQueueTable({
   )
 }
 
-interface PolishingQueueRowProps {
+interface FinishingQueueRowProps {
   brand: string
   job: ProductionJob
   batchNumber: string
 }
 
-function PolishingQueueRow({ brand, job, batchNumber }: PolishingQueueRowProps): JSX.Element {
+function FinishingQueueRow({ brand, job, batchNumber }: FinishingQueueRowProps): JSX.Element {
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,10 +80,10 @@ function PolishingQueueRow({ brand, job, batchNumber }: PolishingQueueRowProps):
   async function skip(): Promise<void> {
     setPending(true)
     setError(null)
-    const res = await skipJobPolishing(brand, job.id)
+    const res = await skipJobFinishing(brand, job.id)
     setPending(false)
     if (!res.ok) {
-      setError(res.error ?? 'Could not skip polishing.')
+      setError(res.error ?? 'Could not skip finishing.')
       return
     }
     router.refresh()
@@ -109,7 +110,12 @@ function PolishingQueueRow({ brand, job, batchNumber }: PolishingQueueRowProps):
             <Button variant="secondary" size="sm" disabled={pending} onClick={() => void skip()}>
               Skip
             </Button>
-            <PolishingCheckDialog brand={brand} jobId={job.id} jobNumber={job.job_number} />
+            <StationIssueDialog
+              brand={brand}
+              stage="finishing"
+              job={{ id: job.id, jobNumber: job.job_number, quantity: job.quantity }}
+            />
+            <FinishingCheckDialog brand={brand} jobId={job.id} jobNumber={job.job_number} />
           </div>
           {error ? (
             <p role="alert" className="text-danger text-xs">

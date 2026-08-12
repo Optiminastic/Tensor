@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 
 import { batchLabel, type BatchNumbers } from '@/components/production/batch-label'
 import { QcCheckDialog } from '@/components/production/qc-check-dialog'
+import { StationIssueDialog } from '@/components/production/station-issue-dialog'
 import { ASSEMBLY_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { AssemblyStatus } from '@/components/production/types'
@@ -58,7 +59,12 @@ export function QcQueueTable({ brand, jobs, batchNumbers }: QcQueueTableProps): 
                 {dateTime(job.created_at)}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  <StationIssueDialog
+                    brand={brand}
+                    stage="qc"
+                    job={{ id: job.id, jobNumber: job.job_number, quantity: job.quantity }}
+                  />
                   <QcCheckDialog brand={brand} jobId={job.id} jobNumber={job.job_number} />
                 </div>
               </TableCell>

@@ -9,12 +9,18 @@ import {
   type Order,
   type OrderDetail,
   type PackagingInput,
+  type FailJobInput,
+  type FailJobResult,
   type PersonalisationValidateInput,
-  type PolishingInput,
+  type StationIssueInput,
+  type StationIssueResult,
+  type FinishingInput,
   type ProductionJob,
   type QcInput,
   type QcSubmitResult,
   FilamentSchema,
+  FailJobResultSchema,
+  StationIssueResultSchema,
   OrderDetailSchema,
   OrderSchema,
   ProductionJobSchema,
@@ -206,21 +212,52 @@ export async function skipAssembly(token: string, jobId: string): Promise<Produc
   )
 }
 
-export async function submitPolishing(
+// failProductionJob records a print failure and returns both the failed job
+// and the reprint the backend cloned from it at urgent priority. This is also
+// how a "reprint" is requested from the completed-batch board: a reprint is
+// always attributable to a reason.
+export async function failProductionJob(
   token: string,
   jobId: string,
-  input: PolishingInput,
+  input: FailJobInput,
+): Promise<FailJobResult> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/fail`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => FailJobResultSchema.parse(data),
+  )
+}
+
+// reportStationIssue flags a defect found at assembly, finishing or QC. It does
+// not change the job's sub-status - the job stays in its queue and can still be
+// completed - so this is additive to the station flow, not a branch of it.
+export async function reportStationIssue(
+  token: string,
+  jobId: string,
+  input: StationIssueInput,
+): Promise<StationIssueResult> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/issues`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => StationIssueResultSchema.parse(data),
+  )
+}
+
+export async function submitFinishing(
+  token: string,
+  jobId: string,
+  input: FinishingInput,
 ): Promise<ProductionJob> {
   return call(
-    `/production-jobs/${encodeURIComponent(jobId)}/polishing`,
+    `/production-jobs/${encodeURIComponent(jobId)}/finishing`,
     { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
     data => ProductionJobSchema.parse(data),
   )
 }
 
-export async function skipPolishing(token: string, jobId: string): Promise<ProductionJob> {
+export async function skipFinishing(token: string, jobId: string): Promise<ProductionJob> {
   return call(
-    `/production-jobs/${encodeURIComponent(jobId)}/polishing/skip`,
+    `/production-jobs/${encodeURIComponent(jobId)}/finishing/skip`,
     { method: 'POST', headers: jsonHeaders(token) },
     data => ProductionJobSchema.parse(data),
   )

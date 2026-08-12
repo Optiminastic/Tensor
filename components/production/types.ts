@@ -103,6 +103,10 @@ export interface OrderRecord {
   status: OrderStatus
   lineItems: OrderLineItem[]
   products: OrderProduct[]
+  // Set when the backend gave up creating this order's production jobs. The
+  // order has none and never will without a manual retry, so it needs to be
+  // visible rather than merely absent from the queue.
+  jobCreationError: string | null
 }
 
 export interface PersonalisationConfirms {
