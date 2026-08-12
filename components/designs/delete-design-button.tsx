@@ -23,6 +23,10 @@ interface DeleteDesignButtonProps {
   // 'overlay' floats a round icon button (grid cards); 'inline' is a text button
   // for the table rows.
   variant?: 'overlay' | 'inline'
+  // Where to go after a successful delete. Required on the design detail page,
+  // where staying put would re-render the now-deleted design and 404. Omit on a
+  // list (the row just disappears on refresh).
+  redirectTo?: string
 }
 
 /**
@@ -35,6 +39,7 @@ export function DeleteDesignButton({
   designId,
   name,
   variant = 'overlay',
+  redirectTo,
 }: DeleteDesignButtonProps): JSX.Element {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -51,6 +56,13 @@ export function DeleteDesignButton({
       return
     }
     setOpen(false)
+    // On the detail page the design is gone, so refreshing in place would 404;
+    // leave for the list instead (replace so Back does not return to the dead URL).
+    if (redirectTo) {
+      router.replace(redirectTo)
+      router.refresh()
+      return
+    }
     router.refresh()
   }
 

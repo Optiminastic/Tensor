@@ -20,6 +20,10 @@ import {
   QualitySchema,
 } from '@/lib/validators/designs'
 
+import { inspectModelFile, type ModelInspection } from './model-colours'
+import { ModelFormatNotice } from './model-format-notice'
+import { PreviewImageField } from './preview-image-field'
+
 const MAX_FILE_MB = 60
 const ACCEPT = '.stl,.3mf,.step,.stp'
 
@@ -121,11 +125,20 @@ interface BuildFormArgs {
   file: File
   preview: File | null
   shopify?: ShopifyImportSource
+  // Colours auto-detected from a 3MF, sent so the backend can keep the full
+  // palette alongside the (length-capped) Colour field.
+  detectedColours?: string[]
 }
 
 // buildDesignFormData assembles the multipart body. When importing, the preview
 // falls back to the Shopify photo URL and the snapshot fields ride along.
-function buildDesignFormData({ values, file, preview, shopify }: BuildFormArgs): FormData {
+function buildDesignFormData({
+  values,
+  file,
+  preview,
+  shopify,
+  detectedColours,
+}: BuildFormArgs): FormData {
   const form = new FormData()
   form.set('name', values.name)
   form.set('material', values.material)
@@ -144,6 +157,9 @@ function buildDesignFormData({ values, file, preview, shopify }: BuildFormArgs):
   form.set('right_nozzle_mm', String(values.right_nozzle_mm))
   form.set('left_flow', values.left_flow)
   form.set('right_flow', values.right_flow)
+  if (detectedColours && detectedColours.length > 0) {
+    form.set('detected_colours', detectedColours.join(','))
+  }
   form.set('file', file)
   if (preview) form.set('preview', preview)
   else if (shopify?.image_url) form.set('preview_url', shopify.image_url)
@@ -169,6 +185,9 @@ export function DesignUploadForm({
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // The auto-detected format + 3MF colours for the picked file, shown as a notice.
+  const [inspection, setInspection] = useState<ModelInspection | null>(null)
+  const [inspecting, setInspecting] = useState(false)
   // In the global view the design must be created under a chosen brand.
   const needsBrandChoice = isAllBrands(brand)
   const [targetBrand, setTargetBrand] = useState(brandOptions?.[0]?.slug ?? '')
@@ -177,6 +196,7 @@ export function DesignUploadForm({
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -184,11 +204,37 @@ export function DesignUploadForm({
   })
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>): void {
-    setFile(event.target.files?.[0] ?? null)
+    const picked = event.target.files?.[0] ?? null
+    setFile(picked)
+    void inspectSelected(picked)
   }
 
-  function onPreviewChange(event: ChangeEvent<HTMLInputElement>): void {
-    setPreview(event.target.files?.[0] ?? null)
+  // Reads the picked file to auto-detect its format and, for a 3MF, its colours -
+  // then pre-fills the Colour and Colour-count fields so the designer does not
+  // re-enter what the file already carries.
+  async function inspectSelected(picked: File | null): Promise<void> {
+    if (!picked) {
+      setInspection(null)
+      return
+    }
+    setInspecting(true)
+    try {
+      const result = await inspectModelFile(picked)
+      setInspection(result)
+      applyDetectedColours(result)
+    } catch {
+      setInspection(null)
+    } finally {
+      setInspecting(false)
+    }
+  }
+
+  function applyDetectedColours(result: ModelInspection): void {
+    if (result.format !== '3mf' || result.colours.length === 0) {
+      return
+    }
+    setValue('colour_count', Math.min(20, result.colours.length))
+    setValue('colour', result.colours.join(', ').slice(0, 60))
   }
 
   async function onSubmit(values: FormValues): Promise<void> {
@@ -216,7 +262,13 @@ export function DesignUploadForm({
       return
     }
 
-    const form = buildDesignFormData({ values, file, preview, shopify })
+    const form = buildDesignFormData({
+      values,
+      file,
+      preview,
+      shopify,
+      detectedColours: inspection?.colours,
+    })
     const outcome = await uploadDesign(effectiveBrand, form)
     if (!outcome.ok || !outcome.data) {
       setError(outcome.error ?? 'Could not upload this design.')
@@ -256,18 +308,17 @@ export function DesignUploadForm({
       <Field label="Model file" htmlFor="file" hint={`STL, 3MF or STEP, up to ${MAX_FILE_MB} MB`}>
         <Input id="file" type="file" accept={ACCEPT} onChange={onFileChange} />
       </Field>
+      <ModelFormatNotice inspection={inspection} loading={inspecting} />
 
-      <Field
-        label="Preview image"
-        htmlFor="preview"
+      <PreviewImageField
+        onChange={setPreview}
+        optional={Boolean(shopify)}
         hint={
           shopify
             ? 'Optional - defaults to the Shopify listing photo'
-            : `PNG, JPG, WEBP or GIF, up to ${MAX_PREVIEW_MB} MB - shown as the cover`
+            : `PNG, JPG or WEBP, up to ${MAX_PREVIEW_MB} MB - its background is removed automatically`
         }
-      >
-        <Input id="preview" type="file" accept="image/*" onChange={onPreviewChange} />
-      </Field>
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Material" htmlFor="material" error={errors.material?.message}>

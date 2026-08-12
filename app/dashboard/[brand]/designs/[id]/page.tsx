@@ -50,6 +50,7 @@ export default async function DesignDetailPage({
   const canManageSku = can(authz, 'shopify:publish')
   const canEdit = can(authz, 'design:update')
   const canDelete = can(authz, 'design:delete')
+  const canWriteContent = can(authz, 'design:content')
 
   return (
     <main className="flex w-full flex-col gap-8 px-6 py-10 lg:px-10">
@@ -60,6 +61,7 @@ export default async function DesignDetailPage({
         canManageSku={canManageSku}
         canEdit={canEdit}
         canDelete={canDelete}
+        canWriteContent={canWriteContent}
       />
     </main>
   )

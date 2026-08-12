@@ -3,6 +3,8 @@ import { headers } from 'next/headers'
 import type { JSX } from 'react'
 
 import { BrandConnections } from '@/components/brands/brand-connections'
+import { isAllBrands } from '@/components/dashboard/nav-config'
+import { PickABrandNotice } from '@/components/dashboard/pick-a-brand-notice'
 import { getTokenSafe } from '@/lib/auth'
 import { requirePermission } from '@/lib/authz'
 import { env } from '@/lib/env'
@@ -22,9 +24,19 @@ const GOOGLE_NOTICES: Record<string, { tone: 'success' | 'danger'; message: stri
   error: { tone: 'danger', message: 'Could not connect the Google account. Please try again.' },
 }
 
+// The Shopify OAuth connect redirects back here with `?shopify=<status>`.
+const SHOPIFY_NOTICES: Record<string, { tone: 'success' | 'danger'; message: string }> = {
+  connected: { tone: 'success', message: 'Shopify store connected.' },
+  invalid_request: {
+    tone: 'danger',
+    message: 'Enter your store domain (your-store.myshopify.com).',
+  },
+  error: { tone: 'danger', message: 'Could not connect Shopify. Please try again.' },
+}
+
 interface IntegrationsPageProps {
   params: Promise<{ brand: string }>
-  searchParams: Promise<{ google?: string }>
+  searchParams: Promise<{ google?: string; shopify?: string }>
 }
 
 /**
@@ -38,7 +50,15 @@ export default async function IntegrationsPage({
 }: IntegrationsPageProps): Promise<JSX.Element> {
   const { brand } = await params
   await requirePermission('integration:manage', `/dashboard/${brand}`)
-  const { google } = await searchParams
+  if (isAllBrands(brand)) {
+    return (
+      <PickABrandNotice
+        section="Integrations"
+        reason="Connections are managed per brand's store."
+      />
+    )
+  }
+  const { google, shopify } = await searchParams
   const token = await getTokenSafe(await headers())
   let connections: Connection[] = []
   if (token?.token) {
@@ -48,7 +68,7 @@ export default async function IntegrationsPage({
   const googleOAuthConfigured = Boolean(
     env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET,
   )
-  const notice = google ? GOOGLE_NOTICES[google] : undefined
+  const notice = google ? GOOGLE_NOTICES[google] : shopify ? SHOPIFY_NOTICES[shopify] : undefined
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">

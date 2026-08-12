@@ -14,12 +14,45 @@ export async function deleteDesign(token: string, id: string): Promise<void> {
   )
 }
 
+// Soft-deletes a design: it leaves every list view except "Archived" and can be
+// restored. Enforces design:delete + brand access on the backend.
+export async function archiveDesign(token: string, id: string): Promise<void> {
+  await call(
+    `/designs/${encodeURIComponent(id)}/archive`,
+    { method: 'PATCH', headers: authHeader(token) },
+    () => undefined,
+  )
+}
+
+// Restores an archived design back into the pipeline (as priced). design:delete.
+export async function unarchiveDesign(token: string, id: string): Promise<void> {
+  await call(
+    `/designs/${encodeURIComponent(id)}/unarchive`,
+    { method: 'PATCH', headers: authHeader(token) },
+    () => undefined,
+  )
+}
+
 // Renames a design. Enforces design:update + brand access on the backend; the
 // caller refetches the design afterwards, so the response body is ignored.
 export async function renameDesign(token: string, id: string, name: string): Promise<void> {
   await call(
     `/designs/${encodeURIComponent(id)}/name`,
     { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ name }) },
+    () => undefined,
+  )
+}
+
+// Writes the product marketing description (design:content). An empty string
+// clears it. Stored on the design and used to pre-fill the publish dialog.
+export async function editDesignDescription(
+  token: string,
+  id: string,
+  description: string,
+): Promise<void> {
+  await call(
+    `/designs/${encodeURIComponent(id)}/description`,
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ description }) },
     () => undefined,
   )
 }

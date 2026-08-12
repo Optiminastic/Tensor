@@ -22,7 +22,7 @@ import type {
 import { useCut } from './cut-controls'
 import { LayerStage } from './design-layer-preview'
 import { PreviewControls } from './design-preview-controls'
-import type { OrientationMeasure, RotateAxis } from './model-viewer'
+import type { ColourMode, OrientationMeasure, RotateAxis } from './model-viewer'
 import type { TextTransform } from './personalisation-text'
 
 type PreviewMode = 'model' | 'layers'
@@ -121,8 +121,13 @@ export function DesignModelPreview({
   const [optimization, setOptimization] = useState<DesignOptimization | null>(null)
   const [optimizeLoading, setOptimizeLoading] = useState(false)
   const [optimizeError, setOptimizeError] = useState<string | null>(null)
-  // A filament colour to preview the whole model in (null = analysis shading).
+  // A filament colour to preview the whole model in (null = the model's own
+  // colours or the analysis shading, per colourMode).
   const [tint, setTint] = useState<string | null>(null)
+  // Whether to render a 3MF's real colours or the support analysis, and the
+  // colours the loaded model actually carries (empty for STL / plain 3MF).
+  const [colourMode, setColourMode] = useState<ColourMode>('model')
+  const [modelColours, setModelColours] = useState<string[]>([])
 
   // The model URL is always the plain lite base model; the name rides on top as a
   // separate object, so moving it never re-downloads the model.
@@ -257,6 +262,8 @@ export function DesignModelPreview({
       onMeasure={handleMeasure}
       clip={clip}
       tint={tint}
+      colourMode={colourMode}
+      onColours={setModelColours}
       personalisation={personalisation}
     />
   )
@@ -266,18 +273,53 @@ export function DesignModelPreview({
   const swatchStrip = (
     <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
       <div className="border-border bg-surface flex items-center gap-1.5 rounded-full border px-2 py-1.5 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setTint(null)}
-          className={cn(
-            'rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
-            tint === null
-              ? 'bg-accent text-accent-foreground'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          Original
-        </button>
+        {modelColours.length > 0 ? (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setTint(null)
+                setColourMode('model')
+              }}
+              className={cn(
+                'rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
+                tint === null && colourMode === 'model'
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Colours
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTint(null)
+                setColourMode('analysis')
+              }}
+              className={cn(
+                'rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
+                tint === null && colourMode === 'analysis'
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Support
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setTint(null)}
+            className={cn(
+              'rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
+              tint === null
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Original
+          </button>
+        )}
         {FILAMENT_COLORS.map(colour => (
           <button
             key={colour.hex}

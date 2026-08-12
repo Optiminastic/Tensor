@@ -5,14 +5,16 @@ import { Canvas } from '@react-three/fiber'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import * as THREE from 'three'
-import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js'
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 import type { Orientation } from '@/lib/validators/designs'
 
 import { type ClipState, ClipController, buildClipPlane } from './clip-plane'
+import { FILAMENT_COLOR_ATTR, parseModelWithColours } from './model-parse'
 import { PersonalisationText, type TextTransform } from './personalisation-text'
+
+// How the model is coloured: "model" shows a 3MF's real filament colours (when it
+// has them), "analysis" shows the support shading (base grey + amber overhangs).
+export type ColourMode = 'model' | 'analysis'
 
 // The live name layer the viewer draws on top of the model, driven by the editor.
 export interface PersonalisationView {
@@ -21,15 +23,6 @@ export interface PersonalisationView {
   colour: string
   transform: TextTransform
 }
-
-// Above this triangle count a model is simplified for the preview so it stays
-// interactive (a 24 MB STL is ~480k triangles; parsing/painting that on the main
-// thread stalls the tab). The full STL is untouched - only this browser preview
-// is decimated; the slicer still uses the original.
-const PREVIEW_MAX_TRIANGLES = 150_000
-// Grid resolution for the vertex-clustering decimation: vertices sharing a cell
-// collapse to the cell's centroid, dropping the fine triangles.
-const PREVIEW_DECIMATE_GRID = 90
 
 // A face needs support when its normal points downward past the self-support
 // limit (~45deg), matching the backend rule so the shaded faces agree.
@@ -52,9 +45,15 @@ interface ModelViewerProps {
   steps: RotateAxis[]
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
-  // A filament colour to render the whole model in (hex). null shows the analysis
-  // shading (base grey + amber overhangs) instead.
+  // A filament colour to render the whole model in (hex). null shows either the
+  // model's own colours (colourMode "model") or the analysis shading.
   tint?: string | null
+  // Whether to show the model's real colours or the support analysis. Defaults to
+  // "model"; it degrades to analysis shading when the model carries no colours.
+  colourMode?: ColourMode
+  // Reports the model's own filament colours once loaded (empty for STL / plain
+  // 3MF), so the parent can offer a colours/analysis toggle only when it helps.
+  onColours?: (colours: string[]) => void
   // The live name layer drawn on the model's top face (the personalisation editor).
   personalisation?: PersonalisationView
   // Reports how long the model took to fetch and build (parse + decimate).
@@ -63,6 +62,7 @@ interface ModelViewerProps {
 
 interface ModelData {
   geometry: THREE.BufferGeometry
+  colours: string[]
   timing: LoadTiming
 }
 
@@ -82,10 +82,11 @@ function useModelGeometry(modelUrl: string): UseQueryResult<ModelData> {
       if (!res.ok) throw new Error(`status ${res.status}`)
       const buf = await res.arrayBuffer()
       const downloaded = performance.now()
-      const geometry = parseModel(buf)
+      const { geometry, colours } = parseModelWithColours(buf)
       const built = performance.now()
       return {
         geometry,
+        colours,
         timing: {
           bytes: buf.byteLength,
           downloadMs: downloaded - started,
@@ -112,8 +113,9 @@ export interface LoadTiming {
 /**
  * Interactive 3D preview of the model on the build plate. The pose is the chosen
  * base (as-uploaded or the recommended orientation) plus the user's 90deg turns.
- * Downward-overhang faces are shaded amber and their area is measured live and
- * reported via onMeasure, so reorienting shows its effect on support immediately.
+ * A multi-colour 3MF renders in its real colours; otherwise downward-overhang
+ * faces are shaded amber and their area is measured live and reported via
+ * onMeasure, so reorienting shows its effect on support immediately.
  */
 export function ModelViewer({
   modelUrl,
@@ -123,23 +125,28 @@ export function ModelViewer({
   onMeasure,
   clip,
   tint,
+  colourMode = 'model',
+  onColours,
   personalisation,
   onTiming,
 }: ModelViewerProps): JSX.Element {
   const { data, isError } = useModelGeometry(modelUrl)
   const geometry = data?.geometry ?? null
-  // The model's top-face Z in the centred viewer frame, reported by ModelMesh, so
-  // the name layer can rest on top of the model.
-  const [topZ, setTopZ] = useState<number | null>(null)
+  // The centred model's bounding box (reported by ModelMesh), so the name layer can
+  // rest on the top face (max.z) and scale to the model's footprint.
+  const [box, setBox] = useState<{ min: THREE.Vector3; max: THREE.Vector3 } | null>(null)
 
-  // Report load timing once, when the (cached) data first becomes available. Kept
-  // in a ref so a changing onTiming identity never re-runs the effect.
+  // Report load timing and detected colours once, when the (cached) data first
+  // becomes available. Kept in refs so a changing callback identity never re-runs.
   const onTimingRef = useRef(onTiming)
+  const onColoursRef = useRef(onColours)
   useEffect(() => {
     onTimingRef.current = onTiming
-  }, [onTiming])
+    onColoursRef.current = onColours
+  }, [onTiming, onColours])
   useEffect(() => {
     if (data?.timing) onTimingRef.current?.(data.timing)
+    if (data) onColoursRef.current?.(data.colours)
   }, [data])
 
   const quaternion = useMemo(
@@ -173,13 +180,15 @@ export function ModelViewer({
           onMeasure={onMeasure}
           clip={clip}
           tint={tint}
-          onBounds={(_, max) => setTopZ(max.z)}
+          colourMode={colourMode}
+          onBounds={(min, max) => setBox({ min, max })}
         />
-        {personalisation?.textUrl && topZ !== null ? (
+        {personalisation?.textUrl && box ? (
           <PersonalisationText
             url={personalisation.textUrl}
             colour={personalisation.colour}
-            topZ={topZ}
+            topZ={box.max.z}
+            footprint={Math.max(box.max.x - box.min.x, box.max.y - box.min.y)}
             transform={personalisation.transform}
           />
         ) : null}
@@ -208,6 +217,7 @@ interface ModelMeshProps {
   onMeasure: (m: OrientationMeasure) => void
   clip: ClipState | null
   tint?: string | null
+  colourMode: ColourMode
   // Reports the centred mesh's bounding-box corners, so a sibling (the name layer)
   // can sit on the model's top face.
   onBounds?: (min: THREE.Vector3, max: THREE.Vector3) => void
@@ -219,6 +229,7 @@ function ModelMesh({
   onMeasure,
   clip,
   tint,
+  colourMode,
   onBounds,
 }: ModelMeshProps): JSX.Element {
   const meshRef = useRef<THREE.Mesh>(null)
@@ -236,11 +247,11 @@ function ModelMesh({
     const box = g.boundingBox
     return {
       prepared: g,
-      measure: paintAndMeasure(g),
+      measure: colourAndMeasure(g, tint, colourMode),
       boxMin: box ? box.min.clone() : new THREE.Vector3(),
       boxMax: box ? box.max.clone() : new THREE.Vector3(),
     }
-  }, [geometry, quaternion])
+  }, [geometry, quaternion, tint, colourMode])
 
   const localPlane = useMemo(
     () => (clip ? buildClipPlane(clip, boxMin, boxMax) : null),
@@ -311,13 +322,48 @@ function recommendedQuaternion(orientation: Orientation | null): THREE.Quaternio
   return q
 }
 
-// paintAndMeasure colours the geometry and measures the shown pose: overhang =
-// elevated downward faces (amber, need support); contact = downward faces resting
-// on the plate (free). The geometry is non-indexed, so each triangle owns its
+// colourAndMeasure decides how the mesh is coloured and always returns the support
+// measure. A tint renders solid (no vertex colours needed). "model" mode with a
+// baked filament-colour attribute shows the real colours. Otherwise the overhang
+// analysis paints the "color" attribute grey/amber. The overhang area is measured
+// in every case so the readout stays live.
+function colourAndMeasure(
+  g: THREE.BufferGeometry,
+  tint: string | null | undefined,
+  colourMode: ColourMode,
+): OrientationMeasure {
+  const filament = g.getAttribute(FILAMENT_COLOR_ATTR)
+  if (!tint && colourMode === 'model' && filament) {
+    g.setAttribute('color', filament)
+    return measureOverhang(g)
+  }
+  if (tint) {
+    return measureOverhang(g)
+  }
+  return paintOverhang(g)
+}
+
+// measureOverhang returns the shown pose's support measure without touching
+// colours: overhang = elevated downward faces (need support); contact = downward
+// faces resting on the plate (free).
+function measureOverhang(g: THREE.BufferGeometry): OrientationMeasure {
+  return analyseOverhang(g, null)
+}
+
+// paintOverhang shades the geometry (base grey, amber for lifted overhangs) and
+// returns the same measure. The geometry is non-indexed, so each triangle owns its
 // three vertices.
-function paintAndMeasure(g: THREE.BufferGeometry): OrientationMeasure {
+function paintOverhang(g: THREE.BufferGeometry): OrientationMeasure {
+  const colors = new Float32Array(g.getAttribute('position').count * 3)
+  const measure = analyseOverhang(g, colors)
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  return measure
+}
+
+// analyseOverhang walks the triangles once, measuring the support areas and, when
+// a colour buffer is supplied, writing the base/overhang colour per vertex.
+function analyseOverhang(g: THREE.BufferGeometry, colors: Float32Array | null): OrientationMeasure {
   const pos = g.getAttribute('position')
-  const colors = new Float32Array(pos.count * 3)
 
   let minZ = Infinity
   let maxZ = -Infinity
@@ -357,124 +403,14 @@ function paintAndMeasure(g: THREE.BufferGeometry): OrientationMeasure {
         color = OVERHANG_COLOR
       }
     }
-    for (let k = 0; k < 3; k++) {
-      const o = (i + k) * 3
-      colors[o] = color.r
-      colors[o + 1] = color.g
-      colors[o + 2] = color.b
+    if (colors) {
+      for (let k = 0; k < 3; k++) {
+        const o = (i + k) * 3
+        colors[o] = color.r
+        colors[o + 1] = color.g
+        colors[o + 2] = color.b
+      }
     }
   }
-  g.setAttribute('color', new THREE.BufferAttribute(colors, 3))
   return { overhang, contact }
-}
-
-// parseModel sniffs the format (3MF is a zip, "PK.."; otherwise STL) and returns
-// a single non-indexed geometry so overhang colouring can work per triangle. A
-// very heavy mesh is decimated first so the preview stays interactive. Exported
-// for reuse by any other plain-model viewer (see
-// components/production/job-model-viewer.tsx).
-export function parseModel(buf: ArrayBuffer): THREE.BufferGeometry {
-  const head = new Uint8Array(buf, 0, Math.min(2, buf.byteLength))
-  const isZip = head[0] === 0x50 && head[1] === 0x4b // "PK" => 3MF
-  let geo = isZip ? merge3MF(new ThreeMFLoader().parse(buf)) : new STLLoader().parse(buf)
-  if (geo.index) {
-    geo = geo.toNonIndexed()
-  }
-  if (geo.getAttribute('position').count / 3 > PREVIEW_MAX_TRIANGLES) {
-    const lite = decimateGeometry(geo, PREVIEW_DECIMATE_GRID)
-    // Keep the simplified mesh only if it survived with a usable number of
-    // triangles; otherwise fall back to the original (never show a blank model).
-    if (lite !== geo && lite.getAttribute('position').count >= 3 * 100) {
-      geo.dispose()
-      geo = lite
-    } else if (lite !== geo) {
-      lite.dispose()
-    }
-  }
-  geo.computeVertexNormals()
-  return geo
-}
-
-// decimateGeometry reduces a non-indexed geometry by grid vertex-clustering: the
-// bounding box is split into a gridN^3 lattice, every vertex snaps to its cell's
-// centroid, and triangles whose corners collapse into one cell are dropped. Cheap
-// (two linear passes) and good enough for an orbit preview; it is not a
-// quality-preserving simplification and slightly changes the overhang readout.
-function decimateGeometry(geo: THREE.BufferGeometry, gridN: number): THREE.BufferGeometry {
-  const pos = geo.getAttribute('position')
-  geo.computeBoundingBox()
-  const bb = geo.boundingBox
-  if (!bb) return geo
-  const maxDim = Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z)
-  if (maxDim <= 0) return geo
-
-  const arr = pos.array as ArrayLike<number>
-  const cell = maxDim / gridN
-  const stride = gridN + 2 // +2 so the max corner never overflows the lattice
-  const keyOf = (x: number, y: number, z: number): number =>
-    Math.floor((x - bb.min.x) / cell) +
-    Math.floor((y - bb.min.y) / cell) * stride +
-    Math.floor((z - bb.min.z) / cell) * stride * stride
-
-  // First pass: accumulate each cell's centroid.
-  const cells = new Map<number, { x: number; y: number; z: number; n: number }>()
-  for (let i = 0; i < pos.count; i++) {
-    const x = arr[i * 3]
-    const y = arr[i * 3 + 1]
-    const z = arr[i * 3 + 2]
-    const k = keyOf(x, y, z)
-    let acc = cells.get(k)
-    if (!acc) {
-      acc = { x: 0, y: 0, z: 0, n: 0 }
-      cells.set(k, acc)
-    }
-    acc.x += x
-    acc.y += y
-    acc.z += z
-    acc.n += 1
-  }
-
-  // Second pass: rebuild triangles from cell centroids, dropping collapsed ones.
-  const out: number[] = []
-  const push = (k: number): void => {
-    const c = cells.get(k)
-    if (c) out.push(c.x / c.n, c.y / c.n, c.z / c.n)
-  }
-  for (let i = 0; i < pos.count; i += 3) {
-    const kA = keyOf(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2])
-    const kB = keyOf(arr[i * 3 + 3], arr[i * 3 + 4], arr[i * 3 + 5])
-    const kC = keyOf(arr[i * 3 + 6], arr[i * 3 + 7], arr[i * 3 + 8])
-    if (kA === kB || kB === kC || kA === kC) continue
-    push(kA)
-    push(kB)
-    push(kC)
-  }
-
-  const g = new THREE.BufferGeometry()
-  g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3))
-  return g
-}
-
-function merge3MF(object: THREE.Object3D): THREE.BufferGeometry {
-  const parts: THREE.BufferGeometry[] = []
-  object.updateMatrixWorld(true)
-  object.traverse(child => {
-    const mesh = child as THREE.Mesh
-    if (!mesh.isMesh || !mesh.geometry) {
-      return
-    }
-    const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone()
-    src.applyMatrix4(mesh.matrixWorld)
-    const only = new THREE.BufferGeometry()
-    only.setAttribute('position', src.getAttribute('position'))
-    parts.push(only)
-    if (src !== mesh.geometry) {
-      src.dispose()
-    }
-  })
-  const merged = parts.length > 0 ? mergeGeometries(parts, false) : null
-  if (!merged) {
-    throw new Error('3MF contained no mesh')
-  }
-  return merged
 }

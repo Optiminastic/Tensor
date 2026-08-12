@@ -18,14 +18,14 @@ const STORAGE_KEY = 'designs-view'
 interface DesignsViewProps {
   brand: string
   designs: Design[]
-  // Whether the viewer may delete designs (design:delete). Shows the delete
-  // affordance on each card/row; the backend still enforces it.
-  canDelete: boolean
+  // The empty-state copy for the active lifecycle view (drafts, archived, ...).
+  emptyMessage?: string
 }
 
 /** The designs list with a grid/table toggle. The choice is remembered per
- * browser; the grid is the default (cover-forward, like the reference). */
-export function DesignsView({ brand, designs, canDelete }: DesignsViewProps): JSX.Element {
+ * browser; the grid is the default (cover-forward, like the reference). Delete
+ * and archive live on each design's Settings tab, not on the browse cards/rows. */
+export function DesignsView({ brand, designs, emptyMessage }: DesignsViewProps): JSX.Element {
   const [view, setView] = useState<View>('grid')
   const showBrand = isAllBrands(brand)
 
@@ -44,7 +44,7 @@ export function DesignsView({ brand, designs, canDelete }: DesignsViewProps): JS
       <Card>
         <CardContent>
           <p className="text-muted-foreground text-sm">
-            No designs yet. Upload one to run the pre-check.
+            {emptyMessage ?? 'No designs yet. Upload one to run the pre-check.'}
           </p>
         </CardContent>
       </Card>
@@ -70,9 +70,9 @@ export function DesignsView({ brand, designs, canDelete }: DesignsViewProps): JS
         </div>
       </div>
       {view === 'grid' ? (
-        <DesignGrid designs={designs} canDelete={canDelete} showBrand={showBrand} />
+        <DesignGrid designs={designs} showBrand={showBrand} />
       ) : (
-        <DesignList designs={designs} canDelete={canDelete} showBrand={showBrand} />
+        <DesignList designs={designs} showBrand={showBrand} />
       )}
     </div>
   )

@@ -6,19 +6,18 @@ import type { JSX } from 'react'
 import { Badge } from '@/components/ui/badge'
 import type { Design } from '@/lib/validators/designs'
 
-import { DeleteDesignButton } from './delete-design-button'
 import { DesignStatusBadge } from './design-status-badge'
 
 interface DesignGridProps {
   designs: Design[]
-  canDelete: boolean
   // In the global "all brands" view, label each card with the brand it belongs to.
   showBrand: boolean
 }
 
 /** The designs as a cover-image grid, each card linking to its pre-check under
- * its own brand. In the global view each card is labelled with its brand. */
-export function DesignGrid({ designs, canDelete, showBrand }: DesignGridProps): JSX.Element {
+ * its own brand. In the global view each card is labelled with its brand. Delete
+ * and archive live on the design's Settings tab, not on the card. */
+export function DesignGrid({ designs, showBrand }: DesignGridProps): JSX.Element {
   return (
     <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {designs.map(design => (
@@ -35,7 +34,7 @@ export function DesignGrid({ designs, canDelete, showBrand }: DesignGridProps): 
                   fill
                   unoptimized
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  className="object-cover transition-transform duration-200 group-hover:scale-105"
+                  className="object-contain p-4 transition-transform duration-200 group-hover:scale-105"
                 />
               ) : (
                 <div className="text-subtle-foreground flex h-full items-center justify-center">
@@ -63,15 +62,6 @@ export function DesignGrid({ designs, canDelete, showBrand }: DesignGridProps): 
               ) : null}
             </div>
           </Link>
-          {canDelete ? (
-            <div className="absolute top-2 right-2">
-              <DeleteDesignButton
-                brand={design.brand_slug}
-                designId={design.id}
-                name={design.name}
-              />
-            </div>
-          ) : null}
         </li>
       ))}
     </ul>

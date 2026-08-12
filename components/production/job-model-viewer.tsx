@@ -5,7 +5,7 @@ import { Canvas } from '@react-three/fiber'
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import type * as THREE from 'three'
 
-import { parseModel } from '@/components/designs/model-viewer'
+import { parseModel } from '@/components/designs/model-parse'
 import { centerOnPlate, fitScaleFor, PrintBedPlate } from '@/components/production/print-bed-plate'
 
 interface JobModelViewerProps {

@@ -149,6 +149,8 @@ export const DesignLifecycleSchema = z.enum([
   'changes_requested',
   'approved',
   'published',
+  // Soft-deleted: hidden from every view except "Archived", restorable.
+  'archived',
 ])
 export type DesignLifecycle = z.infer<typeof DesignLifecycleSchema>
 
@@ -299,6 +301,8 @@ export const DesignAttributesSchema = z.object({
   colour_count: z.number().int().optional(),
   add_ons: z.string().array().optional(),
   packaging_type: z.string().optional(),
+  // Product marketing copy, written by the Marketing Head; pre-fills publish.
+  product_description: z.string().optional(),
   shopify_product_gid: z.string().optional(),
   shopify_handle: z.string().optional(),
   shopify_admin_url: z.string().optional(),
