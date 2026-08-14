@@ -3,6 +3,8 @@
 import { Search } from 'lucide-react'
 import type { JSX } from 'react'
 
+import type { PeriodValue } from '@/components/production/date-range'
+import { OverviewDateRange } from '@/components/production/overview-date-range'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
@@ -24,6 +26,11 @@ interface FilterBarProps {
   searchValue: string
   onSearchChange: (value: string) => void
   searchPlaceholder: string
+  /** Date filter, pinned to the far right. Both props go together - pass
+   * neither on a table with no meaningful date column, so the control never
+   * appears without being able to do anything. */
+  period?: PeriodValue
+  onPeriodChange?: (value: PeriodValue) => void
 }
 
 /**
@@ -44,6 +51,8 @@ export function FilterBar({
   searchValue,
   onSearchChange,
   searchPlaceholder,
+  period,
+  onPeriodChange,
 }: FilterBarProps): JSX.Element {
   return (
     <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
@@ -84,6 +93,11 @@ export function FilterBar({
           className="pl-8"
         />
       </div>
+      {period && onPeriodChange ? (
+        <div className="shrink-0">
+          <OverviewDateRange value={period} onChange={onPeriodChange} />
+        </div>
+      ) : null}
     </div>
   )
 }

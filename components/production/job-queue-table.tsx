@@ -2,6 +2,12 @@
 
 import { useMemo, useState, type JSX } from 'react'
 
+import {
+  ALL_TIME_PERIOD,
+  isWithinDateRange,
+  type PeriodValue,
+  resolvePeriod,
+} from '@/components/production/date-range'
 import { FilterBar } from '@/components/production/filter-bar'
 import { JobQueueRow } from '@/components/production/job-queue-row'
 import {
@@ -61,6 +67,10 @@ export function JobQueueTable({ brand, jobs }: JobQueueTableProps): JSX.Element 
   const [status, setStatus] = useState('')
   const [personalisation, setPersonalisation] = useState('')
   const [packaging, setPackaging] = useState('')
+  // All time by default - see the same note on OrdersTable.
+  const [period, setPeriod] = useState<PeriodValue>(ALL_TIME_PERIOD)
+
+  const periodRange = useMemo(() => resolvePeriod(period, new Date()), [period])
 
   const tabs: TabItem[] = useMemo(
     () => [
@@ -81,9 +91,10 @@ export function JobQueueTable({ brand, jobs }: JobQueueTableProps): JSX.Element 
           matchesSearch(job, search) &&
           (!status || job.status === status) &&
           (!personalisation || job.personalisation === personalisation) &&
-          (!packaging || job.packaging === packaging),
+          (!packaging || job.packaging === packaging) &&
+          isWithinDateRange(job.createdAt, periodRange),
       ),
-    [jobs, search, status, personalisation, packaging],
+    [jobs, search, status, personalisation, packaging, periodRange],
   )
 
   return (
@@ -109,6 +120,8 @@ export function JobQueueTable({ brand, jobs }: JobQueueTableProps): JSX.Element 
         ]}
         searchValue={search}
         onSearchChange={setSearch}
+        period={period}
+        onPeriodChange={setPeriod}
         searchPlaceholder="Search job #, description"
       />
       <Card>

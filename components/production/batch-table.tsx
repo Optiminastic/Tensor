@@ -3,6 +3,12 @@
 import { useMemo, useState, type JSX } from 'react'
 
 import { BatchTableGrid } from '@/components/production/batch-table-grid'
+import {
+  ALL_TIME_PERIOD,
+  isWithinDateRange,
+  type PeriodValue,
+  resolvePeriod,
+} from '@/components/production/date-range'
 import { FilterBar } from '@/components/production/filter-bar'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
 import type { BatchRecord, BatchStatus } from '@/components/production/types'
@@ -33,6 +39,10 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [shortage, setShortage] = useState('')
+  // All time by default - see the same note on OrdersTable.
+  const [period, setPeriod] = useState<PeriodValue>(ALL_TIME_PERIOD)
+
+  const periodRange = useMemo(() => resolvePeriod(period, new Date()), [period])
 
   const tabs: TabItem[] = useMemo(
     () => [
@@ -52,9 +62,10 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
         batch =>
           matchesSearch(batch, search) &&
           (!status || batch.status === status) &&
-          matchesShortage(batch, shortage),
+          matchesShortage(batch, shortage) &&
+          isWithinDateRange(batch.createdAt, periodRange),
       ),
-    [batches, search, status, shortage],
+    [batches, search, status, shortage, periodRange],
   )
 
   return (
@@ -70,6 +81,8 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
         searchValue={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search batch #"
+        period={period}
+        onPeriodChange={setPeriod}
       />
       <BatchTableGrid brand={brand} batches={filtered} />
     </div>

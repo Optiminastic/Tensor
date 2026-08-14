@@ -32,12 +32,18 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
     notFound()
   }
 
+  // h-dvh + overflow-hidden makes this page exactly one viewport tall and
+  // stops the document scrolling: the queue board below is the only thing that
+  // scrolls, and it does so per column. Every wrapper between here and
+  // BatchKanbanColumn has to carry min-h-0 with its flex-1, or a flex child
+  // refuses to shrink under its content and the overflow escapes back out to
+  // the page.
   return (
-    <main className="flex w-full flex-col gap-3 px-6 py-6 md:px-8">
+    <main className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-6 py-6 md:px-8">
       <Link
         href={`/dashboard/${brand}/production/machines`}
         aria-label="Back to Machine Management"
-        className="text-muted-foreground hover:text-foreground hover:bg-surface-muted -ml-1.5 inline-flex w-fit items-center rounded-md p-1.5"
+        className="text-muted-foreground hover:text-foreground hover:bg-surface-muted -ml-1.5 inline-flex w-fit shrink-0 items-center rounded-md p-1.5"
       >
         <ArrowLeft className="size-4" aria-hidden />
       </Link>

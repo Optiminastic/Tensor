@@ -2,6 +2,12 @@
 
 import { useMemo, useState, type JSX } from 'react'
 
+import {
+  ALL_TIME_PERIOD,
+  isWithinDateRange,
+  type PeriodValue,
+  resolvePeriod,
+} from '@/components/production/date-range'
 import { FilterBar } from '@/components/production/filter-bar'
 import { OrderRow } from '@/components/production/order-row'
 import { ORDER_STATUS_CONFIG } from '@/components/production/status-config'
@@ -36,6 +42,12 @@ function matchesSearch(order: OrderRecord, search: string): boolean {
 export function OrdersTable({ brand, orders }: OrdersTableProps): JSX.Element {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  // All time, not the week-long DEFAULT_PERIOD: this table has always shown
+  // every order, and opening it pre-filtered to a week would read as missing
+  // data rather than as a filter the user applied.
+  const [period, setPeriod] = useState<PeriodValue>(ALL_TIME_PERIOD)
+
+  const periodRange = useMemo(() => resolvePeriod(period, new Date()), [period])
 
   const tabs: TabItem[] = useMemo(
     () => [
@@ -51,8 +63,13 @@ export function OrdersTable({ brand, orders }: OrdersTableProps): JSX.Element {
 
   const filtered = useMemo(
     () =>
-      orders.filter(order => matchesSearch(order, search) && (!status || order.status === status)),
-    [orders, search, status],
+      orders.filter(
+        order =>
+          matchesSearch(order, search) &&
+          (!status || order.status === status) &&
+          isWithinDateRange(order.submittedAt, periodRange),
+      ),
+    [orders, search, status, periodRange],
   )
 
   return (
@@ -65,6 +82,8 @@ export function OrdersTable({ brand, orders }: OrdersTableProps): JSX.Element {
         searchValue={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search order #, customer, email"
+        period={period}
+        onPeriodChange={setPeriod}
       />
       <Card>
         <Table>

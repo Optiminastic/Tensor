@@ -2,12 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { toBatchRecord } from '@/components/production/adapters'
+import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
+import type { Machine } from '@/lib/validators/machines'
 import {
   type FailJobResult,
   type ProductionJob,
   FailJobInputSchema,
 } from '@/lib/validators/production'
+import { getBatch } from '@/services/batches.service'
+import { listMachines } from '@/services/machines.service'
 import {
   failProductionJob as failProductionJobCall,
   listProductionJobsForBatch,
@@ -29,6 +34,39 @@ export async function listBatchJobs(batchId: string): Promise<ActionResult<Produ
   } catch (err) {
     const message =
       err instanceof ProductionServiceError ? err.message : "Could not load the batch's jobs."
+    return { ok: false, error: message }
+  }
+}
+
+// getBatchDetail backs the queue board's batch detail sheet. It fetches the
+// SINGLE-batch endpoint rather than reusing the board's own row: only that
+// response carries the merged plate's bounding box (see BatchRecord's
+// plateBbox* fields and toBatchRecord), which the plate preview needs to say
+// how much of the bed the plate occupies. Machines come along for the header's
+// assigned-machine name.
+//
+// Loaded on open, not with the board - a machine's Completed column alone can
+// hold dozens of batches, and none of this is worth fetching until someone
+// actually opens one.
+export async function getBatchDetail(batchId: string): Promise<
+  ActionResult<{
+    batch: BatchRecord
+    jobs: ProductionJob[]
+    machines: Machine[]
+  }>
+> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const [batch, jobs, machines] = await Promise.all([
+      getBatch(token, batchId),
+      listProductionJobsForBatch(token, batchId),
+      listMachines(token),
+    ])
+    return { ok: true, data: { batch: toBatchRecord(batch), jobs, machines } }
+  } catch (err) {
+    const message =
+      err instanceof ProductionServiceError ? err.message : 'Could not load the batch.'
     return { ok: false, error: message }
   }
 }

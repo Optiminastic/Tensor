@@ -6,6 +6,7 @@ import { useState, type JSX } from 'react'
 import { skipJobAssembly } from '@/app/dashboard/[brand]/production/actions'
 import { AssemblyCheckDialog } from '@/components/production/assembly-check-dialog'
 import { batchLabel, type BatchNumbers } from '@/components/production/batch-label'
+import { ReprintDialog } from '@/components/production/reprint-dialog'
 import { StationIssueDialog } from '@/components/production/station-issue-dialog'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -107,6 +108,20 @@ function AssemblyQueueRow({ brand, job, batchNumber }: AssemblyQueueRowProps): J
               brand={brand}
               stage="assembly"
               job={{ id: job.id, jobNumber: job.job_number, quantity: job.quantity }}
+            />
+            {/* Assembly is where a bad part is usually first handled, so the
+                reprint belongs here rather than only on the machine board.
+                Same dialog and same /fail path as everywhere else: the reason
+                is always recorded and the clone re-enters normal batching at
+                urgent priority - it never bypasses the planner. */}
+            <ReprintDialog
+              brand={brand}
+              job={{
+                id: job.id,
+                jobNumber: job.job_number,
+                productName: job.product_name ?? null,
+                printFileID: job.print_file_id ?? null,
+              }}
             />
             <AssemblyCheckDialog brand={brand} jobId={job.id} jobNumber={job.job_number} />
           </div>

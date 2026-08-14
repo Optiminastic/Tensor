@@ -1,13 +1,15 @@
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
-import { createSampleBatchRecords, toBatchRecord } from '@/components/production/adapters'
+import { toBatchRecord } from '@/components/production/adapters'
 import { AutoCreateBatchesButton } from '@/components/production/auto-create-batches-button'
+import { AutoRefresh } from '@/components/production/auto-refresh'
 import { BatchTable } from '@/components/production/batch-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { BatchRecord } from '@/components/production/types'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
+import { env } from '@/lib/env'
 import { BatchServiceError, listBatches } from '@/services/batches.service'
 
 export const metadata: Metadata = { title: 'Batch Management' }
@@ -37,6 +39,13 @@ export default async function BatchManagementPage({
 
   return (
     <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+      {/* Nothing on this page polls: it is a server component fetched once.
+          Only active when NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS is set, for
+          watching an automated run. */}
+      <AutoRefresh
+        intervalSeconds={env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS}
+        enabled={env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS !== undefined}
+      />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <ProductionPageHeader
           title="Batch Management"
@@ -48,9 +57,15 @@ export default async function BatchManagementPage({
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
           {error}
         </p>
-      ) : batches.length === 0 ? (
-        <BatchTable brand={brand} batches={createSampleBatchRecords()} />
       ) : (
+        // Always the real list, including when it is empty - BatchTableGrid
+        // renders its own empty state. This used to substitute
+        // createSampleBatchRecords() whenever the backend returned nothing,
+        // which meant an empty shop floor displayed five invented batches
+        // (B-240801-001 and friends) that looked exactly like real rows, with
+        // job counts, print times and utilisation figures attached. There is
+        // no way for someone reading the page to tell that apart from real
+        // production data.
         <BatchTable brand={brand} batches={batches} />
       )}
     </main>

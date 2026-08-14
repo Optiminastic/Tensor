@@ -1,6 +1,13 @@
 'use client'
 
-import { DndContext, type DragEndEvent } from '@dnd-kit/core'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
 import { Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type JSX } from 'react'
@@ -23,6 +30,13 @@ import { Tabs, type TabItem } from '@/components/ui/tabs'
 interface MachineQueueBoardProps {
   brand: string
   batches: BatchRecord[]
+  /** Which period the board opens on. Defaults to the shared DEFAULT_PERIOD
+   * (the current Mon-Sun week), which is right for the Overview but wrong for
+   * a machine's own queue: that board is the only place Completed batches are
+   * visible, and filtering by createdAt hides a batch the moment its week
+   * rolls over even though it is still the machine's most recent work. Pass
+   * `{ unit: 'all', anchor: '' }` there. */
+  defaultPeriod?: PeriodValue
 }
 
 const COLUMNS: BatchStatus[] = ['pending_approval', 'open', 'in_progress', 'completed']
@@ -56,13 +70,31 @@ function FilterField({
  * target was Printing/Completed. Optimistic locally, reverted if the backend
  * rejects it. Draft itself never accepts a drop - the backend has no way to
  * set a batch back to pending_approval. */
-export function MachineQueueBoard({ brand, batches }: MachineQueueBoardProps): JSX.Element {
+export function MachineQueueBoard({
+  brand,
+  batches,
+  defaultPeriod = DEFAULT_PERIOD,
+}: MachineQueueBoardProps): JSX.Element {
   const router = useRouter()
   const [localBatches, setLocalBatches] = useState(batches)
   const [search, setSearch] = useState('')
-  const [period, setPeriod] = useState<PeriodValue>(DEFAULT_PERIOD)
+  const [period, setPeriod] = useState<PeriodValue>(defaultPeriod)
   const [view, setView] = useState<'board' | 'list'>('board')
   const [error, setError] = useState<string | null>(null)
+
+  // A card is both draggable and clickable, and without an activation
+  // constraint those two fight: dnd-kit's PointerSensor starts a drag on
+  // pointerdown and preventDefault()s it, so the browser never emits the
+  // click and opening a batch silently does nothing.
+  //
+  // 5px of movement separates them - a press that never moves stays a click,
+  // anything further is a drag. KeyboardSensor is listed explicitly because
+  // passing `sensors` at all replaces the defaults, and dropping it would
+  // quietly remove keyboard dragging.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  )
 
   useEffect(() => setLocalBatches(batches), [batches])
 
@@ -132,8 +164,8 @@ export function MachineQueueBoard({ brand, batches }: MachineQueueBoardProps): J
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-nowrap items-end gap-3 overflow-x-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="flex shrink-0 flex-nowrap items-end gap-3 overflow-x-auto">
         <FilterField label="Search">
           <div className="relative w-56">
             <Search
@@ -166,20 +198,24 @@ export function MachineQueueBoard({ brand, batches }: MachineQueueBoardProps): J
       </div>
 
       {error ? (
-        <p role="alert" className="text-danger text-sm">
+        <p role="alert" className="text-danger shrink-0 text-sm">
           {error}
         </p>
       ) : null}
 
       {view === 'list' ? (
-        <BatchGroupedList
-          brand={brand}
-          batches={filtered}
-          onStatusChange={(batchId, status) => void changeStatus(batchId, status)}
-        />
+        // The list is one long column rather than four, so it scrolls as a
+        // whole instead of per status.
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <BatchGroupedList
+            brand={brand}
+            batches={filtered}
+            onStatusChange={(batchId, status) => void changeStatus(batchId, status)}
+          />
+        </div>
       ) : (
-        <DndContext onDragEnd={event => void handleDragEnd(event)}>
-          <div className="flex gap-3">
+        <DndContext sensors={sensors} onDragEnd={event => void handleDragEnd(event)}>
+          <div className="flex min-h-0 flex-1 gap-3">
             {COLUMNS.map(status => (
               <BatchKanbanColumn
                 key={status}

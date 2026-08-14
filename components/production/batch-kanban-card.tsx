@@ -3,9 +3,9 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { AlertTriangle, ChevronDown } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { useState, type JSX } from 'react'
 
+import { BatchDetailSheet } from '@/components/production/batch-detail-sheet'
 import { CompletedBatchJobs } from '@/components/production/completed-batch-jobs'
 import type { BatchRecord } from '@/components/production/types'
 import { countdown } from '@/lib/format'
@@ -26,8 +26,8 @@ interface BatchKanbanCardProps {
  * Only the header is draggable: an expanded job list has its own links and
  * buttons, which a drag handle would swallow. */
 export function BatchKanbanCard({ brand, batch, expandable }: BatchKanbanCardProps): JSX.Element {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: batch.id,
   })
@@ -46,7 +46,11 @@ export function BatchKanbanCard({ brand, batch, expandable }: BatchKanbanCardPro
         ref={setNodeRef}
         {...listeners}
         {...attributes}
-        onClick={() => router.push(`/dashboard/${brand}/production/batches/${batch.id}`)}
+        // Opens the detail panel rather than navigating away: the board is
+        // where an operator is working, and a full page load to read one
+        // batch's plate loses their place on it. The panel still links
+        // through to the page for anything it does not carry.
+        onClick={() => setDetailOpen(true)}
         className="flex cursor-grab flex-col gap-2 p-3 active:cursor-grabbing"
       >
         <div className="flex items-center justify-between gap-2">
@@ -88,6 +92,13 @@ export function BatchKanbanCard({ brand, batch, expandable }: BatchKanbanCardPro
         <p className="text-subtle-foreground text-xs">Created {batch.createdAt}</p>
       </div>
       {expandable && open ? <CompletedBatchJobs brand={brand} batchId={batch.id} /> : null}
+      <BatchDetailSheet
+        brand={brand}
+        batchId={batch.id}
+        batchNumber={batch.batchNumber}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+      />
     </div>
   )
 }
