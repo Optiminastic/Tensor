@@ -9,6 +9,7 @@ import {
 } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { BatchRecord, ProductionJobDetail } from '@/components/production/types'
+import { dateTime } from '@/lib/format'
 import type { Role } from '@/lib/validators/authz'
 
 interface JobDetailHeaderProps {
@@ -31,7 +32,7 @@ export function JobDetailHeader({ brand, job, batches, roles }: JobDetailHeaderP
           <span className="text-foreground text-base font-semibold">{job.jobNumber}</span>
           <TonePill label={status.label} tone={status.tone} />
         </div>
-        <p className="text-muted-foreground text-xs">Created {job.createdAt}</p>
+        <p className="text-muted-foreground text-xs">Created {dateTime(job.createdAt)}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <TonePill label={`QC: ${qc.label}`} tone={qc.tone} />

@@ -9,7 +9,7 @@ import type { BatchRecord, BatchStatus } from '@/components/production/types'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
-import { countdown } from '@/lib/format'
+import { countdown, dateTime } from '@/lib/format'
 
 interface BatchGroupedListProps {
   brand: string
@@ -50,7 +50,7 @@ function BatchListRow({ brand, batch, onStatusChange }: BatchListRowProps): JSX.
         {batch.bedUtilizationPercent !== null ? `${batch.bedUtilizationPercent.toFixed(0)}%` : '—'}
       </span>
       <span className="text-subtle-foreground w-24 shrink-0 text-right text-xs">
-        {batch.createdAt}
+        {dateTime(batch.createdAt)}
       </span>
       <Select
         value={batch.status}

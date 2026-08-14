@@ -8,7 +8,7 @@ import { useState, type JSX } from 'react'
 import { BatchDetailSheet } from '@/components/production/batch-detail-sheet'
 import { CompletedBatchJobs } from '@/components/production/completed-batch-jobs'
 import type { BatchRecord } from '@/components/production/types'
-import { countdown } from '@/lib/format'
+import { countdown, dateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 interface BatchKanbanCardProps {
@@ -89,7 +89,7 @@ export function BatchKanbanCard({ brand, batch, expandable }: BatchKanbanCardPro
             : ''}
           {batch.totalFilamentGrams !== null ? ` · ${Math.round(batch.totalFilamentGrams)} g` : ''}
         </p>
-        <p className="text-subtle-foreground text-xs">Created {batch.createdAt}</p>
+        <p className="text-subtle-foreground text-xs">Created {dateTime(batch.createdAt)}</p>
       </div>
       {expandable && open ? <CompletedBatchJobs brand={brand} batchId={batch.id} /> : null}
       <BatchDetailSheet

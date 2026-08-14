@@ -25,13 +25,39 @@ export function countdown(seconds: number): string {
   return '<1m'
 }
 
-/** Formats an ISO timestamp as "6 Aug 2026, 1:29 PM" - date and time to the minute, never seconds or a raw offset. */
-export function dateTime(value: string): string {
-  return new Date(value).toLocaleString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+/** The stand-in for a timestamp that is absent or unparseable, matching the
+ * placeholder the production adapters already use for missing fields. */
+const NO_DATE = '-'
+
+const pad2 = (n: number): string => String(n).padStart(2, '0')
+
+/**
+ * Formats an ISO timestamp as "16-08-2026 16:09" - DD-MM-YYYY and HH:MM, never
+ * seconds and never a raw offset.
+ *
+ * Built from the date parts rather than toLocaleString for two reasons. The
+ * format is then fixed rather than at the mercy of whatever locale the runtime
+ * happens to report - and, more importantly, `toLocaleString(undefined, ...)`
+ * resolves its locale separately on the server and in the browser, so the same
+ * timestamp could render two different ways either side of hydration. React
+ * reports that as "server rendered text didn't match the client" and throws the
+ * subtree away.
+ *
+ * Null, empty and unparseable values return the placeholder instead of "Invalid
+ * Date", which is what a missing due date used to render as.
+ */
+export function dateTime(value: string | null | undefined): string {
+  if (!value) return NO_DATE
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return NO_DATE
+  return `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+/** Formats an ISO timestamp as "16-08-2026" - the same rules as dateTime, for
+ * fields where the time of day carries no meaning. */
+export function dateOnly(value: string | null | undefined): string {
+  if (!value) return NO_DATE
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return NO_DATE
+  return `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`
 }
