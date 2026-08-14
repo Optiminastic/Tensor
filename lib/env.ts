@@ -51,6 +51,13 @@ export const env = createEnv({
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
+
+    // Seconds between automatic refreshes of the production pages. Unset (the
+    // default) means no auto-refresh at all: every production page is a server
+    // component fetched once, which is correct for a human-paced shop floor.
+    // Set it while watching an automated run (cmd/simulator in Tensor-Core),
+    // where state changes with nobody clicking anything. 10 is comfortable.
+    NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS: z.coerce.number().int().min(2).optional(),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
@@ -73,6 +80,7 @@ export const env = createEnv({
     GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
     GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS: process.env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

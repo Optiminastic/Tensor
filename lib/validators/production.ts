@@ -14,6 +14,7 @@ export const ProductionJobSchema = z.object({
   quantity: z.number(),
   status: z.string(),
   assembly_status: z.string(),
+  finishing_status: z.string(),
   qc_status: z.string(),
   packaging_status: z.string(),
   personalisation_status: z.string(),
@@ -61,6 +62,7 @@ export type ProductionJob = z.infer<typeof ProductionJobSchema>
 export const JobPatchInputSchema = z.object({
   status: z.enum(['queued', 'in_production', 'completed']).optional(),
   assembly_status: z.enum(['pending', 'completed', 'not_required']).optional(),
+  finishing_status: z.enum(['pending', 'completed', 'not_required']).optional(),
   qc_status: z.enum(['pending', 'passed', 'failed']).optional(),
   packaging_status: z.enum(['pending', 'packaged']).optional(),
   priority: z.number().int().optional(),
@@ -87,6 +89,93 @@ export type PersonalisationValidateInput = z.infer<typeof PersonalisationValidat
 
 // assemblyRequest (internal/httpapi/production_qc.go#submitAssembly). POST
 // /production-jobs/:id/assembly.
+// failJobRequest (internal/httpapi/production_jobs.go#failProductionJob). The
+// reason taxonomy is fixed by production.failureReasons - the backend 422s
+// anything outside it, so the list is mirrored here to build the picker.
+export const FAILURE_REASONS = [
+  'bed_adhesion',
+  'warping',
+  'layer_shift',
+  'filament_issue',
+  'colour_issue',
+  'support_failure',
+  'power_issue',
+  'machine_error',
+  'wrong_personalisation',
+  'design_issue',
+  'operator_error',
+  'other',
+] as const
+
+export const FailJobInputSchema = z.object({
+  reason: z.enum(FAILURE_REASONS),
+  notes: z.string().max(2000).nullish(),
+  filament_wasted_grams: z.number().min(0).nullish(),
+  time_wasted_minutes: z.number().int().min(0).nullish(),
+})
+export type FailJobInput = z.infer<typeof FailJobInputSchema>
+
+// failJobResponse: the job just failed, plus the reprint the backend cloned
+// from it at urgent priority.
+export const FailJobResultSchema = z.object({
+  failed_job: ProductionJobSchema,
+  reprint_job: ProductionJobSchema,
+})
+export type FailJobResult = z.infer<typeof FailJobResultSchema>
+
+// stationIssueRequest (internal/httpapi/production_issues.go). An issue is an
+// event on the job's history, NOT a status: the job stays in its station queue,
+// visible, and can still be completed afterwards. Deliberately a separate
+// taxonomy from FAILURE_REASONS (why a print failed on the bed) and from
+// issue_reason (pre-print catalogue validation).
+export const STATION_ISSUE_REASONS = [
+  'missing_part',
+  'damaged_part',
+  'poor_surface_finish',
+  'wrong_colour',
+  'wrong_personalisation',
+  'dimension_out_of_spec',
+  'cracked',
+  'warped',
+  'hardware_missing',
+  'addon_faulty',
+  'other',
+] as const
+export type StationIssueReason = (typeof STATION_ISSUE_REASONS)[number]
+
+export const ISSUE_STAGES = ['assembly', 'finishing', 'qc'] as const
+export type IssueStage = (typeof ISSUE_STAGES)[number]
+
+export const StationIssueInputSchema = z.object({
+  stage: z.enum(ISSUE_STAGES),
+  reason: z.enum(STATION_ISSUE_REASONS),
+  comment: z.string().max(1000).nullable(),
+  // QC only: queue a reprint in the same transaction. quantity defaults to 1 -
+  // one damaged part out of five is a reprint of one.
+  request_reprint: z.boolean(),
+  quantity: z.number().int().min(1).nullable(),
+})
+export type StationIssueInput = z.infer<typeof StationIssueInputSchema>
+
+export const StationIssueResultSchema = z.object({
+  job: ProductionJobSchema,
+  reprint_job: ProductionJobSchema.nullish(),
+})
+export type StationIssueResult = z.infer<typeof StationIssueResultSchema>
+
+// finishingRequest (internal/httpapi/production_qc.go#submitFinishing). The
+// finishing station between assembly and QC - the backend rejects it until
+// assembly is completed or skipped, and refuses QC until this one is resolved.
+export const FinishingInputSchema = z.object({
+  supports_removed: z.boolean(),
+  sanded: z.boolean(),
+  seams_cleaned: z.boolean(),
+  surface_finish_ok: z.boolean(),
+  photo_file_id: z.string().nullish(),
+  notes: z.string().max(2000).nullish(),
+})
+export type FinishingInput = z.infer<typeof FinishingInputSchema>
+
 export const AssemblyInputSchema = z.object({
   parts_combined: z.boolean(),
   hardware_attached: z.boolean(),
@@ -153,6 +242,11 @@ export const OrderSchema = z.object({
   status: z.string(),
   source: z.string(),
   imported_at: z.string(),
+  // Set only when the backend's job-creation worker exhausted its retries on
+  // this order: it has no production jobs and never will without a manual
+  // retry. Null on a healthy order.
+  job_creation_error: z.string().nullish(),
+  job_creation_failed_at: z.string().nullish(),
 })
 export type Order = z.infer<typeof OrderSchema>
 

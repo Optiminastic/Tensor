@@ -18,8 +18,10 @@ export function FleetMachineDetailView({
   queuedBatches,
 }: FleetMachineDetailViewProps): JSX.Element {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-4 md:grid-cols-[260px_1fr]">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      {/* The photo/summary header keeps its natural height; the queue section
+          below takes whatever is left of the viewport. */}
+      <div className="grid shrink-0 gap-4 md:grid-cols-[260px_1fr]">
         <MachinePhotoCard
           src={machine.image_url ?? '/production/h2c-printer.png'}
           alt={`${machine.name} printer`}

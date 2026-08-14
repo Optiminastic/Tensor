@@ -3,11 +3,13 @@
 import { useRouter } from 'next/navigation'
 import { useState, type JSX } from 'react'
 
-import { skipJobAssembly } from '@/app/dashboard/[brand]/production/actions'
-import { AssemblyCheckDialog } from '@/components/production/assembly-check-dialog'
+import { skipJobFinishing } from '@/app/dashboard/[brand]/production/finishing-actions'
 import { batchLabel, type BatchNumbers } from '@/components/production/batch-label'
-import { ReprintDialog } from '@/components/production/reprint-dialog'
+import { FinishingCheckDialog } from '@/components/production/finishing-check-dialog'
 import { StationIssueDialog } from '@/components/production/station-issue-dialog'
+import { ASSEMBLY_STATUS_CONFIG } from '@/components/production/status-config'
+import { TonePill } from '@/components/production/tone-pill'
+import type { AssemblyStatus } from '@/components/production/types'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -21,22 +23,23 @@ import {
 import { dateTime } from '@/lib/format'
 import type { ProductionJob } from '@/lib/validators/production'
 
-const COLUMNS = ['Job', 'Batch', 'Description', 'Qty', 'Customer', 'Created']
+const COLUMNS = ['Job', 'Batch', 'Description', 'Qty', 'Assembly', 'Customer', 'Created']
 
-interface AssemblyQueueTableProps {
+interface FinishingQueueTableProps {
   brand: string
   jobs: ProductionJob[]
   batchNumbers: BatchNumbers
 }
 
-/** Jobs that came off the printer and are waiting on the assembly checklist -
- * assembly_status = pending, and either the job itself or the batch it was
- * printed in has finished (see the Packaging page's Assembly tab). */
-export function AssemblyQueueTable({
+/** Jobs whose assembly is resolved and that are waiting on finishing -
+ * finishing_status = pending (see the Packaging page's Finishing tab). The
+ * Assembly column is shown because finishing only unlocks once assembly is
+ * completed or marked not required. */
+export function FinishingQueueTable({
   brand,
   jobs,
   batchNumbers,
-}: AssemblyQueueTableProps): JSX.Element {
+}: FinishingQueueTableProps): JSX.Element {
   return (
     <Card>
       <Table>
@@ -50,7 +53,7 @@ export function AssemblyQueueTable({
         </TableHead>
         <TableBody>
           {jobs.map(job => (
-            <AssemblyQueueRow
+            <FinishingQueueRow
               key={job.id}
               brand={brand}
               job={job}
@@ -63,13 +66,13 @@ export function AssemblyQueueTable({
   )
 }
 
-interface AssemblyQueueRowProps {
+interface FinishingQueueRowProps {
   brand: string
   job: ProductionJob
   batchNumber: string
 }
 
-function AssemblyQueueRow({ brand, job, batchNumber }: AssemblyQueueRowProps): JSX.Element {
+function FinishingQueueRow({ brand, job, batchNumber }: FinishingQueueRowProps): JSX.Element {
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -77,10 +80,10 @@ function AssemblyQueueRow({ brand, job, batchNumber }: AssemblyQueueRowProps): J
   async function skip(): Promise<void> {
     setPending(true)
     setError(null)
-    const res = await skipJobAssembly(brand, job.id)
+    const res = await skipJobFinishing(brand, job.id)
     setPending(false)
     if (!res.ok) {
-      setError(res.error ?? 'Could not skip assembly.')
+      setError(res.error ?? 'Could not skip finishing.')
       return
     }
     router.refresh()
@@ -94,6 +97,9 @@ function AssemblyQueueRow({ brand, job, batchNumber }: AssemblyQueueRowProps): J
       </TableCell>
       <TableCell>{job.description}</TableCell>
       <TableCell numeric>{job.quantity}</TableCell>
+      <TableCell>
+        <TonePill {...ASSEMBLY_STATUS_CONFIG[job.assembly_status as AssemblyStatus]} />
+      </TableCell>
       <TableCell className="text-muted-foreground">{job.customer_name ?? '—'}</TableCell>
       <TableCell className="text-muted-foreground whitespace-nowrap">
         {dateTime(job.created_at)}
@@ -106,24 +112,10 @@ function AssemblyQueueRow({ brand, job, batchNumber }: AssemblyQueueRowProps): J
             </Button>
             <StationIssueDialog
               brand={brand}
-              stage="assembly"
+              stage="finishing"
               job={{ id: job.id, jobNumber: job.job_number, quantity: job.quantity }}
             />
-            {/* Assembly is where a bad part is usually first handled, so the
-                reprint belongs here rather than only on the machine board.
-                Same dialog and same /fail path as everywhere else: the reason
-                is always recorded and the clone re-enters normal batching at
-                urgent priority - it never bypasses the planner. */}
-            <ReprintDialog
-              brand={brand}
-              job={{
-                id: job.id,
-                jobNumber: job.job_number,
-                productName: job.product_name ?? null,
-                printFileID: job.print_file_id ?? null,
-              }}
-            />
-            <AssemblyCheckDialog brand={brand} jobId={job.id} jobNumber={job.job_number} />
+            <FinishingCheckDialog brand={brand} jobId={job.id} jobNumber={job.job_number} />
           </div>
           {error ? (
             <p role="alert" className="text-danger text-xs">

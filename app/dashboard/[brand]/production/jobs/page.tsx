@@ -2,11 +2,13 @@ import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
 import { toQueueItem } from '@/components/production/adapters'
+import { AutoRefresh } from '@/components/production/auto-refresh'
 import { JobQueueTable } from '@/components/production/job-queue-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { ProductionJobQueueItem } from '@/components/production/types'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
+import { env } from '@/lib/env'
 import { ProductionServiceError, listProductionJobs } from '@/services/production.service'
 
 export const metadata: Metadata = { title: 'Production Jobs' }
@@ -37,6 +39,13 @@ export default async function ProductionJobsPage({
 
   return (
     <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+      {/* Nothing on this page polls: it is a server component fetched once.
+          Only active when NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS is set, for
+          watching an automated run. */}
+      <AutoRefresh
+        intervalSeconds={env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS}
+        enabled={env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS !== undefined}
+      />
       <ProductionPageHeader
         title="Production Jobs"
         description="Every job in the queue, from slicing through packaging."

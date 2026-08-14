@@ -4,6 +4,12 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState, type JSX } from 'react'
 
 import { addFilament } from '@/app/dashboard/[brand]/production/actions'
+import {
+  ALL_TIME_PERIOD,
+  isWithinDateRange,
+  type PeriodValue,
+  resolvePeriod,
+} from '@/components/production/date-range'
 import { FilterBar } from '@/components/production/filter-bar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -50,6 +56,15 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
   const [search, setSearch] = useState('')
   const [stock, setStock] = useState('')
   const [material, setMaterial] = useState('')
+  // All time by default - see the same note on OrdersTable. Filters on
+  // updated_at, not created_at: a spool row is created once and then moves
+  // with every reservation and restock, so "what changed in this window" is
+  // the question worth asking of stock. created_at would only ever answer
+  // "when was this line first added", which for a stable catalogue is nearly
+  // always the same distant day for every row.
+  const [period, setPeriod] = useState<PeriodValue>(ALL_TIME_PERIOD)
+
+  const periodRange = useMemo(() => resolvePeriod(period, new Date()), [period])
 
   const materialOptions = useMemo(
     () =>
@@ -74,9 +89,10 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
         filament =>
           matchesSearch(filament, search) &&
           (!stock || (stock === 'low' ? isLow(filament) : !isLow(filament))) &&
-          (!material || filament.material === material),
+          (!material || filament.material === material) &&
+          isWithinDateRange(filament.updated_at, periodRange),
       ),
-    [filaments, search, stock, material],
+    [filaments, search, stock, material, periodRange],
   )
 
   return (
@@ -115,6 +131,8 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
             searchValue={search}
             onSearchChange={setSearch}
             searchPlaceholder="Search material, colour"
+            period={period}
+            onPeriodChange={setPeriod}
           />
           <Card>
             <Table>
