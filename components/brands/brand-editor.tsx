@@ -251,38 +251,51 @@ export function BrandEditor({ brand }: BrandEditorProps): JSX.Element {
             </Field>
           </div>
 
-          <Field label="Price ladder (₹, ascending)" error={rungError}>
-            <div className="flex flex-col gap-2">
-              {fields.map((field, index) => (
-                <div key={field.id} className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    data-numeric="true"
-                    aria-label={`Rung ${index + 1}`}
-                    {...register(`rungs.${index}.value`, { valueAsNumber: true })}
-                  />
+          {/* The approved selling-price ladder: the engine snaps each design's raw
+              price up to the nearest rung. Collapsed by default (often 10+ rungs)
+              so it does not dominate the form; the summary keeps the rung count and
+              any validation error visible while closed. */}
+          <details className="border-border rounded-md border">
+            <summary className="text-foreground cursor-pointer px-3 py-2 text-sm font-medium select-none">
+              Pricing ladder
+              <span className="text-muted-foreground font-normal"> · {fields.length} rungs</span>
+              {rungError ? <span className="text-danger font-normal"> — {rungError}</span> : null}
+            </summary>
+            <div className="border-border border-t px-3 py-3">
+              <Field label="Approved prices (₹, ascending)" error={rungError}>
+                <div className="flex flex-col gap-2">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        data-numeric="true"
+                        aria-label={`Rung ${index + 1}`}
+                        {...register(`rungs.${index}.value`, { valueAsNumber: true })}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => remove(index)}
+                        disabled={fields.length === 1}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
-                    onClick={() => remove(index)}
-                    disabled={fields.length === 1}
+                    className="self-start"
+                    onClick={addRung}
                   >
-                    Remove
+                    Add rung
                   </Button>
                 </div>
-              ))}
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="self-start"
-                onClick={addRung}
-              >
-                Add rung
-              </Button>
+              </Field>
             </div>
-          </Field>
+          </details>
 
           <Button type="submit" disabled={isSubmitting} className="self-start">
             {isSubmitting ? 'Saving…' : 'Save brand'}

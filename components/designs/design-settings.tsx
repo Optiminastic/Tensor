@@ -9,15 +9,19 @@ import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import type { DesignDetail } from '@/lib/validators/designs'
 
+import { ArchiveDesignButton } from './archive-design-button'
 import { DeleteDesignButton } from './delete-design-button'
 import { DesignEditCards } from './design-settings-edit'
 import { DesignSkuDialog } from './design-sku-dialog'
+import { ProductDescriptionCard } from './product-description-card'
 
 export interface DesignSettingsCaps {
   // design:update - covers rename, notes, attributes and the cover image.
   canEdit: boolean
   canManageSku: boolean
   canDelete: boolean
+  // design:content - write the product marketing description (Marketing Head).
+  canWriteContent: boolean
 }
 
 interface DesignSettingsProps {
@@ -35,14 +39,18 @@ export function DesignSettings({
   caps,
   onChanged,
 }: DesignSettingsProps): JSX.Element {
-  const nothing = !caps.canEdit && !caps.canManageSku && !caps.canDelete
+  const nothing = !caps.canEdit && !caps.canManageSku && !caps.canDelete && !caps.canWriteContent
   return (
     <div className="flex flex-col gap-6">
+      {caps.canWriteContent ? (
+        <ProductDescriptionCard brand={brand} design={design} onChanged={onChanged} />
+      ) : null}
       {caps.canEdit ? <RenameCard brand={brand} design={design} onChanged={onChanged} /> : null}
       {caps.canEdit ? (
         <DesignEditCards brand={brand} design={design} onChanged={onChanged} />
       ) : null}
       {caps.canManageSku ? <SkuCard brand={brand} design={design} onChanged={onChanged} /> : null}
+      {caps.canDelete ? <ArchiveCard brand={brand} design={design} /> : null}
       {caps.canDelete ? <DangerCard brand={brand} design={design} /> : null}
       {nothing ? (
         <Card>
@@ -141,6 +149,30 @@ function SkuCard({ brand, design, onChanged }: CardProps): JSX.Element {
   )
 }
 
+function ArchiveCard({ brand, design }: { brand: string; design: DesignDetail }): JSX.Element {
+  const archived = design.status === 'archived'
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{archived ? 'Restore design' : 'Archive design'}</CardTitle>
+        <CardDescription>
+          {archived
+            ? 'This design is archived and hidden from the active lists. Restore it to bring it back into the pipeline.'
+            : 'Hide this design from the active lists without deleting it. It moves to Archived and can be restored any time.'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ArchiveDesignButton
+          brand={brand}
+          designId={design.id}
+          name={design.name}
+          archived={archived}
+        />
+      </CardContent>
+    </Card>
+  )
+}
+
 function DangerCard({ brand, design }: { brand: string; design: DesignDetail }): JSX.Element {
   return (
     <Card className="border-danger/40">
@@ -157,6 +189,7 @@ function DangerCard({ brand, design }: { brand: string; design: DesignDetail }):
           designId={design.id}
           name={design.name}
           variant="inline"
+          redirectTo={`/dashboard/${brand}/designs`}
         />
       </CardContent>
     </Card>

@@ -8,6 +8,7 @@ const ROLE_LABELS: Record<Role, string> = {
   PERFORMANCE_MARKETER: 'Performance Marketer',
   OPERATOR: 'Operator',
   PACKAGING_QC: 'Packaging & QC',
+  MARKETING_HEAD: 'Marketing Head',
 }
 
 interface InviteEmailInput {

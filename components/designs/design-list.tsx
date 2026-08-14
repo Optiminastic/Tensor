@@ -7,19 +7,18 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import type { Design } from '@/lib/validators/designs'
 
-import { DeleteDesignButton } from './delete-design-button'
 import { DesignStatusBadge } from './design-status-badge'
 
 interface DesignListProps {
   designs: Design[]
-  canDelete: boolean
   // In the global "all brands" view, label each row with the brand it belongs to.
   showBrand: boolean
 }
 
 /** The designs as a table/list, newest first, each linking to its pre-check
- * detail under its own brand. A small cover thumbnail sits beside each row. */
-export function DesignList({ designs, canDelete, showBrand }: DesignListProps): JSX.Element {
+ * detail under its own brand. A small cover thumbnail sits beside each row.
+ * Delete and archive live on each design's Settings tab, not on the rows. */
+export function DesignList({ designs, showBrand }: DesignListProps): JSX.Element {
   return (
     <Card>
       <CardContent className="p-0">
@@ -67,16 +66,6 @@ export function DesignList({ designs, canDelete, showBrand }: DesignListProps): 
                 </div>
                 <DesignStatusBadge status={design.status} className="shrink-0" />
               </Link>
-              {canDelete ? (
-                <div className="pr-3">
-                  <DeleteDesignButton
-                    brand={design.brand_slug}
-                    designId={design.id}
-                    name={design.name}
-                    variant="inline"
-                  />
-                </div>
-              ) : null}
             </li>
           ))}
         </ul>

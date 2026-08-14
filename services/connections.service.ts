@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
@@ -118,6 +120,26 @@ export async function syncShopifyOrders(
     `/brands/${encodeURIComponent(brandSlug)}/connections/shopify/sync`,
     { method: 'POST', headers: bearer(accessToken) },
     data => ShopifySyncResultSchema.parse(data),
+  )
+}
+
+const ShopifyAuthorizeSchema = z.object({ authorize_url: z.string().url() })
+
+/**
+ * Fetches the Shopify OAuth authorize URL for connecting a brand's store (with
+ * publish scopes). The browser cannot call the guarded backend directly, so a
+ * server route calls this with the admin's token, then redirects to the URL.
+ */
+export async function getShopifyAuthorizeUrl(
+  accessToken: string,
+  brandSlug: string,
+  shopDomain: string,
+): Promise<string> {
+  const query = new URLSearchParams({ shop_domain: shopDomain }).toString()
+  return request(
+    `/brands/${encodeURIComponent(brandSlug)}/connections/shopify/authorize?${query}`,
+    { headers: bearer(accessToken) },
+    data => ShopifyAuthorizeSchema.parse(data).authorize_url,
   )
 }
 

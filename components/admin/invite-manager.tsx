@@ -21,6 +21,7 @@ const ROLES = [
   { value: 'PROJECT_LEAD', label: 'Project Lead — approves designs and prices' },
   { value: 'OPERATOR', label: 'Operator — runs production, cannot see costs' },
   { value: 'PERFORMANCE_MARKETER', label: 'Performance Marketer — reads pricing' },
+  { value: 'MARKETING_HEAD', label: 'Marketing Head — writes product copy' },
   { value: 'ADMIN', label: 'Admin — full access, including people and costs' },
 ] as const
 
