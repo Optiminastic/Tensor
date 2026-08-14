@@ -56,6 +56,9 @@ interface PublishShopifyDialogProps {
   defaultTitle: string
   defaultPrice: number | null
   defaultSku?: string
+  // The Marketing Head's product copy, stored on the design; pre-fills the
+  // description so the Project Lead publishes written copy, not a blank field.
+  defaultDescription?: string
   isApproved: boolean
   onPublished: () => void
 }
@@ -68,6 +71,7 @@ export function PublishShopifyDialog({
   defaultTitle,
   defaultPrice,
   defaultSku,
+  defaultDescription,
   isApproved,
   onPublished,
 }: PublishShopifyDialogProps): JSX.Element {
@@ -87,7 +91,7 @@ export function PublishShopifyDialog({
       product_type: '',
       tags: '',
       vendor: '',
-      description: '',
+      description: defaultDescription ?? '',
       seo_title: '',
       seo_description: '',
     },

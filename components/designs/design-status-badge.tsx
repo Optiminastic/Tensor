@@ -21,6 +21,7 @@ const CONFIG: Record<DesignLifecycle, StatusConfig> = {
   changes_requested: { label: 'Changes requested', className: 'bg-danger-subtle text-danger' },
   approved: { label: 'Approved', className: 'bg-accent-subtle text-accent' },
   published: { label: 'Published', className: 'bg-success-subtle text-success' },
+  archived: { label: 'Archived', className: 'bg-surface-muted text-subtle-foreground' },
 }
 
 interface DesignStatusBadgeProps {

@@ -29,6 +29,7 @@ interface DesignDetailViewProps {
   canManageSku: boolean
   canEdit: boolean
   canDelete: boolean
+  canWriteContent: boolean
 }
 
 // attributesSummary renders the optional upload metadata as one compact line.
@@ -73,6 +74,7 @@ export function DesignDetailView({
   canManageSku,
   canEdit,
   canDelete,
+  canWriteContent,
 }: DesignDetailViewProps): JSX.Element {
   const { data: design, refetch } = useQuery({
     queryKey: ['design', initial.id],
@@ -147,6 +149,7 @@ export function DesignDetailView({
               defaultTitle={design.name}
               defaultPrice={publishPrice}
               defaultSku={design.sku ?? undefined}
+              defaultDescription={design.attributes?.product_description}
               isApproved={design.status === 'approved'}
               onPublished={() => void refetch()}
             />
@@ -218,7 +221,7 @@ export function DesignDetailView({
           brand={brand}
           design={design}
           specs={currentSpecs(design)}
-          settingsCaps={{ canEdit, canManageSku, canDelete }}
+          settingsCaps={{ canEdit, canManageSku, canDelete, canWriteContent }}
           onChanged={() => void refetch()}
         />
       ) : null}

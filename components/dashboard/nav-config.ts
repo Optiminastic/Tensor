@@ -84,7 +84,6 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     permission: 'pricing:read',
     items: [
       { label: 'Cost Reports', href: '/costing' },
-      { label: 'Price Calculator', href: '/costing?view=calculator' },
       { label: 'Pricing Rules', href: '/costing?view=rules' },
     ],
   },
@@ -146,6 +145,13 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     segment: 'integrations',
     permission: 'integration:manage',
     description: 'Shopify, Google Ads and Meta Ads for this brand.',
+  },
+  {
+    label: 'Settings',
+    icon: Settings,
+    segment: 'settings',
+    permission: 'brand:manage',
+    description: "This brand's identity, pricing ladder, CP thresholds and danger zone.",
   },
 ]
 

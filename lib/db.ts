@@ -25,7 +25,14 @@ export const authPool: Pool =
     // connections go, so HMR does not exhaust Postgres connection slots.
     max: 10,
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
+    // Neon (serverless Postgres) auto-suspends when idle; its first connection
+    // then has to wake the compute, which can take longer than a few seconds. A
+    // 10s timeout was firing during that cold start, and Better Auth's failure
+    // path was crashing the dev server. Give the wake room, and keep the socket
+    // alive so an established connection is not dropped mid-idle.
+    connectionTimeoutMillis: 30_000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
   })
 
 // Survive Next.js hot reloads in dev, which would otherwise open a new pool

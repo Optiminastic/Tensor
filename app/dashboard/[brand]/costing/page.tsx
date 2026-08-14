@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
-import { PriceCalculator } from '@/components/costing/price-calculator'
 import { PricingRulesDialog } from '@/components/costing/pricing-rules-dialog'
+import { SalesReport } from '@/components/costing/sales-report'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { CostAssumption } from '@/lib/validators/config'
@@ -16,9 +16,9 @@ interface CostingPageProps {
 }
 
 /**
- * Costing for a brand. The price calculator runs the pure pricing engine; the
- * pricing-rules view (?view=rules) edits the admin cost assumptions that drive
- * Design CP and the selling price.
+ * Costing for a brand. The default view is Cost Reports: the Shopify sales
+ * summary - best-selling products, the revenue trend and headline figures. The
+ * pricing-rules view (?view=rules) edits the admin cost assumptions.
  */
 export default async function CostingPage({
   params,
@@ -31,15 +31,16 @@ export default async function CostingPage({
   if (view === 'rules') return <PricingRulesView />
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-10">
       <div className="flex flex-col gap-2">
-        <h1 className="text-display text-3xl">Costing</h1>
+        <h1 className="text-display text-3xl">Cost reports</h1>
         <p className="text-muted-foreground text-sm">
-          Price a design against this brand: enter the slicer metrics and costs to get the Design
-          CP, the recommended selling price and the pre-check.
+          Shopify sales at a glance: the best-selling products, the revenue trend and the headline
+          figures.
         </p>
       </div>
-      <PriceCalculator brand={brand} />
+
+      <SalesReport />
     </main>
   )
 }

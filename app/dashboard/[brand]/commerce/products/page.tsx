@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
 import { ShopifyProductGrid } from '@/components/commerce/shopify-product-grid'
+import { isAllBrands } from '@/components/dashboard/nav-config'
+import { PickABrandNotice } from '@/components/dashboard/pick-a-brand-notice'
 import { Card, CardContent } from '@/components/ui/card'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { ShopifyProduct } from '@/lib/validators/shopify-products'
@@ -21,6 +23,14 @@ export default async function CommerceProductsPage({
   params,
 }: CommerceProductsPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  if (isAllBrands(brand)) {
+    return (
+      <PickABrandNotice
+        section="Shopify Products"
+        reason="The live product catalog is per brand's connected store."
+      />
+    )
+  }
 
   let products: ShopifyProduct[] = []
   let error: string | null = null

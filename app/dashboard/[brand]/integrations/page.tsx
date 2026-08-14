@@ -4,6 +4,8 @@ import type { JSX } from 'react'
 
 import { BrandConnections } from '@/components/brands/brand-connections'
 import { ShopifyOrderImportStatus } from '@/components/brands/shopify-order-import-status'
+import { isAllBrands } from '@/components/dashboard/nav-config'
+import { PickABrandNotice } from '@/components/dashboard/pick-a-brand-notice'
 import { getTokenSafe } from '@/lib/auth'
 import { requirePermission } from '@/lib/authz'
 import { env } from '@/lib/env'
@@ -21,6 +23,16 @@ const GOOGLE_NOTICES: Record<string, { tone: 'success' | 'danger'; message: stri
   unconfigured: { tone: 'danger', message: 'Google OAuth is not configured on this server.' },
   invalid_request: { tone: 'danger', message: 'That Google connection request was invalid.' },
   error: { tone: 'danger', message: 'Could not connect the Google account. Please try again.' },
+}
+
+// The Shopify OAuth connect redirects back here with `?shopify=<status>`.
+const SHOPIFY_NOTICES: Record<string, { tone: 'success' | 'danger'; message: string }> = {
+  connected: { tone: 'success', message: 'Shopify store connected.' },
+  invalid_request: {
+    tone: 'danger',
+    message: 'Enter your store domain (your-store.myshopify.com).',
+  },
+  error: { tone: 'danger', message: 'Could not connect Shopify. Please try again.' },
 }
 
 // Connecting Shopify during brand creation chains straight into the real
@@ -42,7 +54,7 @@ const SHOPIFY_ORDERS_NOTICES: Record<string, { tone: 'success' | 'danger'; messa
 
 interface IntegrationsPageProps {
   params: Promise<{ brand: string }>
-  searchParams: Promise<{ google?: string; shopify_orders?: string }>
+  searchParams: Promise<{ google?: string; shopify?: string; shopify_orders?: string }>
 }
 
 /**
@@ -56,7 +68,15 @@ export default async function IntegrationsPage({
 }: IntegrationsPageProps): Promise<JSX.Element> {
   const { brand } = await params
   await requirePermission('integration:manage', `/dashboard/${brand}`)
-  const { google, shopify_orders: shopifyOrders } = await searchParams
+  if (isAllBrands(brand)) {
+    return (
+      <PickABrandNotice
+        section="Integrations"
+        reason="Connections are managed per brand's store."
+      />
+    )
+  }
+  const { google, shopify, shopify_orders: shopifyOrders } = await searchParams
   const token = await getTokenSafe(await headers())
   let connections: Connection[] = []
   if (token?.token) {
@@ -89,9 +109,11 @@ export default async function IntegrationsPage({
   )
   const notice = google
     ? GOOGLE_NOTICES[google]
-    : shopifyOrders
-      ? SHOPIFY_ORDERS_NOTICES[shopifyOrders]
-      : undefined
+    : shopify
+      ? SHOPIFY_NOTICES[shopify]
+      : shopifyOrders
+        ? SHOPIFY_ORDERS_NOTICES[shopifyOrders]
+        : undefined
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">

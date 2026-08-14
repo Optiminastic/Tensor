@@ -42,6 +42,9 @@ export function ConnectionRow({
   const connected = connection?.status === 'connected'
   // Google providers connect via OAuth (a redirect), not the manual token form.
   const useGoogleOAuth = googleOAuthConfigured && GOOGLE_PROVIDERS.has(provider)
+  // Shopify connects via one-click OAuth (a store-domain prompt then a redirect),
+  // with a manual token as a hidden fallback.
+  const isShopify = provider === 'shopify'
   const installHref = `/api/google/oauth/install?brand=${encodeURIComponent(
     brandSlug,
   )}&provider=${provider}`
@@ -125,7 +128,56 @@ export function ConnectionRow({
         </p>
       ) : null}
 
-      {editing && !connected ? (
+      {editing && !connected && isShopify ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <Input
+              aria-label="Shopify store domain"
+              placeholder="your-store.myshopify.com"
+              value={accountId}
+              onChange={e => setAccountId(e.target.value)}
+              className="w-64"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                window.location.href = `/api/shopify/oauth/install?brand=${encodeURIComponent(
+                  brandSlug,
+                )}&shop=${encodeURIComponent(accountId.trim().toLowerCase())}`
+              }}
+              disabled={accountId.trim() === ''}
+            >
+              Connect with Shopify
+            </Button>
+          </div>
+          <details className="text-xs">
+            <summary className="text-muted-foreground cursor-pointer select-none">
+              Advanced: paste an access token instead
+            </summary>
+            <div className="flex flex-wrap items-end gap-2 pt-2">
+              <Input
+                aria-label="Shopify access token"
+                placeholder="Access token"
+                type="password"
+                autoComplete="off"
+                value={token}
+                onChange={e => setToken(e.target.value)}
+                className="w-56"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={connect}
+                disabled={busy || accountId.trim() === '' || token.trim() === ''}
+              >
+                {busy ? 'Saving…' : 'Save token'}
+              </Button>
+            </div>
+          </details>
+        </div>
+      ) : editing && !connected ? (
         <div className="flex flex-wrap items-end gap-2">
           <Input
             aria-label={`${PROVIDER_LABELS[provider]} account id`}

@@ -6,8 +6,13 @@ import type { BrandChoice } from '@/components/designs/design-upload-form'
 import { DesignsView } from '@/components/designs/designs-view'
 import { ShopifyImportDialog } from '@/components/designs/shopify-import-dialog'
 import { UploadDesignDialog } from '@/components/designs/upload-design-dialog'
-import { can, currentAuthz, requirePermission } from '@/lib/authz'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
+import {
+  emptyDesignsMessage,
+  filterDesignsByView,
+  resolveDesignView,
+} from '@/lib/designs/view-filter'
 import type { Design } from '@/lib/validators/designs'
 import { listBrands } from '@/services/brands.service'
 import { DesignServiceError, listDesigns } from '@/services/designs.service'
@@ -16,16 +21,21 @@ export const metadata: Metadata = { title: 'Designs' }
 
 interface DesignsPageProps {
   params: Promise<{ brand: string }>
+  searchParams: Promise<{ view?: string }>
 }
 
 /**
  * A brand's designs: upload a model to run the pre-check, and track every design
- * from queued through the Green/Yellow/Red verdict.
+ * from queued through the Green/Yellow/Red verdict. The `?view=` param scopes the
+ * list to a lifecycle stage (drafts, submitted, approved, archived).
  */
-export default async function DesignsPage({ params }: DesignsPageProps): Promise<JSX.Element> {
+export default async function DesignsPage({
+  params,
+  searchParams,
+}: DesignsPageProps): Promise<JSX.Element> {
   const { brand } = await params
+  const view = resolveDesignView((await searchParams).view)
   await requirePermission('design:read', `/dashboard/${brand}`)
-  const canDelete = can(await currentAuthz(), 'design:delete')
   const global = isAllBrands(brand)
 
   let designs: Design[] = []
@@ -70,7 +80,11 @@ export default async function DesignsPage({ params }: DesignsPageProps): Promise
           {error}
         </p>
       ) : (
-        <DesignsView brand={brand} designs={designs} canDelete={canDelete} />
+        <DesignsView
+          brand={brand}
+          designs={filterDesignsByView(designs, view)}
+          emptyMessage={emptyDesignsMessage(view)}
+        />
       )}
     </main>
   )
