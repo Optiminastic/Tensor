@@ -204,6 +204,7 @@ export function toBatchRecord(batch: Batch): BatchRecord {
     effectiveTimePerUnitMinutes: batch.effective_time_per_unit_minutes ?? null,
     totalFilamentGrams: batch.total_filament_grams ?? null,
     bedUtilizationPercent: batch.bed_utilization_percent ?? null,
+    plateSlicedAt: batch.plate_sliced_at ?? null,
     packingStrategy: batch.packing_strategy ?? null,
     jobsCount: batch.jobs_count ?? null,
     createdAt: batch.created_at,

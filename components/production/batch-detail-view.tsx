@@ -4,6 +4,7 @@ import { BatchDetailGrid } from '@/components/production/batch-detail-grid'
 import { BatchDetailHeader } from '@/components/production/batch-detail-header'
 import { BatchJobsTable } from '@/components/production/batch-jobs-table'
 import { BatchPlatePreview } from '@/components/production/batch-plate-preview'
+import { BatchPrintButton } from '@/components/production/batch-print-button'
 import type { BatchRecord } from '@/components/production/types'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -54,6 +55,18 @@ export function BatchDetailView({
           plateBboxYMm={batch.plateBboxYMm}
           plateBboxZMm={batch.plateBboxZMm}
         />
+        {/* Locked only, matching BatchDetailSheetContent: a Draft bed is still a
+            proposal the next planner pass can dissolve. */}
+        {batch.status === 'open' ? (
+          <div className="mt-4">
+            <BatchPrintButton
+              brand={brand}
+              batchId={batch.id}
+              batchNumber={batch.batchNumber}
+              plateSliced={batch.plateSlicedAt !== null}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   )

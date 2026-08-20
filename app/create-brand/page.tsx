@@ -23,6 +23,10 @@ interface CreateBrandPageProps {
 function statusNotice(status: string | undefined): string | null {
   if (status === 'error') return 'Shopify connection failed. Try again, or enter details manually.'
   if (status === 'invalid_shop') return "That doesn't look like a Shopify store domain."
+  // Distinct from 'error' on purpose: retrying cannot help when the server has
+  // no Shopify credentials, so it must not advise it.
+  if (status === 'unconfigured')
+    return 'Shopify is not configured on this server. Enter your brand details manually.'
   return null
 }
 

@@ -20,7 +20,10 @@ interface ShopifyConnectStepProps {
 export function ShopifyConnectStep({ enabled, onSkip }: ShopifyConnectStepProps): JSX.Element {
   const [domain, setDomain] = useState('')
 
-  const installHref = `/api/shopify/oauth/install?shop=${encodeURIComponent(domain.trim())}`
+  // The wizard's own brandless flow, NOT /api/shopify/oauth/install - that one
+  // requires an existing brand to bind the OAuth state to, and there is none
+  // yet at this point. See app/api/shopify/oauth/start.
+  const installHref = `/api/shopify/oauth/start?shop=${encodeURIComponent(domain.trim())}`
 
   return (
     <div className="flex flex-col gap-5">

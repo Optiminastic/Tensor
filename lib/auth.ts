@@ -76,15 +76,21 @@ export const auth = betterAuth({
       },
     }),
   ],
-  // NEXT_PUBLIC_APP_URL covers the primary domain; local dev covers
-  // http://localhost:3001. Vercel Preview deployments (e.g. this repo's
-  // staging branch) get a per-branch/per-deployment origin that never
-  // matches either, so VERCEL_BRANCH_URL/VERCEL_URL - system env vars
+  // NEXT_PUBLIC_APP_URL covers the primary domain. Vercel Preview deployments
+  // (e.g. this repo's staging branch) get a per-branch/per-deployment origin
+  // that never matches it, so VERCEL_BRANCH_URL/VERCEL_URL - system env vars
   // Vercel injects automatically, no manual value needed - are trusted too.
   // Both are bare hosts (no scheme), so they're prefixed with https://.
+  //
+  // The two localhost ports are listed explicitly rather than relying on
+  // NEXT_PUBLIC_APP_URL to happen to be one of them. It does not always point
+  // at localhost: tunnelling the app through ngrok for a Shopify OAuth
+  // round-trip repoints it at the public domain, and when that happened, local
+  // sign-in started failing with a bare "Invalid origin" - the dev server had
+  // quietly stopped being a trusted origin. 3000 is Next's default port and
+  // what this repo actually runs on; 3001 is the fallback when 3000 is taken.
   trustedOrigins: [
-    env.NEXT_PUBLIC_APP_URL,
-    'http://localhost:3001',
+    ...new Set([env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000', 'http://localhost:3001']),
     ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
   ],

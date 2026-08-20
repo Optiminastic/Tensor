@@ -8,9 +8,9 @@ import { toBatchRecord } from '@/components/production/adapters'
 import { FleetMachineDetailView } from '@/components/production/fleet-machine-detail-view'
 import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
-import type { FleetMachine } from '@/lib/validators/machine-fleet'
+import type { FleetMachine, FleetMachineLive } from '@/lib/validators/machine-fleet'
 import { getFleetMachineQueue } from '@/services/batches.service'
-import { getFleetMachine } from '@/services/machine-fleet.service'
+import { getFleetMachine, getFleetMachineLive } from '@/services/machine-fleet.service'
 
 export const metadata: Metadata = { title: 'Machine' }
 
@@ -25,8 +25,12 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
 
   let machine: FleetMachine
   let queuedBatches: BatchRecord[]
+  // Enrichment, never a hard dependency: getFleetMachineLive returns null when
+  // BambuBuddy is unreachable so the page still renders its scheduling state.
+  let live: FleetMachineLive | null = null
   try {
     machine = await getFleetMachine(token, machineId)
+    live = await getFleetMachineLive(token, machineId)
     queuedBatches = (await getFleetMachineQueue(token, machineId)).map(toBatchRecord)
   } catch {
     notFound()
@@ -47,7 +51,12 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
       >
         <ArrowLeft className="size-4" aria-hidden />
       </Link>
-      <FleetMachineDetailView brand={brand} machine={machine} queuedBatches={queuedBatches} />
+      <FleetMachineDetailView
+        brand={brand}
+        machine={machine}
+        queuedBatches={queuedBatches}
+        live={live}
+      />
     </main>
   )
 }
