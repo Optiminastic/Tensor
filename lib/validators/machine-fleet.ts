@@ -106,3 +106,18 @@ export type FleetMachineLive = z.infer<typeof FleetMachineLiveSchema>
 export type FleetMachineLiveAms = z.infer<typeof LiveAmsSchema>
 export type FleetMachineLiveNozzle = z.infer<typeof LiveNozzleSchema>
 export type FleetMachineLiveTemperature = z.infer<typeof LiveTemperatureSchema>
+
+/**
+ * What reconciling the fleet against BambuBuddy changed.
+ *
+ * `synced` counts printers created or refreshed, `removed` counts fleet entries
+ * BambuBuddy no longer reports. `names` is what the operator actually wants to
+ * see - "which printers do I now have" is a more useful answer than a count.
+ */
+export const FleetSyncResultSchema = z.object({
+  synced: z.number(),
+  removed: z.number(),
+  names: z.array(z.string()).nullish(),
+})
+
+export type FleetSyncResult = z.infer<typeof FleetSyncResultSchema>

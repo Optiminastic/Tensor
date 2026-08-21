@@ -2,6 +2,8 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
+  type FleetSyncResult,
+  FleetSyncResultSchema,
   type FleetMachine,
   type FleetMachineLive,
   FleetMachineLiveSchema,
@@ -115,5 +117,18 @@ export async function uploadToPrinter(
     `/machine-fleet/${encodeURIComponent(machineId)}/upload`,
     { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form },
     data => data as PrinterUploadResult,
+  )
+}
+
+/**
+ * Reconciles the fleet with BambuBuddy: every printer it reports is created or
+ * refreshed, anything it no longer reports is removed.
+ *
+ * Nothing does this on a schedule, so a fresh deployment's Machine Management
+ * page is empty until this runs at least once.
+ */
+export async function syncFleetMachines(token: string): Promise<FleetSyncResult> {
+  return call('/machine-fleet/sync', { method: 'POST', headers: jsonHeaders(token) }, data =>
+    FleetSyncResultSchema.parse(data),
   )
 }
