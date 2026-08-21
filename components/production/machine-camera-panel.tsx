@@ -23,6 +23,11 @@ interface MachineCameraPanelProps {
  * (multipart/x-mixed-replace), which browsers render natively in an image tag
  * and not at all in a video element.
  */
+// Bounded so a stream that fails instantly cannot spin. Enough to cover a long
+// watch across several serverless-function expiries, few enough that a genuine
+// fault surfaces to the operator instead of retrying forever.
+const MAX_AUTO_RECONNECTS = 20
+
 /** The proxy URL for one machine's feed. `t` defeats the browser's cache so a
  *  retry opens a new connection instead of reusing a dead one. */
 function cameraUrl(machineId: string, attempt: number): string {
@@ -35,12 +40,16 @@ export function MachineCameraPanel({
 }: MachineCameraPanelProps): JSX.Element {
   const [live, setLive] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Consecutive automatic reconnects. Reset by a successful start and by the
+  // operator toggling, so a long watch does not slowly exhaust the budget.
+  const [reconnects, setReconnects] = useState(0)
   // Bumped on each start so the browser re-requests instead of reusing a dead
   // connection it already has cached for this URL.
   const [attempt, setAttempt] = useState(0)
 
   function toggle(): void {
     setError(null)
+    setReconnects(0)
     if (live) {
       setLive(false)
       return
@@ -76,9 +85,20 @@ export function MachineCameraPanel({
       })
       if (res.ok) {
         probe.abort()
-        // It answers when asked directly, so the stream itself dropped rather
-        // than being refused - a stall or a network blip, worth just retrying.
-        setError('The camera stream dropped. Turn it off and on again to reconnect.')
+        // The endpoint answers when asked directly, so nothing is misconfigured
+        // - the stream itself ended. On Vercel that is expected roughly every
+        // five minutes, because the proxy is a serverless function with a
+        // wall-clock budget and a live feed never finishes on its own. Silently
+        // reconnecting is the honest response to a limit we know about; making
+        // the operator re-toggle every five minutes would be pretending it is
+        // their problem.
+        if (reconnects < MAX_AUTO_RECONNECTS) {
+          setReconnects(n => n + 1)
+          setAttempt(n => n + 1)
+          setError(null)
+          return
+        }
+        setError('The camera stream keeps dropping. Turn it off and on again to retry.')
         return
       }
       const body: unknown = await res.json().catch(() => null)

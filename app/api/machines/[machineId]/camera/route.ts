@@ -12,6 +12,19 @@ interface RouteContext {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+// This route is deployed to Vercel, where it runs as a serverless function with
+// a wall-clock budget - and an MJPEG feed is a response that deliberately never
+// ends. Without this the platform default (as little as 10s on some plans) cuts
+// the picture off seconds after it appears, which reads as a broken camera
+// rather than a platform limit.
+//
+// 300s is the documented ceiling, not a target: the stream is still killed when
+// it expires. The panel's onError handler catches that and offers a reconnect,
+// so a viewer watching a long print sees a brief interruption rather than a
+// dead frame. A genuinely unbroken feed would mean not proxying through a
+// serverless function at all.
+export const maxDuration = 300
+
 const FALLBACK_DETAIL = 'The camera stream is unavailable.'
 
 /**
