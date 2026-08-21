@@ -79,7 +79,7 @@ export default async function ProductionPage({
           orders={orders}
           jobs={jobs}
           batches={batches}
-          fleetMachines={fleetMachines}
+          initialFleetMachines={fleetMachines}
           filaments={filaments}
           recentJobs={jobs.slice(0, 8).map(toRecentJob)}
           machines={machines.map(toMachineSummary)}

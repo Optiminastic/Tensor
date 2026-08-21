@@ -79,9 +79,9 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
       ) : null}
       <FleetMachineDetailView
         brand={brand}
-        machine={machine}
+        initialMachine={machine}
         queuedBatches={queuedBatches}
-        live={live}
+        initialLive={live}
       />
     </main>
   )
