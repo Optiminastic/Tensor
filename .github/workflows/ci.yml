@@ -19,7 +19,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22, not 20: pnpm 11 (pinned above) requires Node >= 22.13 and exits
+          # with ERR_UNKNOWN_BUILTIN_MODULE on 20, before installing anything -
+          # so every run failed in ~14s having never reached lint or build.
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
