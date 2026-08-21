@@ -23,24 +23,78 @@ interface MachineCameraPanelProps {
  * (multipart/x-mixed-replace), which browsers render natively in an image tag
  * and not at all in a video element.
  */
+/** The proxy URL for one machine's feed. `t` defeats the browser's cache so a
+ *  retry opens a new connection instead of reusing a dead one. */
+function cameraUrl(machineId: string, attempt: number): string {
+  return `/api/machines/${encodeURIComponent(machineId)}/camera?fps=2&t=${attempt}`
+}
+
 export function MachineCameraPanel({
   machineId,
   machineName,
 }: MachineCameraPanelProps): JSX.Element {
   const [live, setLive] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   // Bumped on each start so the browser re-requests instead of reusing a dead
   // connection it already has cached for this URL.
   const [attempt, setAttempt] = useState(0)
 
   function toggle(): void {
-    setFailed(false)
+    setError(null)
     if (live) {
       setLive(false)
       return
     }
     setAttempt(n => n + 1)
     setLive(true)
+  }
+
+  /**
+   * Finds out WHY the feed failed, and says so.
+   *
+   * An <img> onError reports only that something went wrong - never a status
+   * or a body - so a single generic sentence had to cover a missing route, an
+   * expired session, an unconfigured BambuBuddy and a genuinely offline
+   * printer. Those need completely different fixes, and guessing "the printer
+   * may be offline" sent people to check the printer when the real answer was
+   * that the backend had not been redeployed.
+   *
+   * So on failure the same URL is re-requested with fetch, which does expose
+   * the status and the {detail} the proxy passes through from Tensor-Core.
+   */
+  async function explainFailure(): Promise<void> {
+    setError('The camera stream stopped. Checking why…')
+    // Aborted the moment the status is known. This request is asking a
+    // question, not watching a feed - and a successful one returns an endless
+    // MJPEG body, so leaving it open would start a second stream from the
+    // printer that nobody ever reads.
+    const probe = new AbortController()
+    try {
+      const res = await fetch(cameraUrl(machineId, attempt), {
+        cache: 'no-store',
+        signal: probe.signal,
+      })
+      if (res.ok) {
+        probe.abort()
+        // It answers when asked directly, so the stream itself dropped rather
+        // than being refused - a stall or a network blip, worth just retrying.
+        setError('The camera stream dropped. Turn it off and on again to reconnect.')
+        return
+      }
+      const body: unknown = await res.json().catch(() => null)
+      const detail =
+        typeof body === 'object' && body !== null && 'detail' in body
+          ? String((body as { detail: unknown }).detail)
+          : null
+      setError(
+        detail ??
+          (res.status === 404
+            ? 'The camera endpoint does not exist on this deployment. The backend may need redeploying.'
+            : `The camera stream failed (HTTP ${res.status}).`),
+      )
+    } catch {
+      setError('Could not reach Tensor to start the camera stream.')
+    }
   }
 
   return (
@@ -59,18 +113,17 @@ export function MachineCameraPanel({
 
       {live ? (
         <div className="bg-surface-muted relative overflow-hidden rounded-md">
-          {failed ? (
+          {error ? (
             <p role="alert" className="text-danger px-3 py-6 text-center text-xs">
-              The camera stream could not be started. The printer may be offline, or its camera
-              disabled in BambuBuddy.
+              {error}
             </p>
           ) : (
             <img
               key={attempt}
-              src={`/api/machines/${encodeURIComponent(machineId)}/camera?fps=2&t=${attempt}`}
+              src={cameraUrl(machineId, attempt)}
               alt={`Live camera feed from ${machineName}`}
               className="max-h-[420px] w-full object-contain"
-              onError={() => setFailed(true)}
+              onError={() => void explainFailure()}
             />
           )}
         </div>
