@@ -19,6 +19,7 @@ import type {
   OrderRecord,
   ProductionJob as RecentJob,
 } from '@/components/production/types'
+import { useFleetMachines } from '@/hooks/use-fleet-poll'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
 import type { Filament, ProductionJob } from '@/lib/validators/production'
 
@@ -27,7 +28,8 @@ interface ProductionOverviewProps {
   orders: OrderRecord[]
   jobs: ProductionJob[]
   batches: BatchRecord[]
-  fleetMachines: FleetMachine[]
+  /** Seeded by the server render; the fleet slice then polls on its own. */
+  initialFleetMachines: FleetMachine[]
   filaments: Filament[]
   recentJobs: RecentJob[]
   machines: MachineSummary[]
@@ -40,11 +42,17 @@ export function ProductionOverview({
   orders,
   jobs,
   batches,
-  fleetMachines,
+  initialFleetMachines,
   filaments,
   recentJobs,
   machines,
 }: ProductionOverviewProps): JSX.Element {
+  // Only the fleet polls. Orders, jobs, batches and filament stay seeded from
+  // the server render: refreshing six endpoints every ten seconds is the
+  // load-generator failure mode AutoRefresh warns about, and status is the one
+  // thing here that changes minute to minute.
+  const { data: fleetMachines } = useFleetMachines(initialFleetMachines)
+
   const [dateRange, setDateRange] = useState<PeriodValue>(DEFAULT_PERIOD)
   const range = useMemo(() => resolvePeriod(dateRange, new Date()), [dateRange])
 
