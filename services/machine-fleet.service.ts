@@ -1,7 +1,12 @@
 // Server-only by placement (called from server actions and server components).
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
-import { type FleetMachine, FleetMachineSchema } from '@/lib/validators/machine-fleet'
+import {
+  type FleetMachine,
+  type FleetMachineLive,
+  FleetMachineLiveSchema,
+  FleetMachineSchema,
+} from '@/lib/validators/machine-fleet'
 
 const log = createLogger('MachineFleetService')
 const TIMEOUT_MS = 15_000
@@ -55,5 +60,60 @@ export async function listFleetMachines(token: string): Promise<FleetMachine[]> 
 export async function getFleetMachine(token: string, id: string): Promise<FleetMachine> {
   return call(`/machine-fleet/${encodeURIComponent(id)}`, { headers: jsonHeaders(token) }, data =>
     FleetMachineSchema.parse(data),
+  )
+}
+
+/**
+ * A printer's live telemetry, read through to BambuBuddy on demand.
+ *
+ * Returns null instead of throwing when the printer or BambuBuddy is
+ * unreachable (502), not configured (409), or unknown to BambuBuddy (404).
+ * Live telemetry is an enrichment: the machine page must still render its
+ * queue and scheduling state when the printer cannot be reached, and a 502
+ * from a machine that is merely switched off is not an error worth failing
+ * the page for.
+ */
+export async function getFleetMachineLive(
+  token: string,
+  id: string,
+): Promise<FleetMachineLive | null> {
+  try {
+    return await call(
+      `/machine-fleet/${encodeURIComponent(id)}/live`,
+      { headers: jsonHeaders(token) },
+      data => FleetMachineLiveSchema.parse(data),
+    )
+  } catch {
+    return null
+  }
+}
+
+export interface PrinterUploadResult {
+  file_id: number
+  filename: string
+  queued: boolean
+  duplicate: boolean
+  /** BambuBuddy's own reason when it declined to queue the file. Empty when queued. */
+  queue_note: string
+}
+
+/**
+ * Sends a model file to the printer's BambuBuddy library and adds it to the
+ * print queue.
+ *
+ * Content-Type is left unset so fetch adds the multipart boundary itself, the
+ * same way createDesign does.
+ */
+export async function uploadToPrinter(
+  token: string,
+  machineId: string,
+  file: File,
+): Promise<PrinterUploadResult> {
+  const form = new FormData()
+  form.set('file', file, file.name)
+  return call(
+    `/machine-fleet/${encodeURIComponent(machineId)}/upload`,
+    { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form },
+    data => data as PrinterUploadResult,
   )
 }

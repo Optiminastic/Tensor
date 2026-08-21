@@ -8,8 +8,10 @@ import {
   type Batch,
   type BatchApproveInput,
   type BatchPatchInput,
+  type PrintBatchResult,
   AutoCreateBatchesResultSchema,
   BatchSchema,
+  PrintBatchResultSchema,
 } from '@/lib/validators/batches'
 import { type ProductionJob, ProductionJobSchema } from '@/lib/validators/production'
 
@@ -88,6 +90,20 @@ export async function approveBatch(
     `/batches/${encodeURIComponent(id)}/approve`,
     { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
     data => BatchSchema.parse(data),
+  )
+}
+
+/**
+ * Sends a locked batch's sliced plate to BambuBuddy and queues it for printing.
+ *
+ * Queues rather than prints: BambuBuddy's own dispatcher decides when the bed
+ * actually starts, so this returns as soon as the plate is on its queue.
+ */
+export async function printBatch(token: string, id: string): Promise<PrintBatchResult> {
+  return call(
+    `/batches/${encodeURIComponent(id)}/print`,
+    { method: 'POST', headers: jsonHeaders(token) },
+    data => PrintBatchResultSchema.parse(data),
   )
 }
 

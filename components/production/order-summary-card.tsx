@@ -6,6 +6,7 @@ import { TonePill } from '@/components/production/tone-pill'
 import type { OrderRecord } from '@/components/production/types'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { dateTime } from '@/lib/format'
 
 interface OrderSummaryCardProps {
   order: OrderRecord
@@ -19,7 +20,7 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps): JSX.Element 
       <div className="flex items-start justify-between px-5 py-4">
         <div className="flex flex-col gap-1">
           <span className="text-foreground text-base font-semibold">{order.orderNumber}</span>
-          <p className="text-muted-foreground text-xs">Submitted {order.submittedAt}</p>
+          <p className="text-muted-foreground text-xs">Submitted {dateTime(order.submittedAt)}</p>
         </div>
         <TonePill label={status.label} tone={status.tone} />
       </div>

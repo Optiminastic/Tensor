@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 
 import { DetailField } from '@/components/production/detail-field'
+import { MachineUploadButton } from '@/components/production/machine-upload-button'
 import { FLEET_MACHINE_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import { Card } from '@/components/ui/card'
@@ -30,7 +31,10 @@ export function FleetMachineSummaryCard({ machine }: FleetMachineSummaryCardProp
           <span className="text-foreground text-base font-semibold">{machine.name}</span>
           <p className="text-muted-foreground text-xs">Machine ID {machine.machine_id}</p>
         </div>
-        <TonePill label={status.label} tone={status.tone} />
+        <div className="flex items-center gap-3">
+          <TonePill label={status.label} tone={status.tone} />
+          <MachineUploadButton machineId={machine.id} />
+        </div>
       </div>
       <Separator />
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 px-4 py-3 md:grid-cols-3">

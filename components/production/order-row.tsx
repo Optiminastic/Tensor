@@ -10,6 +10,7 @@ import { TonePill } from '@/components/production/tone-pill'
 import type { OrderRecord } from '@/components/production/types'
 import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
+import { dateTime } from '@/lib/format'
 
 interface OrderRowProps {
   brand: string
@@ -71,7 +72,7 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
       <TableCell className={order.customer ? undefined : 'text-muted-foreground'}>
         {order.customer ?? '—'}
       </TableCell>
-      <TableCell className="text-muted-foreground">{order.submittedAt}</TableCell>
+      <TableCell className="text-muted-foreground">{dateTime(order.submittedAt)}</TableCell>
       <TableCell numeric>₹{order.total.toLocaleString('en-IN')}</TableCell>
       <TableCell>
         <TonePill label={status.label} tone={status.tone} />

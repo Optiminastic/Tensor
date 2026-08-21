@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { auth } from '@/lib/auth'
 import { env } from '@/lib/env'
+import { logger } from '@/lib/logger'
 import {
   exchangeCode,
   isValidShopDomain,
@@ -107,8 +108,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const secret = env.SHOPIFY_API_SECRET
   if (!clientId || !secret) return redirectTo('unconfigured')
 
+  // Every failure below lands the user on the same "Shopify connection failed"
+  // screen, which is right for them and useless for anyone debugging it. The
+  // two causes are very different - a rejected HMAC/state means the round-trip
+  // itself is wrong (wrong secret, stale cookie, replayed callback), while a
+  // failed exchange means Shopify refused the code (wrong app credentials,
+  // already-used code) - and telling them apart from the outside is guesswork.
+  // So each is logged with its own message. Never log `secret`, the `code`, or
+  // the resulting token: the shop domain is enough to correlate.
   const verified = verifyCallback(request, secret)
-  if (!verified) return redirectTo('error')
+  if (!verified) {
+    logger.warn(
+      { shop: request.nextUrl.searchParams.get('shop') },
+      'shopify oauth callback rejected: bad HMAC or state mismatch',
+    )
+    return redirectTo('error')
+  }
 
   let token: string
   try {
@@ -118,7 +133,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       clientSecret: secret,
       code: verified.code,
     })
-  } catch {
+  } catch (err) {
+    logger.warn(
+      { shop: verified.shop, err: err instanceof Error ? err.message : String(err) },
+      'shopify oauth callback: code exchange failed',
+    )
     return redirectTo('error')
   }
 

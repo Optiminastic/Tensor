@@ -12,6 +12,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/ui/table'
+import { dateTime } from '@/lib/format'
 
 interface RecentJobsTableProps {
   jobs: ProductionJob[]
@@ -42,7 +43,7 @@ export function RecentJobsTable({ jobs }: RecentJobsTableProps): JSX.Element {
                 <TableCell className="font-mono tabular-nums">{job.jobNumber}</TableCell>
                 <TableCell>{job.designName}</TableCell>
                 <TableCell className="text-muted-foreground">{job.machine}</TableCell>
-                <TableCell className="text-muted-foreground">{job.startedAt}</TableCell>
+                <TableCell className="text-muted-foreground">{dateTime(job.startedAt)}</TableCell>
                 <TableCell numeric>{job.durationHours.toFixed(2)} h</TableCell>
                 <TableCell className="text-right">
                   <TonePill label={status.label} tone={status.tone} />

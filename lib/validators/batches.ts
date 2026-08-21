@@ -23,6 +23,11 @@ export const BatchSchema = z.object({
   total_filament_grams: z.number().nullish(),
   bed_utilization_percent: z.number().nullish(),
   packing_strategy: z.string().nullish(),
+  // Null while the batch's time is batchTimeFromJobs' estimate rather than a
+  // slice of this actual bed. Also gates "Send to printer": no plate slice
+  // means no .gcode.3mf exists to send.
+  plate_sliced_at: z.string().nullish(),
+  plate_slice_error: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
   jobs_count: z.number().nullish(),
@@ -74,3 +79,21 @@ export const AddJobsToBatchInputSchema = z.object({
   job_ids: z.string().min(1).array().min(1),
 })
 export type AddJobsToBatchInput = z.infer<typeof AddJobsToBatchInputSchema>
+
+/**
+ * What sending a locked batch to BambuBuddy reported back.
+ *
+ * `queued: false` is not necessarily a failure - the plate can reach
+ * BambuBuddy's library and still not be queued (already sent, or the queue
+ * declined it), which is why `note` carries BambuBuddy's own wording rather
+ * than the UI inventing a reason.
+ */
+export const PrintBatchResultSchema = z.object({
+  filename: z.string(),
+  file_id: z.number(),
+  queued: z.boolean(),
+  already_sent: z.boolean(),
+  note: z.string(),
+})
+
+export type PrintBatchResult = z.infer<typeof PrintBatchResultSchema>

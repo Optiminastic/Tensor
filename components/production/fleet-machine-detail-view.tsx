@@ -1,21 +1,25 @@
 import type { JSX } from 'react'
 
+import { FleetMachineLiveCard } from '@/components/production/fleet-machine-live-card'
 import { FleetMachineSummaryCard } from '@/components/production/fleet-machine-summary-card'
 import { MachinePhotoCard } from '@/components/production/machine-photo-card'
 import { MachineQueueSection } from '@/components/production/machine-queue-section'
 import type { BatchRecord } from '@/components/production/types'
-import type { FleetMachine } from '@/lib/validators/machine-fleet'
+import type { FleetMachine, FleetMachineLive } from '@/lib/validators/machine-fleet'
 
 interface FleetMachineDetailViewProps {
   brand: string
   machine: FleetMachine
   queuedBatches: BatchRecord[]
+  /** Live printer telemetry, null when BambuBuddy could not be reached. */
+  live: FleetMachineLive | null
 }
 
 export function FleetMachineDetailView({
   brand,
   machine,
   queuedBatches,
+  live,
 }: FleetMachineDetailViewProps): JSX.Element {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -27,6 +31,9 @@ export function FleetMachineDetailView({
           alt={`${machine.name} printer`}
         />
         <FleetMachineSummaryCard machine={machine} />
+      </div>
+      <div className="shrink-0">
+        <FleetMachineLiveCard live={live} />
       </div>
       <MachineQueueSection brand={brand} batches={queuedBatches} />
     </div>

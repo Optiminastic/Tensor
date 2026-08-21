@@ -4,6 +4,7 @@ import type { JSX } from 'react'
 import { DetailField } from '@/components/production/detail-field'
 import { ASSEMBLY_STATUS_CONFIG } from '@/components/production/status-config'
 import type { BatchRecord, ProductionJobDetail } from '@/components/production/types'
+import { dateTime } from '@/lib/format'
 
 interface JobDetailGridProps {
   job: ProductionJobDetail
@@ -29,7 +30,7 @@ export function JobDetailGrid({ job, batches }: JobDetailGridProps): JSX.Element
       />
 
       <DetailField label="Estimated print time" value={`${job.estimatedPrintTimeMin} min`} mono />
-      <DetailField label="Due date" value={job.dueDate} />
+      <DetailField label="Due date" value={dateTime(job.dueDate)} />
       <DetailField label="Priority" value={job.priority} mono />
       <DetailField
         label="Print file"

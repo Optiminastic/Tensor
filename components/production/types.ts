@@ -138,6 +138,10 @@ export interface BatchRecord {
   effectiveTimePerUnitMinutes: number | null
   totalFilamentGrams: number | null
   bedUtilizationPercent: number | null
+  // Null while the batch's time is an estimate rather than a slice of this
+  // actual bed. Gates "Send to printer": without a plate slice there is no
+  // .gcode.3mf to send.
+  plateSlicedAt: string | null
   packingStrategy: string | null
   jobsCount: number | null
   createdAt: string
