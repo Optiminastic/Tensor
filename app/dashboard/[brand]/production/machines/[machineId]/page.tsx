@@ -23,17 +23,33 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
   const { token } = await resolveBackendToken()
   if (!token) notFound()
 
+  // The machine itself is the only hard dependency: if it cannot be loaded,
+  // the page genuinely has nothing to be about, and 404 is honest.
   let machine: FleetMachine
-  let queuedBatches: BatchRecord[]
-  // Enrichment, never a hard dependency: getFleetMachineLive returns null when
-  // BambuBuddy is unreachable so the page still renders its scheduling state.
-  let live: FleetMachineLive | null = null
   try {
     machine = await getFleetMachine(token, machineId)
-    live = await getFleetMachineLive(token, machineId)
-    queuedBatches = (await getFleetMachineQueue(token, machineId)).map(toBatchRecord)
   } catch {
     notFound()
+  }
+
+  // Everything below is enrichment and must not be able to 404 the page.
+  //
+  // All three calls used to share one try/catch, so a failing queue lookup -
+  // a backend without the route, a Zod mismatch, a slow query - rendered
+  // "This page doesn't exist" for a machine that plainly does exist. That is
+  // the worst kind of error message: it sends the reader looking for a broken
+  // link instead of a broken call. getFleetMachineLive already swallowed its
+  // own errors and returned null; the queue did not, and that asymmetry was
+  // invisible from the call site.
+  const live: FleetMachineLive | null = await getFleetMachineLive(token, machineId)
+
+  let queuedBatches: BatchRecord[] = []
+  let queueError: string | null = null
+  try {
+    queuedBatches = (await getFleetMachineQueue(token, machineId)).map(toBatchRecord)
+  } catch (err) {
+    queueError =
+      err instanceof Error ? err.message : 'Could not load the queued batches for this machine.'
   }
 
   // h-dvh + overflow-hidden makes this page exactly one viewport tall and
@@ -51,6 +67,16 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
       >
         <ArrowLeft className="size-4" aria-hidden />
       </Link>
+      {/* Said out loud rather than shown as an empty board: "no queued batches"
+          and "the queue could not be loaded" look identical otherwise. */}
+      {queueError ? (
+        <p
+          role="alert"
+          className="bg-danger-subtle text-danger shrink-0 rounded-md px-3 py-2 text-sm"
+        >
+          {queueError}
+        </p>
+      ) : null}
       <FleetMachineDetailView
         brand={brand}
         machine={machine}

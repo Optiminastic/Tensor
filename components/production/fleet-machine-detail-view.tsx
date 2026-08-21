@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 
 import { FleetMachineLiveCard } from '@/components/production/fleet-machine-live-card'
 import { FleetMachineSummaryCard } from '@/components/production/fleet-machine-summary-card'
+import { MachineCameraPanel } from '@/components/production/machine-camera-panel'
 import { MachinePhotoCard } from '@/components/production/machine-photo-card'
 import { MachineQueueSection } from '@/components/production/machine-queue-section'
 import type { BatchRecord } from '@/components/production/types'
@@ -34,6 +35,11 @@ export function FleetMachineDetailView({
       </div>
       <div className="shrink-0">
         <FleetMachineLiveCard live={live} />
+      </div>
+      {/* Below the telemetry, and off by default: the numbers above answer most
+          questions, and the camera is the expensive way to ask. */}
+      <div className="shrink-0">
+        <MachineCameraPanel machineId={machine.id} machineName={machine.name} />
       </div>
       <MachineQueueSection brand={brand} batches={queuedBatches} />
     </div>
