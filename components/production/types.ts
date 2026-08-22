@@ -75,7 +75,15 @@ export type OrderStatus = 'paid' | 'pending' | 'refunded' | 'cancelled'
 
 export interface OrderLineItem {
   name: string
+  sku: string | null
   quantity: number
+  options: OrderLineItemOption[]
+}
+
+/** One personalisation field the customer filled in on the storefront. */
+export interface OrderLineItemOption {
+  name: string
+  value: string
 }
 
 // One product within an order - the commerce-facing shape (SKU, name, image),

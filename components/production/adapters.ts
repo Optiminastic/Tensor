@@ -221,7 +221,9 @@ export function toOrderDetailRecord(order: OrderDetail): OrderRecord {
     ...toOrderRecord(order),
     lineItems: (order.line_items ?? []).map(item => ({
       name: item.title ?? item.name ?? PLACEHOLDER,
+      sku: item.sku ?? null,
       quantity: item.quantity ?? 1,
+      options: (item.options ?? []).map(option => ({ name: option.name, value: option.value })),
     })),
     products: (order.products ?? []).map(product => ({
       id: product.id,

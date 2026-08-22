@@ -253,10 +253,19 @@ export type Order = z.infer<typeof OrderSchema>
 // orderDetailResponse adds the raw Shopify line items (only the fields the UI
 // reads are declared, the rest are ignored) plus products - the typed,
 // commerce-facing per-item rows from order_line_items (SKU, name, image).
+export const OrderLineItemOptionSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+})
 export const OrderLineItemSchema = z.object({
   title: z.string().nullish(),
   name: z.string().nullish(),
+  sku: z.string().nullish(),
   quantity: z.number().nullish(),
+  // What the customer typed into the storefront's personalisation fields,
+  // labelled the way the store asked for them. Absent on orders imported
+  // before the backend started keeping them.
+  options: OrderLineItemOptionSchema.array().nullish(),
 })
 export const OrderProductSchema = z.object({
   id: z.string(),

@@ -17,6 +17,14 @@ const log = createLogger('ConnectionService')
 
 const TIMEOUT_MS = 5_000
 
+// The order import walks the store's Shopify orders and writes each one, so it
+// runs far longer than the CRUD calls above. Aborting it early is not just a
+// slow-request problem: the abort cancels the backend's request context, so
+// every order still in flight fails with "context canceled" and the batch is
+// lost. Kept in step with Tensor-Core's 60s HTTP write timeout
+// (HTTP_WRITE_TIMEOUT_SECONDS) - raise both together if a store needs longer.
+const SYNC_TIMEOUT_MS = 60_000
+
 /**
  * Typed client for Tensor-Core's /brands/:slug/connections endpoints.
  *
@@ -35,11 +43,20 @@ async function request<T>(
   let response: Response
   try {
     response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
+      // The default deadline every call gets. A call that legitimately runs
+      // longer passes its own signal in `init` - see syncShopifyOrders.
+      signal: AbortSignal.timeout(TIMEOUT_MS),
       ...init,
       cache: 'no-store',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch (error) {
+    // A timeout means the backend took the request and then took too long,
+    // which is a different fix from it being down - say so, or the operator
+    // restarts a backend that was never the problem.
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      log.error({ path, err: error }, 'Tensor-Core timed out')
+      throw new ConnectionServiceError('Tensor-Core did not respond in time.')
+    }
     log.error({ path, err: error }, 'Tensor-Core is unreachable')
     throw new ConnectionServiceError('Tensor-Core is unreachable. Is the backend running?')
   }
@@ -118,7 +135,11 @@ export async function syncShopifyOrders(
 ): Promise<ShopifySyncResult> {
   return request(
     `/brands/${encodeURIComponent(brandSlug)}/connections/shopify/sync`,
-    { method: 'POST', headers: bearer(accessToken) },
+    {
+      method: 'POST',
+      headers: bearer(accessToken),
+      signal: AbortSignal.timeout(SYNC_TIMEOUT_MS),
+    },
     data => ShopifySyncResultSchema.parse(data),
   )
 }

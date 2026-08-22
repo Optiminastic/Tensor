@@ -15,7 +15,11 @@ export function OrderDetailView({ brand, order, jobs }: OrderDetailViewProps): J
   return (
     <div className="flex flex-col gap-6">
       <OrderSummaryCard order={order} />
-      <OrderLineItemsTable products={order.products} lineItems={order.lineItems} />
+      <OrderLineItemsTable
+        orderId={order.id}
+        products={order.products}
+        lineItems={order.lineItems}
+      />
       <OrderPersonalisationLog brand={brand} jobs={jobs} />
     </div>
   )
