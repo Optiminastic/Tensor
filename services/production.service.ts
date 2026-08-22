@@ -2,6 +2,8 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
+  type FilamentSyncResult,
+  FilamentSyncResultSchema,
   type AssemblyInput,
   type Filament,
   type FilamentInput,
@@ -177,6 +179,19 @@ export async function getOrder(token: string, id: string): Promise<OrderDetail> 
 export async function listFilament(token: string): Promise<Filament[]> {
   return call('/filament-inventory', { headers: jsonHeaders(token) }, data =>
     FilamentSchema.array().parse(data),
+  )
+}
+
+/**
+ * Mirrors BambuBuddy's spool shelf into Tensor's filament inventory.
+ *
+ * BambuBuddy tracks individual spools; Tensor tracks availability per material
+ * and colour. The backend aggregates, and its figures win - it is where spools
+ * are physically scanned and weighed.
+ */
+export async function syncFilamentFromBambuBuddy(token: string): Promise<FilamentSyncResult> {
+  return call('/filament-inventory/sync', { method: 'POST', headers: jsonHeaders(token) }, data =>
+    FilamentSyncResultSchema.parse(data),
   )
 }
 
