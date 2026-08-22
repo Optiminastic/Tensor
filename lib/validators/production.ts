@@ -296,3 +296,19 @@ export const FilamentInputSchema = z.object({
   reorder_level_grams: z.number().min(0, 'Must be zero or more'),
 })
 export type FilamentInput = z.infer<typeof FilamentInputSchema>
+
+/**
+ * What mirroring BambuBuddy's spool shelf into Tensor's inventory changed.
+ *
+ * `spools` counts individual spools as BambuBuddy shows them; `created` and
+ * `updated` count material/colour buckets, which is how Tensor stores stock.
+ * Reporting both is what lets an operator reconcile the two views at a glance.
+ */
+export const FilamentSyncResultSchema = z.object({
+  spools: z.number(),
+  created: z.number(),
+  updated: z.number(),
+  total_grams: z.number(),
+})
+
+export type FilamentSyncResult = z.infer<typeof FilamentSyncResultSchema>

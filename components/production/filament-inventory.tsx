@@ -10,6 +10,7 @@ import {
   type PeriodValue,
   resolvePeriod,
 } from '@/components/production/date-range'
+import { FilamentSyncButton } from '@/components/production/filament-sync-button'
 import { FilterBar } from '@/components/production/filter-bar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -104,13 +105,17 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
             Stock per material and colour, with a reorder threshold.
           </p>
         </div>
-        <AddFilamentDialog brand={brand} />
+        <div className="flex items-start gap-2">
+          <FilamentSyncButton brand={brand} />
+          <AddFilamentDialog brand={brand} />
+        </div>
       </div>
 
       {filaments.length === 0 ? (
         <Card>
           <p className="text-muted-foreground px-5 py-4 text-sm">
-            No filament recorded yet. Add a line to start tracking stock.
+            No filament recorded yet. Sync from BambuBuddy to pull in the spool shelf, or add a line
+            by hand.
           </p>
         </Card>
       ) : (
