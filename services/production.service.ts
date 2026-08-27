@@ -162,6 +162,15 @@ export async function validateJobPersonalisation(
   )
 }
 
+/**
+ * Which orders to list: `live` is what Shopify imported, `dummy` the seeded
+ * sample rows.
+ *
+ * Both stay in the client because the backend supports both and this is a
+ * typed client for that API, not for one page's current use. The Orders page
+ * asks only for `live` - a list that might be showing fabricated rows is worse
+ * than an empty one, since nothing on screen would say which it was.
+ */
 export type OrderSource = 'live' | 'dummy'
 
 export async function listOrders(token: string, source: OrderSource): Promise<Order[]> {
