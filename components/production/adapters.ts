@@ -220,6 +220,8 @@ export function toOrderDetailRecord(order: OrderDetail): OrderRecord {
   return {
     ...toOrderRecord(order),
     lineItems: (order.line_items ?? []).map(item => ({
+      sku: item.sku ?? null,
+      properties: item.properties ?? [],
       name: item.title ?? item.name ?? PLACEHOLDER,
       quantity: item.quantity ?? 1,
     })),

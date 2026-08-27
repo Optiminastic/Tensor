@@ -253,10 +253,25 @@ export type Order = z.infer<typeof OrderSchema>
 // orderDetailResponse adds the raw Shopify line items (only the fields the UI
 // reads are declared, the rest are ignored) plus products - the typed,
 // commerce-facing per-item rows from order_line_items (SKU, name, image).
+/**
+ * One custom attribute exactly as the store sent it.
+ *
+ * Kept verbatim rather than mapped: a storefront personaliser names its
+ * questions for humans ("STEP 4-First Name-:"), and anything the backend does
+ * not recognise still has to reach the person fulfilling the order.
+ */
+export const LinePropSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+})
+export type LineProp = z.infer<typeof LinePropSchema>
+
 export const OrderLineItemSchema = z.object({
   title: z.string().nullish(),
   name: z.string().nullish(),
   quantity: z.number().nullish(),
+  sku: z.string().nullish(),
+  properties: LinePropSchema.array().nullish(),
 })
 export const OrderProductSchema = z.object({
   id: z.string(),
@@ -281,6 +296,9 @@ export const FilamentSchema = z.object({
   id: z.string(),
   material: z.string(),
   colour: z.string().nullish(),
+  // The swatch for `colour`, e.g. '#1A1A1A'. Null on rows entered by hand -
+  // the UI shows the name alone rather than inventing a colour.
+  colour_hex: z.string().nullish(),
   grams_available: z.number(),
   reorder_level_grams: z.number(),
   created_at: z.string(),

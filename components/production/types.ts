@@ -73,9 +73,18 @@ export interface FilamentRecord {
 
 export type OrderStatus = 'paid' | 'pending' | 'refunded' | 'cancelled'
 
+/** One Shopify line-item custom attribute, verbatim. */
+export interface LineProp {
+  name: string
+  value: string
+}
+
 export interface OrderLineItem {
   name: string
   quantity: number
+  sku: string | null
+  /** Every custom attribute the store sent, in the order the customer answered. */
+  properties: LineProp[]
 }
 
 // One product within an order - the commerce-facing shape (SKU, name, image),
