@@ -61,3 +61,21 @@ export function dateOnly(value: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return NO_DATE
   return `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`
 }
+
+/**
+ * Formats one of Shopify's decimal money strings, e.g. "424.00" -> "₹424.00".
+ *
+ * Takes a string rather than a number because that is how the amount travels:
+ * the backend keeps Shopify's own decimal form so no figure is re-rounded on
+ * the way here. Two decimals always, matching how a store shows prices.
+ *
+ * Null, undefined and anything unparseable return null rather than "₹0.00".
+ * "Shopify never told us the shipping cost" and "shipping was free" are
+ * different facts, and a confident zero would state the wrong one.
+ */
+export function money(value: string | null | undefined): string | null {
+  if (value === null || value === undefined || value.trim() === '') return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  return inr(parsed, 2)
+}

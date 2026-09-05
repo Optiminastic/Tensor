@@ -9,7 +9,11 @@ import type { OrderRecord } from '@/components/production/types'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import { listConnections } from '@/services/connections.service'
-import { ProductionServiceError, listOrders } from '@/services/production.service'
+import {
+  ProductionServiceError,
+  listOrders,
+  listOrdersWithoutJobs,
+} from '@/services/production.service'
 
 // Whether this brand's Shopify connection (the same one the create-brand
 // OAuth flow set up - see app/dashboard/[brand]/integrations/page.tsx for the
@@ -38,6 +42,10 @@ export default async function ProductionOrdersPage({
   await requirePermission('order:read', `/dashboard/${brand}`)
 
   let orders: OrderRecord[] = []
+  // Ids of orders that produced no production jobs, for the "No jobs" tab.
+  // Fetched here rather than derived, because the order DTO carries no job
+  // count - see listOrdersWithoutJobs.
+  let orderIdsWithoutJobs: string[] = []
   let error: string | null = null
   let shopifyConnected = false
   const { token, error: tokenError } = await resolveBackendToken()
@@ -52,6 +60,13 @@ export default async function ProductionOrdersPage({
       orders = (await listOrders(token, 'live')).map(toOrderRecord)
     } catch (err) {
       error = err instanceof ProductionServiceError ? err.message : 'Could not load orders.'
+    }
+    try {
+      orderIdsWithoutJobs = (await listOrdersWithoutJobs(token, 'live')).map(o => o.id)
+    } catch {
+      // A filter tab failing must not take the whole list with it: the orders
+      // are the page, and losing them to a missing count would be a worse
+      // outcome than a tab that reads zero.
     }
     shopifyConnected = await resolveShopifyConnected(token, brand)
   }
@@ -71,7 +86,7 @@ export default async function ProductionOrdersPage({
           No live orders yet. Click Sync from Shopify to pull in the latest orders.
         </p>
       ) : (
-        <OrdersTable brand={brand} orders={orders} />
+        <OrdersTable brand={brand} orders={orders} orderIdsWithoutJobs={orderIdsWithoutJobs} />
       )}
     </main>
   )

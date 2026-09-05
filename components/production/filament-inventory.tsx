@@ -41,6 +41,36 @@ interface FilamentInventoryProps {
   filaments: Filament[]
 }
 
+interface ColourSwatchProps {
+  name: string | null | undefined
+  hex: string | null | undefined
+}
+
+/**
+ * The colour, shown rather than described.
+ *
+ * A name is what the planner keys on, but nobody can picture "Ivory" - and an
+ * operator matching stock against a shelf is matching the swatch. The dot is
+ * only drawn when a hex actually exists: a row typed in by hand has no colour
+ * to show, and defaulting to grey would look like a real colour rather than an
+ * absent one.
+ */
+function ColourSwatch({ name, hex }: ColourSwatchProps): JSX.Element {
+  if (!name) return <span className="text-muted-foreground">-</span>
+  return (
+    <span className="flex items-center gap-2">
+      {hex ? (
+        <span
+          aria-hidden
+          className="border-border size-3.5 shrink-0 rounded-full border"
+          style={{ backgroundColor: hex }}
+        />
+      ) : null}
+      <span>{name}</span>
+    </span>
+  )
+}
+
 function isLow(filament: Filament): boolean {
   return filament.grams_available < filament.reorder_level_grams
 }
@@ -163,7 +193,9 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
                     return (
                       <TableRow key={filament.id}>
                         <TableCell className="font-medium">{filament.material}</TableCell>
-                        <TableCell>{filament.colour ?? '-'}</TableCell>
+                        <TableCell>
+                          <ColourSwatch name={filament.colour} hex={filament.colour_hex} />
+                        </TableCell>
                         <TableCell className="text-right font-mono tabular-nums">
                           {(filament.grams_available / 1000).toLocaleString(undefined, {
                             maximumFractionDigits: 2,

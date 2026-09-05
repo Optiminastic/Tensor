@@ -8,9 +8,11 @@ import {
   type Batch,
   type BatchApproveInput,
   type BatchPatchInput,
+  type CompleteBatchJobsResult,
   type PrintBatchResult,
   AutoCreateBatchesResultSchema,
   BatchSchema,
+  CompleteBatchJobsResultSchema,
   PrintBatchResultSchema,
 } from '@/lib/validators/batches'
 import { type ProductionJob, ProductionJobSchema } from '@/lib/validators/production'
@@ -153,6 +155,25 @@ export async function removeJobFromBatch(
     `/batches/${encodeURIComponent(batchId)}/jobs/${encodeURIComponent(jobId)}`,
     { method: 'DELETE', headers: jsonHeaders(token) },
     data => BatchSchema.parse(data),
+  )
+}
+
+/**
+ * Marks the named planks on a bed done.
+ *
+ * A selection, not a switch: a plate comes off the printer with three good
+ * planks and one warped, and the bed only becomes Done once nothing on it is
+ * outstanding.
+ */
+export async function completeBatchJobs(
+  token: string,
+  batchId: string,
+  jobIds: string[],
+): Promise<CompleteBatchJobsResult> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}/jobs/complete`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify({ job_ids: jobIds }) },
+    data => CompleteBatchJobsResultSchema.parse(data),
   )
 }
 

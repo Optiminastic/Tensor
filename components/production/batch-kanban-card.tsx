@@ -6,7 +6,9 @@ import { AlertTriangle, ChevronDown } from 'lucide-react'
 import { useState, type JSX } from 'react'
 
 import { BatchDetailSheet } from '@/components/production/batch-detail-sheet'
+import { batchFailure } from '@/components/production/batch-label'
 import { CompletedBatchJobs } from '@/components/production/completed-batch-jobs'
+import { FailureNote } from '@/components/production/failure-note'
 import type { BatchRecord } from '@/components/production/types'
 import { countdown, dateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -32,6 +34,7 @@ export function BatchKanbanCard({ brand, batch, expandable }: BatchKanbanCardPro
     id: batch.id,
   })
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined
+  const failure = batchFailure(batch)
 
   return (
     <div
@@ -39,6 +42,7 @@ export function BatchKanbanCard({ brand, batch, expandable }: BatchKanbanCardPro
         'border-border bg-surface flex flex-col rounded-md border shadow-xs transition-colors',
         'hover:border-border-strong',
         isDragging && 'z-10 opacity-60',
+        failure && 'border-l-danger bg-danger-subtle/40 border-l-2',
       )}
       style={style}
     >
@@ -82,6 +86,7 @@ export function BatchKanbanCard({ brand, batch, expandable }: BatchKanbanCardPro
             ) : null}
           </div>
         </div>
+        <FailureNote reason={failure?.reason} label={failure?.label} />
         <p className="text-muted-foreground text-xs">
           {batch.jobsCount ?? 0} jobs
           {batch.totalPrintTimeMinutes !== null

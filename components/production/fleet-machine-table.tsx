@@ -14,7 +14,29 @@ interface FleetMachineTableProps {
   initialMachines: FleetMachine[]
 }
 
-const COLUMNS = ['Machine', 'Machine ID', 'Status', 'Current Batch', 'Layer', 'Time Remaining']
+const COLUMNS = [
+  'Machine',
+  'Model',
+  'Machine ID',
+  'Status',
+  'Current Batch',
+  'Layer',
+  'Time Remaining',
+]
+
+/**
+ * Errored machines first; everything else keeps the backend's order.
+ *
+ * Sorted here rather than in SQL because the list is polled and re-sorted on
+ * every tick, and a machine that develops a fault should rise to the top
+ * without a round trip. It is a stable partition, not a full sort: the
+ * backend's ordering within each group is deliberate and preserved.
+ */
+function errorsFirst(machines: FleetMachine[]): FleetMachine[] {
+  const failed = machines.filter(m => m.status === 'error')
+  if (failed.length === 0) return machines
+  return [...failed, ...machines.filter(m => m.status !== 'error')]
+}
 
 /**
  * The fleet, updating on its own.
@@ -30,6 +52,7 @@ const COLUMNS = ['Machine', 'Machine ID', 'Status', 'Current Batch', 'Layer', 'T
  */
 export function FleetMachineTable({ brand, initialMachines }: FleetMachineTableProps): JSX.Element {
   const { data: machines } = useFleetMachines(initialMachines)
+  const ordered = errorsFirst(machines)
 
   return (
     <Card>
@@ -43,7 +66,7 @@ export function FleetMachineTable({ brand, initialMachines }: FleetMachineTableP
           </TableRow>
         </TableHead>
         <TableBody>
-          {machines.map(machine => (
+          {ordered.map(machine => (
             <FleetMachineRow key={machine.id} brand={brand} machine={machine} />
           ))}
         </TableBody>

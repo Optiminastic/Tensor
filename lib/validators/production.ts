@@ -1,5 +1,18 @@
 import { z } from 'zod'
 
+/**
+ * One custom attribute exactly as the store sent it.
+ *
+ * Kept verbatim rather than mapped: a storefront personaliser names its
+ * questions for humans ("STEP 4-First Name-:"), and anything the backend does
+ * not recognise still has to reach the person fulfilling the order.
+ */
+export const LinePropSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+})
+export type LineProp = z.infer<typeof LinePropSchema>
+
 // Mirrors of Tensor-Core's production DTOs (snake_case). The frontend validates
 // every response against these; the backend is the source of truth.
 
@@ -21,6 +34,10 @@ export const ProductionJobSchema = z.object({
   priority: z.number(),
   held: z.boolean(),
   issue_reason: z.string().nullish(),
+  // Why the batch planner passed this job over, in the planner's own wording.
+  // Derived on read from held/personalisation/issue_reason - it is an
+  // explanation, never a cause, so nothing may be written back to it.
+  batching_blocked_reason: z.string().nullish(),
   due_date: z.string().nullish(),
   sku: z.string().nullish(),
   product_name: z.string().nullish(),
@@ -30,6 +47,20 @@ export const ProductionJobSchema = z.object({
   filament_grams_required: z.number().nullish(),
   estimated_print_time_minutes: z.number().nullish(),
   print_file_id: z.string().nullish(),
+  // The storefront's own option string, e.g. "BABY PINK / NO LIGHT" - colour
+  // and light choice together, because that is how the store sells it.
+  // Where this job's geometry comes from and whether it has arrived.
+  // Computed by the backend because it turns on the SKU rule for generated
+  // products; a second copy of that rule here would drift.
+  model_status: z.enum(['ready', 'generating', 'failed', 'approval_required']).nullish(),
+  // Why a generated model could not be built, in the renderer's own words.
+  // Null unless model_status is 'failed'.
+  model_error: z.string().nullish(),
+  variant_title: z.string().nullish(),
+  // Every custom attribute for this line, verbatim and in the order the
+  // customer answered. This is where the two names and the heart count live:
+  // personalisation_name joins them into "A & B" and loses the split.
+  personalisation_properties: LinePropSchema.array().nullish(),
   shopify_order_id: z.number().nullish(),
   shopify_customer_id: z.number().nullish(),
   customer_name: z.string().nullish(),
@@ -228,6 +259,27 @@ export type PackagingInput = z.infer<typeof PackagingInputSchema>
 // real imported order or "seed" for a dummy one - what the live/dummy toggle
 // filters the /orders?source= request on. "shopify_webhook" is a stored legacy
 // label: orders are now only ever pulled by an explicit sync, never pushed.
+
+/**
+ * A shipping or billing address.
+ *
+ * Every field is optional because this is Shopify PROTECTED CUSTOMER DATA: the
+ * Admin API returns it as null until the app is granted protected-data access,
+ * so today these arrive empty and start filling in the day access lands - no
+ * frontend change needed.
+ */
+export const OrderAddressSchema = z.object({
+  name: z.string().nullish(),
+  address1: z.string().nullish(),
+  address2: z.string().nullish(),
+  city: z.string().nullish(),
+  province: z.string().nullish(),
+  zip: z.string().nullish(),
+  country: z.string().nullish(),
+  phone: z.string().nullish(),
+})
+export type OrderAddress = z.infer<typeof OrderAddressSchema>
+
 export const OrderSchema = z.object({
   id: z.string(),
   shopify_order_id: z.number(),
@@ -247,30 +299,59 @@ export const OrderSchema = z.object({
   // retry. Null on a healthy order.
   job_creation_error: z.string().nullish(),
   job_creation_failed_at: z.string().nullish(),
+
+  // Shopify's own order page, mirrored. placed_at is when the customer
+  // ordered, as against imported_at (when Tensor first saw it) - on a backfill
+  // they are weeks apart, and it is the customer's date that belongs on screen.
+  placed_at: z.string().nullish(),
+  note: z.string().nullish(),
+  fulfillment_status: z.string().nullish(),
+  // The carrier's view, null until something ships - an unfulfilled order has
+  // no fulfilments at all. return_status is "no_return" on an order nobody
+  // sent back, which is a stated fact rather than an absence.
+  delivery_status: z.string().nullish(),
+  return_status: z.string().nullish(),
+  // Units on the order, summed across its lines - carried on the list response
+  // so the table can render "2 items" without shipping every line item.
+  item_count: z.number().nullish(),
+  source_name: z.string().nullish(),
+  // Decimal strings, not numbers: the backend keeps the store's own precision
+  // rather than round-tripping through a float. Null means Shopify never
+  // stated the figure, which is not the same as zero.
+  subtotal_price: z.string().nullish(),
+  total_discounts: z.string().nullish(),
+  total_shipping: z.string().nullish(),
+  // What the customer has actually paid - Shopify's "Paid" line, which differs
+  // from total_price on a COD or partly-refunded order.
+  total_received: z.string().nullish(),
+  discount_title: z.string().nullish(),
+  shipping_title: z.string().nullish(),
+  attributes: LinePropSchema.array().nullish(),
+  tags: z.string().array().nullish(),
+  shipping_address: OrderAddressSchema.nullish(),
+  billing_address: OrderAddressSchema.nullish(),
 })
 export type Order = z.infer<typeof OrderSchema>
 
 // orderDetailResponse adds the raw Shopify line items (only the fields the UI
 // reads are declared, the rest are ignored) plus products - the typed,
 // commerce-facing per-item rows from order_line_items (SKU, name, image).
-/**
- * One custom attribute exactly as the store sent it.
- *
- * Kept verbatim rather than mapped: a storefront personaliser names its
- * questions for humans ("STEP 4-First Name-:"), and anything the backend does
- * not recognise still has to reach the person fulfilling the order.
- */
-export const LinePropSchema = z.object({
-  name: z.string(),
-  value: z.string(),
-})
-export type LineProp = z.infer<typeof LinePropSchema>
-
 export const OrderLineItemSchema = z.object({
+  // product_name is what the backend writes; title/name are Shopify's own
+  // spellings, still read so an order imported before the rename renders.
+  product_name: z.string().nullish(),
   title: z.string().nullish(),
   name: z.string().nullish(),
   quantity: z.number().nullish(),
   sku: z.string().nullish(),
+  // The option string under the product name, e.g. "BABY PINK / NO LIGHT".
+  variant_title: z.string().nullish(),
+  image_url: z.string().nullish(),
+  // unit_price is the price before discount - what Shopify strikes through -
+  // and discounted_unit_price what was actually charged.
+  unit_price: z.string().nullish(),
+  discounted_unit_price: z.string().nullish(),
+  line_total: z.string().nullish(),
   properties: LinePropSchema.array().nullish(),
 })
 export const OrderProductSchema = z.object({

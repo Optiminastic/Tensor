@@ -28,9 +28,23 @@ export const BatchSchema = z.object({
   // means no .gcode.3mf exists to send.
   plate_sliced_at: z.string().nullish(),
   plate_slice_error: z.string().nullish(),
+  // Why the batch never reached the printer, in BambuBuddy's own words.
+  // Distinct from plate_slice_error: that one means there is no print file,
+  // this one means there is a file nothing will pick up.
+  print_error: z.string().nullish(),
+  // BambuBuddy's queue item, present once the plate was accepted.
+  queue_item_id: z.number().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
   jobs_count: z.number().nullish(),
+  // Which Shopify orders are on this bed, ascending and deduplicated. The
+  // Batches table shows these instead of a job count - standing at a printer,
+  // the question is whose work is on the plate, not how many rows it holds.
+  order_numbers: z.string().array().nullish(),
+  // The distinct filament colours on this bed, with the swatch to draw each.
+  // hex is empty when the colour is not on the filament shelf - the name still
+  // shows, so a colour nobody has registered is visible rather than hidden.
+  colours: z.object({ name: z.string(), hex: z.string() }).array().nullish(),
   // Derived from bed_utilization_percent against the nominal bed area -
   // present on every response, list and single-batch alike.
   occupied_area_mm2: z.number().nullish(),
@@ -75,6 +89,20 @@ export type BatchPatchInput = z.infer<typeof BatchPatchInputSchema>
 // addJobsToBatchRequest - only unassigned jobs matching the batch's material/
 // nozzle/machine-family configuration are accepted (see
 // GET /batches/:id/compatible-jobs), and only while the batch is still Draft.
+/**
+ * What signing off some of a bed's planks did.
+ *
+ * `remaining` is the number still outstanding, and zero is what turns the bed
+ * Done - which is why the dialog can say "3 marked done, 1 left" without asking
+ * the server a second time.
+ */
+export const CompleteBatchJobsResultSchema = z.object({
+  batch: BatchSchema,
+  completed: z.number(),
+  remaining: z.number(),
+})
+export type CompleteBatchJobsResult = z.infer<typeof CompleteBatchJobsResultSchema>
+
 export const AddJobsToBatchInputSchema = z.object({
   job_ids: z.string().min(1).array().min(1),
 })

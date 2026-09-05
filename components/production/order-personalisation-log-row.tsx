@@ -22,7 +22,7 @@ export function OrderPersonalisationLogRow({
     <div className="border-border flex flex-col gap-1.5 border-b pb-4 last:border-b-0 last:pb-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
-          href={`/dashboard/${brand}/production/jobs/${job.jobId}`}
+          href={`/dashboard/${brand}/production/jobs/${job.jobNumber}`}
           className="text-foreground hover:text-accent text-sm font-medium"
         >
           {job.description}

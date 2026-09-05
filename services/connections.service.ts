@@ -106,18 +106,37 @@ export async function listShopifyOrderConnections(
   )
 }
 
-// syncShopifyOrders imports the brand's most recent Shopify orders (POST
-// /brands/:slug/connections/shopify/sync), using the access token already
-// stored on the brand's Shopify connection - the same one the existing
+// syncShopifyOrders asks Tensor-Core to START importing the brand's Shopify
+// orders (POST /brands/:slug/connections/shopify/sync), using the access token
+// already stored on the brand's Shopify connection - the same one the existing
 // product-catalog OAuth flow wrote. No separate order-import grant needed.
-// This is the only ongoing path orders take into Tensor: the Orders page's
-// "Sync from Shopify" button calls it, and nothing imports on its own.
+//
+// It returns as soon as the pull is queued, and deliberately so: importing runs
+// to thousands of orders, while the fetch above gives up after TIMEOUT_MS. When
+// the backend did the import on this request, that timeout cancelled it part
+// way and orders went silently missing.
 export async function syncShopifyOrders(
   accessToken: string,
   brandSlug: string,
 ): Promise<ShopifySyncResult> {
   return request(
     `/brands/${encodeURIComponent(brandSlug)}/connections/shopify/sync`,
+    { method: 'POST', headers: bearer(accessToken) },
+    data => ShopifySyncResultSchema.parse(data),
+  )
+}
+
+/**
+ * Starts a pull of orders for EVERY brand with Shopify connected.
+ *
+ * The Orders page's "All brands" view has a sentinel slug rather than a real
+ * brand, so it has no connection of its own to sync - which is why its Sync
+ * button used to be permanently disabled, on the very page most people work
+ * from. This spans the connections instead of looking one up.
+ */
+export async function syncAllShopifyOrders(accessToken: string): Promise<ShopifySyncResult> {
+  return request(
+    '/connections/shopify/sync-all',
     { method: 'POST', headers: bearer(accessToken) },
     data => ShopifySyncResultSchema.parse(data),
   )

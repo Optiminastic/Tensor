@@ -31,6 +31,18 @@ export async function GET(_request: NextRequest, { params }: RouteContext): Prom
     })
     const length = upstream.headers.get('Content-Length')
     if (length) headers.set('Content-Length', length)
+
+    // Forwarded, not dropped. Tensor-Core sets
+    // `attachment; filename="JOB-114567-RAHUL-RANU.stl"`, and that header is
+    // the only thing that carries the real name and extension to the browser.
+    // Without it a download saved as whatever the <a download> attribute said
+    // - which was a name with no extension at all, so the file arrived as
+    // something no slicer would open. It also forces a download rather than a
+    // navigation, which is what makes the link work at all for a type the
+    // browser might otherwise try to render.
+    const disposition = upstream.headers.get('Content-Disposition')
+    if (disposition) headers.set('Content-Disposition', disposition)
+
     return new Response(upstream.body, { status: 200, headers })
   } catch (err) {
     if (err instanceof FileServiceError) {

@@ -4,8 +4,8 @@ import { Bounds, OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import type * as THREE from 'three'
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 
+import { FILAMENT_COLOR_ATTR, parseModelWithColours } from '@/components/designs/model-parse'
 import {
   BED_DEPTH_MM,
   BED_WIDTH_MM,
@@ -18,13 +18,20 @@ interface BatchPlateViewerProps {
 }
 
 /**
- * Interactive 3D preview of a batch's merged plate STL - drag to orbit, scroll
- * to zoom. Deliberately simpler than components/designs/model-viewer.tsx: a
- * merged plate has no single orientation to score/reorient, just geometry to
- * inspect before approving.
+ * Interactive 3D preview of a batch's merged plate - drag to orbit, scroll to
+ * zoom. Deliberately simpler than components/designs/model-viewer.tsx: a merged
+ * plate has no single orientation to score/reorient, just geometry to inspect
+ * before approving.
+ *
+ * The plate is a 3MF whenever every model on the bed carries colour, so this
+ * cannot use STLLoader directly - it threw outright on a ZIP, and the card said
+ * "Plate preview unavailable" for exactly the beds worth looking at. The shared
+ * parser sniffs the format and bakes each part's colour, which is what makes a
+ * bed of blue planks actually look blue.
  */
 export function BatchPlateViewer({ modelUrl }: BatchPlateViewerProps): JSX.Element {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null)
+  const [coloured, setColoured] = useState(false)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -37,12 +44,23 @@ export function BatchPlateViewer({ modelUrl }: BatchPlateViewerProps): JSX.Eleme
         return res.arrayBuffer()
       })
       .then(buf => {
-        const geo = new STLLoader().parse(buf)
+        const { geometry: geo, colours } = parseModelWithColours(buf)
+        // NOT centred, unlike the job viewer: bedpack.Pack places every part
+        // measured from a bed corner, so re-centring would slide the whole
+        // plate off the bed graphic it is being checked against.
         geo.computeVertexNormals()
         if (cancelled) {
           geo.dispose()
           return
         }
+        // The parser bakes colour into its own attribute rather than "color",
+        // which the overhang analysis uses. Renaming it here is what lets a
+        // plain <meshStandardMaterial vertexColors> read it.
+        const baked = geo.getAttribute(FILAMENT_COLOR_ATTR)
+        if (colours.length > 0 && baked) {
+          geo.setAttribute('color', baked)
+        }
+        setColoured(colours.length > 0 && Boolean(baked))
         setGeometry(geo)
       })
       .catch(() => {
@@ -77,7 +95,16 @@ export function BatchPlateViewer({ modelUrl }: BatchPlateViewerProps): JSX.Eleme
           fixed-size plate looking mis-scaled or clipped relative to it. */}
       <Bounds fit observe margin={1.2}>
         <mesh geometry={geometry} scale={fitScale}>
-          <meshStandardMaterial color="#9aa4b2" flatShading roughness={0.72} metalness={0} />
+          {/* Grey only when the plate carries no colours of its own - a bed
+              merged from uploaded STLs, or one whose colours would not
+              resolve. */}
+          <meshStandardMaterial
+            color={coloured ? '#ffffff' : '#9aa4b2'}
+            vertexColors={coloured}
+            flatShading
+            roughness={0.72}
+            metalness={0}
+          />
         </mesh>
         {/* bedpack.Pack places every part with (0,0) at one bed corner,
             extending to (BED_WIDTH_MM, BED_DEPTH_MM) - but PrintBedPlate's

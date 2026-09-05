@@ -4,7 +4,12 @@
 
 import type { Batch } from '@/lib/validators/batches'
 import type { Machine } from '@/lib/validators/machines'
-import type { Order, OrderDetail, ProductionJob } from '@/lib/validators/production'
+import type {
+  Order,
+  OrderAddress as OrderAddressResponse,
+  OrderDetail,
+  ProductionJob,
+} from '@/lib/validators/production'
 
 import type {
   AssemblyStatus,
@@ -13,6 +18,7 @@ import type {
   JobStatus,
   MachineStatus,
   MachineSummary,
+  OrderAddress,
   OrderJobPersonalisation,
   OrderRecord,
   OrderStatus,
@@ -64,6 +70,13 @@ export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
     priority: job.priority,
     createdAt: job.created_at,
     issueReason: job.issue_reason ?? null,
+    batchingBlockedReason: job.batching_blocked_reason ?? null,
+    printFileId: job.print_file_id ?? null,
+    // Defaults to 'ready' rather than 'approval_required': an older backend
+    // that does not send this must not make every job look like it needs
+    // signing off.
+    modelStatus: job.model_status ?? 'ready',
+    modelError: job.model_error ?? null,
   }
 }
 
@@ -89,7 +102,47 @@ export function toOrderRecord(order: Order): OrderRecord {
     lineItems: [],
     products: [],
     jobCreationError: order.job_creation_error ?? null,
+
+    placedAt: order.placed_at ?? null,
+    note: order.note ?? null,
+    fulfillmentStatus: order.fulfillment_status ?? null,
+    deliveryStatus: order.delivery_status ?? null,
+    returnStatus: order.return_status ?? null,
+    itemCount: order.item_count ?? 0,
+    sourceName: order.source_name ?? null,
+    subtotal: order.subtotal_price ?? null,
+    totalDiscounts: order.total_discounts ?? null,
+    totalShipping: order.total_shipping ?? null,
+    amountPaid: order.total_received ?? null,
+    discountTitle: order.discount_title ?? null,
+    shippingTitle: order.shipping_title ?? null,
+    attributes: order.attributes ?? [],
+    tags: order.tags ?? [],
+    shippingAddress: toOrderAddress(order.shipping_address),
+    billingAddress: toOrderAddress(order.billing_address),
   }
+}
+
+/**
+ * Maps an address, treating one with nothing in it as absent.
+ *
+ * Shopify hands back an address object with every field null when the app
+ * lacks protected-data access, and rendering that produces a panel of empty
+ * labels that reads as a bug rather than as missing permission.
+ */
+function toOrderAddress(a: OrderAddressResponse | null | undefined): OrderAddress | null {
+  if (!a) return null
+  const address: OrderAddress = {
+    name: a.name ?? null,
+    address1: a.address1 ?? null,
+    address2: a.address2 ?? null,
+    city: a.city ?? null,
+    province: a.province ?? null,
+    zip: a.zip ?? null,
+    country: a.country ?? null,
+    phone: a.phone ?? null,
+  }
+  return Object.values(address).some(Boolean) ? address : null
 }
 
 function toJobStatus(job: ProductionJob): JobStatus {
@@ -173,6 +226,8 @@ export function toJobDetail(job: ProductionJob): ProductionJobDetail {
       variant: job.personalisation_variant ?? null,
     },
     personalisationPhotoFileId: job.personalisation_photo_file_id ?? null,
+    variantTitle: job.variant_title ?? null,
+    personalisationProperties: job.personalisation_properties ?? [],
   }
 }
 
@@ -181,6 +236,7 @@ export function toJobDetail(job: ProductionJob): ProductionJobDetail {
 export function toOrderJobPersonalisation(job: ProductionJob): OrderJobPersonalisation {
   return {
     jobId: job.id,
+    jobNumber: job.job_number,
     description: job.product_name ?? job.description,
     personalisation: toPersonalisation(job.personalisation_status),
     log: job.personalisation_log ?? [],
@@ -205,8 +261,12 @@ export function toBatchRecord(batch: Batch): BatchRecord {
     totalFilamentGrams: batch.total_filament_grams ?? null,
     bedUtilizationPercent: batch.bed_utilization_percent ?? null,
     plateSlicedAt: batch.plate_sliced_at ?? null,
+    sliceError: batch.plate_slice_error ?? null,
+    printError: batch.print_error ?? null,
     packingStrategy: batch.packing_strategy ?? null,
     jobsCount: batch.jobs_count ?? null,
+    orderNumbers: batch.order_numbers ?? [],
+    colours: batch.colours ?? [],
     createdAt: batch.created_at,
     occupiedAreaMm2: batch.occupied_area_mm2 ?? null,
     freeAreaMm2: batch.free_area_mm2 ?? null,
@@ -222,8 +282,16 @@ export function toOrderDetailRecord(order: OrderDetail): OrderRecord {
     lineItems: (order.line_items ?? []).map(item => ({
       sku: item.sku ?? null,
       properties: item.properties ?? [],
-      name: item.title ?? item.name ?? PLACEHOLDER,
+      // product_name is what the backend writes today; title/name are
+      // Shopify's spellings, still read so an order imported before the
+      // rename still shows something other than a placeholder.
+      name: item.product_name ?? item.title ?? item.name ?? PLACEHOLDER,
       quantity: item.quantity ?? 1,
+      variantTitle: item.variant_title ?? null,
+      imageUrl: item.image_url ?? null,
+      unitPrice: item.unit_price ?? null,
+      discountedUnitPrice: item.discounted_unit_price ?? null,
+      lineTotal: item.line_total ?? null,
     })),
     products: (order.products ?? []).map(product => ({
       id: product.id,
