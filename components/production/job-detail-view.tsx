@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 
+import { JobCustomisationCard } from '@/components/production/job-customisation-card'
 import { JobDetailGrid } from '@/components/production/job-detail-grid'
 import { JobDetailHeader } from '@/components/production/job-detail-header'
 import { JobModelPreview } from '@/components/production/job-model-preview'
@@ -25,19 +26,17 @@ export function JobDetailView({ brand, job, batches, roles }: JobDetailViewProps
           <Separator />
           <JobDetailGrid job={job} batches={batches} />
         </Card>
+        <JobCustomisationCard job={job} />
         <Card>
           <CardHeader>
-            <CardTitle>Customer personalisation</CardTitle>
+            <CardTitle>Personalisation checks</CardTitle>
           </CardHeader>
           <CardContent>
             <PersonalisationLog brand={brand} job={job} />
           </CardContent>
         </Card>
       </div>
-      <JobModelPreview
-        printFileId={job.printFileId}
-        fileName={job.sku && job.sku !== '-' ? `${job.sku}-model` : `${job.id}-model`}
-      />
+      <JobModelPreview jobId={job.id} modelStatus={job.modelStatus} printFileId={job.printFileId} />
     </div>
   )
 }

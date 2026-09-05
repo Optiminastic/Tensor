@@ -1,21 +1,22 @@
 'use client'
 
-import { Pause, Play } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
-import { updateProductionJob } from '@/app/dashboard/[brand]/production/actions'
+import { FailureNote, failureRowClass } from '@/components/production/failure-note'
+import { JobModelUploadButton } from '@/components/production/job-model-upload-button'
 import { PriorityTag } from '@/components/production/priority-tag'
 import {
+  MODEL_STATUS_CONFIG,
   PACKAGING_STATUS_CONFIG,
   PERSONALISATION_STATUS_CONFIG,
   QUEUE_STATUS_CONFIG,
 } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { ProductionJobQueueItem } from '@/components/production/types'
-import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { dateTime } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 interface JobQueueRowProps {
   brand: string
@@ -28,35 +29,13 @@ function stopRowClick(event: MouseEvent): void {
 
 export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
   const router = useRouter()
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const href = `/dashboard/${brand}/production/jobs/${job.id}`
-  const onHold = job.status === 'on_hold'
-  const canStart = job.status === 'queued'
-  // A clean job (no validation issue, personalisation resolved) flows into a
-  // batch automatically via the planner - manual Hold/Start controls are
-  // only useful for a job stuck on something a human has to fix first.
-  const needsManualAction = job.issueReason !== null || job.personalisation === 'required'
+  // Addressed by job number - the identifier a person can read back off a
+  // plank or over the phone. The backend resolves either form.
+  const href = `/dashboard/${brand}/production/jobs/${job.jobNumber}`
 
   const openDetail = (): void => router.push(href)
   const onKeyDown = (event: KeyboardEvent<HTMLTableRowElement>): void => {
     if (event.key === 'Enter') openDetail()
-  }
-
-  async function update(
-    event: MouseEvent,
-    input: { held?: boolean; status?: 'in_production' },
-  ): Promise<void> {
-    stopRowClick(event)
-    setPending(true)
-    setError(null)
-    const res = await updateProductionJob(brand, job.id, input)
-    setPending(false)
-    if (!res.ok) {
-      setError(res.error ?? 'Could not update the job.')
-      return
-    }
-    router.refresh()
   }
 
   return (
@@ -64,11 +43,31 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
       tabIndex={0}
       onClick={openDetail}
       onKeyDown={onKeyDown}
-      className="cursor-pointer"
+      className={cn(
+        'cursor-pointer',
+        // Red means "somebody has to do something". A render in flight does
+        // not qualify, and painting every plank red for the twenty seconds it
+        // takes is how red stops meaning anything.
+        failureRowClass(job.modelStatus === 'failed' || Boolean(job.batchingBlockedReason)),
+      )}
       aria-label={`Open ${job.id}`}
     >
-      <TableCell className="font-mono text-sm whitespace-nowrap">{job.jobNumber}</TableCell>
-      <TableCell>{job.description}</TableCell>
+      <TableCell className="font-mono text-sm whitespace-nowrap">
+        {job.jobNumber}
+        <FailureNote reason={job.batchingBlockedReason} className="mt-1 font-sans" />
+      </TableCell>
+      <TableCell>
+        {job.description}
+        {/* Which jobs are waiting on a person, and which on a render. A plank
+            builds itself from the customer's names; everything else needs
+            somebody to supply a model, and supplying it is the approval. */}
+        <span className="mt-1 block">
+          <TonePill {...MODEL_STATUS_CONFIG[job.modelStatus]} />
+        </span>
+        {/* "Oops" alone tells an operator something is wrong but not what.
+            The renderer's own words are the only useful thing anyone has. */}
+        <FailureNote reason={job.modelError} className="mt-1" />
+      </TableCell>
       <TableCell numeric>{job.qty}</TableCell>
       <TableCell>
         <TonePill {...QUEUE_STATUS_CONFIG[job.status]} />
@@ -85,44 +84,20 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
       <TableCell className="text-muted-foreground whitespace-nowrap">
         {dateTime(job.createdAt)}
       </TableCell>
+      {/* One column for the model: where it is, and the one thing anyone can
+          do about it. Hold and Start Production moved to the job's own Edit
+          dialog - a clean job flows into a batch by itself, so those were
+          controls for an exception being offered on every row. */}
       <TableCell className="text-right">
         <div className="flex flex-col items-end gap-1">
-          {needsManualAction ? (
-            <div className="flex justify-end gap-2" onClick={stopRowClick}>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={pending}
-                onClick={event => void update(event, { held: !onHold })}
-              >
-                {onHold ? (
-                  <Play className="size-3.5" aria-hidden />
-                ) : (
-                  <Pause className="size-3.5" aria-hidden />
-                )}
-                {onHold ? 'Resume' : 'Hold'}
-              </Button>
-              {canStart ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={pending}
-                  onClick={event => void update(event, { status: 'in_production' })}
-                >
-                  Start Production
-                </Button>
-              ) : null}
-            </div>
+          {job.modelStatus === 'approval_required' ? (
+            <JobModelUploadButton jobId={job.id} />
           ) : (
-            <span className="text-muted-foreground text-xs">Auto-batching</span>
+            <TonePill {...MODEL_STATUS_CONFIG[job.modelStatus]} />
           )}
-          {error ? (
-            <p role="alert" className="text-danger text-xs">
-              {error}
-            </p>
-          ) : null}
+          {/* "Oops" alone says something is wrong but not what. The renderer's
+              own words are the only useful thing anyone has. */}
+          <FailureNote reason={job.modelError} className="max-w-52 text-right" />
         </div>
       </TableCell>
     </TableRow>

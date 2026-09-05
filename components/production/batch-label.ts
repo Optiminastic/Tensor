@@ -10,3 +10,19 @@ export function batchLabel(batchId: string | null | undefined, numbers: BatchNum
   if (!batchId) return '—'
   return numbers[batchId] ?? batchId.slice(0, 8)
 }
+
+/**
+ * Which of a batch's two failure points is the one to report, if either.
+ *
+ * Slice comes first when both are set: without a print file the queue error is
+ * a consequence, and telling an operator to retry the send would waste their
+ * time on a batch that has nothing to send.
+ */
+export function batchFailure(batch: {
+  sliceError: string | null
+  printError: string | null
+}): { label: string; reason: string } | null {
+  if (batch.sliceError) return { label: 'Slice failed', reason: batch.sliceError }
+  if (batch.printError) return { label: 'Not sent', reason: batch.printError }
+  return null
+}

@@ -7,6 +7,7 @@ import { useState, type JSX } from 'react'
 
 import { removeJobFromBatchAction } from '@/app/dashboard/[brand]/production/actions'
 import { AddJobsToBatchDialog } from '@/components/production/add-jobs-to-batch-dialog'
+import { orderNumberFromJobNumber } from '@/components/production/order-number'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -60,6 +61,7 @@ export function BatchJobsTable({
           <TableHead>
             <TableRow>
               <TableHeaderCell>Job</TableHeaderCell>
+              <TableHeaderCell>Order</TableHeaderCell>
               <TableHeaderCell>Product</TableHeaderCell>
               <TableHeaderCell>SKU</TableHeaderCell>
               <TableHeaderCell className="text-right">Quantity</TableHeaderCell>
@@ -72,11 +74,26 @@ export function BatchJobsTable({
               <TableRow key={job.id}>
                 <TableCell className="font-mono text-sm">
                   <Link
-                    href={`/dashboard/${brand}/production/jobs/${job.id}`}
+                    href={`/dashboard/${brand}/production/jobs/${job.job_number}`}
                     className="text-accent hover:underline"
                   >
                     {job.job_number}
                   </Link>
+                </TableCell>
+                {/* The order number, green once the plank is signed off. The
+                    floor works from order numbers, and colouring the finished
+                    ones is what makes a half-done plate readable at a glance -
+                    three green, one grey still to go. */}
+                <TableCell>
+                  <span
+                    className={`rounded px-1.5 py-0.5 font-mono text-xs tabular-nums ${
+                      job.status === 'completed'
+                        ? 'bg-success-subtle text-success'
+                        : 'bg-surface-muted text-muted-foreground'
+                    }`}
+                  >
+                    {orderNumberFromJobNumber(job.job_number)}
+                  </span>
                 </TableCell>
                 <TableCell>{job.product_name ?? job.description}</TableCell>
                 <TableCell className="text-muted-foreground font-mono text-sm">

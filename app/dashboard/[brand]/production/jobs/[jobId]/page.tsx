@@ -53,7 +53,9 @@ export default async function ProductionJobPage({
           Back to Production Jobs
         </Link>
         <div className="flex flex-col gap-2">
-          <h1 className="text-display text-3xl">Job {job.id}</h1>
+          {/* The number, not the uuid: it is what is written on the plank,
+              quoted to the customer, and now what the URL carries. */}
+          <h1 className="text-display text-3xl">{job.jobNumber}</h1>
           <p className="text-muted-foreground text-sm">Full production job detail.</p>
         </div>
       </div>

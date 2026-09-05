@@ -55,7 +55,28 @@ export interface ProductionJobQueueItem {
   // it's excluded from auto-batching until a human fixes it, so it's the
   // one case the queue still needs manual Hold/Start controls for.
   issueReason: string | null
+  // Why the batch planner passed this job over, in the planner's own wording -
+  // held, personalisation pending, or a validation issue. Null when the job is
+  // batchable or already batched. Read-only: it explains, it never causes.
+  batchingBlockedReason: string | null
+  /**
+   * Null when the job has no geometry yet. Every product except the Dual Name
+   * Plank needs a person to supply it - a plank is rendered from the
+   * customer's own names - so this is what the queue's upload action keys on.
+   */
+  printFileId: string | null
+  /**
+   * Whether this job can be printed, and if not, who is waiting on whom:
+   * a Dual Name Plank builds itself ('generating'), everything else waits for
+   * a person to supply and approve a model ('approval_required').
+   */
+  modelStatus: ModelStatus
+  /** Why a generated model could not be built. Null unless modelStatus is 'failed'. */
+  modelError: string | null
 }
+
+/** Where a job's geometry comes from and whether it has arrived. */
+export type ModelStatus = 'ready' | 'generating' | 'failed' | 'approval_required'
 
 export type FilamentQuantityUnit = 'kg' | 'count'
 
@@ -73,9 +94,48 @@ export interface FilamentRecord {
 
 export type OrderStatus = 'paid' | 'pending' | 'refunded' | 'cancelled'
 
+/** One Shopify line-item custom attribute, verbatim. */
+export interface LineProp {
+  name: string
+  value: string
+}
+
 export interface OrderLineItem {
   name: string
   quantity: number
+  sku: string | null
+  /** The option string under the product name, e.g. "BABY PINK / NO LIGHT". */
+  variantTitle: string | null
+  imageUrl: string | null
+  /**
+   * unitPrice is the price before discount - the figure Shopify strikes
+   * through - discountedUnitPrice what was actually charged per unit, and
+   * lineTotal the row's total. Strings in the store's own decimal form; they
+   * are formatted for display, never summed.
+   */
+  unitPrice: string | null
+  discountedUnitPrice: string | null
+  lineTotal: string | null
+  /** Every custom attribute the store sent, in the order the customer answered. */
+  properties: LineProp[]
+}
+
+/**
+ * A shipping or billing address.
+ *
+ * Shopify protected customer data: every field arrives empty until the app has
+ * protected-data access, so the UI must render a missing address as absent
+ * rather than as a panel of blank labels.
+ */
+export interface OrderAddress {
+  name: string | null
+  address1: string | null
+  address2: string | null
+  city: string | null
+  province: string | null
+  zip: string | null
+  country: string | null
+  phone: string | null
 }
 
 // One product within an order - the commerce-facing shape (SKU, name, image),
@@ -107,6 +167,44 @@ export interface OrderRecord {
   // order has none and never will without a manual retry, so it needs to be
   // visible rather than merely absent from the queue.
   jobCreationError: string | null
+
+  /**
+   * Shopify's own order page, mirrored.
+   *
+   * placedAt is when the customer ordered, as against submittedAt (when Tensor
+   * imported it) - weeks apart on a backfill, and it is the customer's date
+   * that belongs at the top of the page.
+   */
+  placedAt: string | null
+  note: string | null
+  fulfillmentStatus: string | null
+  /** The carrier's view; null until something ships. */
+  deliveryStatus: string | null
+  returnStatus: string | null
+  /**
+   * Units on the order. Comes from the backend rather than being counted from
+   * lineItems, which the list response deliberately leaves empty.
+   */
+  itemCount: number
+  sourceName: string | null
+  /**
+   * Money as the store stated it, in decimal strings. Null means Shopify never
+   * stated the figure, which renders differently from a stated zero.
+   *
+   * amountPaid is Shopify's "Paid" line - what the customer has actually paid,
+   * which differs from `total` on a COD or partly-refunded order.
+   */
+  subtotal: string | null
+  totalDiscounts: string | null
+  totalShipping: string | null
+  amountPaid: string | null
+  discountTitle: string | null
+  shippingTitle: string | null
+  /** Order-level custom attributes: Shopify's "Additional details" panel. */
+  attributes: LineProp[]
+  tags: string[]
+  shippingAddress: OrderAddress | null
+  billingAddress: OrderAddress | null
 }
 
 export interface PersonalisationConfirms {
@@ -142,8 +240,24 @@ export interface BatchRecord {
   // actual bed. Gates "Send to printer": without a plate slice there is no
   // .gcode.3mf to send.
   plateSlicedAt: string | null
+  // Why this batch is stuck, at the two points it can be. sliceError means
+  // there is no print file; printError means there is one that nothing will
+  // pick up. Both null on a healthy batch.
+  sliceError: string | null
+  printError: string | null
   packingStrategy: string | null
   jobsCount: number | null
+  /**
+   * The Shopify orders on this bed, ascending and deduplicated. Empty when the
+   * batch holds no jobs traceable to an order - a reprint, or one assembled by
+   * hand.
+   */
+  orderNumbers: string[]
+  /**
+   * The distinct filament colours on this bed. `hex` is empty for a colour the
+   * filament shelf does not know, which renders as a name without a swatch.
+   */
+  colours: { name: string; hex: string }[]
   createdAt: string
   // Derived from bedUtilizationPercent against the nominal bed area.
   occupiedAreaMm2: number | null
@@ -178,6 +292,14 @@ export interface ProductionJobDetail extends ProductionJobQueueItem {
   personalisationLog: string[]
   personalisationConfirms: PersonalisationConfirms
   personalisationFields: PersonalisationFields
+  /** "BABY PINK / NO LIGHT" - the colour and light choice as the store sells it. */
+  variantTitle: string | null
+  /**
+   * Every custom attribute the customer filled in, verbatim and in order.
+   * The two names and the heart count are only here - personalisationName
+   * joins the names into "A & B".
+   */
+  personalisationProperties: LineProp[]
   personalisationPhotoFileId: string | null
 }
 
@@ -185,6 +307,8 @@ export interface ProductionJobDetail extends ProductionJobQueueItem {
 // a lighter-weight view than ProductionJobDetail (no print/machine facts).
 export interface OrderJobPersonalisation {
   jobId: string
+  /** The readable identifier, used to address the job in a URL. */
+  jobNumber: string
   description: string
   personalisation: PersonalisationStatus
   log: string[]

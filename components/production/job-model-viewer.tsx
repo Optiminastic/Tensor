@@ -5,7 +5,7 @@ import { Canvas } from '@react-three/fiber'
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import type * as THREE from 'three'
 
-import { parseModel } from '@/components/designs/model-parse'
+import { FILAMENT_COLOR_ATTR, parseModelWithColours } from '@/components/designs/model-parse'
 import { centerOnPlate, fitScaleFor, PrintBedPlate } from '@/components/production/print-bed-plate'
 
 interface JobModelViewerProps {
@@ -21,6 +21,10 @@ interface JobModelViewerProps {
  */
 export function JobModelViewer({ modelUrl }: JobModelViewerProps): JSX.Element {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null)
+  // A Dual Name Plank is two objects in one 3MF - a white plate and lettering
+  // in the customer's colour. Showing it in flat grey would hide the one
+  // choice the customer made that cannot be corrected after printing.
+  const [coloured, setColoured] = useState(false)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -33,13 +37,21 @@ export function JobModelViewer({ modelUrl }: JobModelViewerProps): JSX.Element {
         return res.arrayBuffer()
       })
       .then(buf => {
-        const geo = parseModel(buf)
+        const { geometry: geo, colours } = parseModelWithColours(buf)
         centerOnPlate(geo)
         geo.computeVertexNormals()
         if (cancelled) {
           geo.dispose()
           return
         }
+        // The parser bakes each part's colour into its own attribute rather
+        // than "color", which the overhang analysis uses. Renaming it here is
+        // what lets a plain <meshStandardMaterial vertexColors> read it.
+        const baked = geo.getAttribute(FILAMENT_COLOR_ATTR)
+        if (colours.length > 0 && baked) {
+          geo.setAttribute('color', baked)
+        }
+        setColoured(colours.length > 0 && Boolean(baked))
         setGeometry(geo)
       })
       .catch(() => {
@@ -74,7 +86,15 @@ export function JobModelViewer({ modelUrl }: JobModelViewerProps): JSX.Element {
           size plate looking mis-scaled or clipped relative to it. */}
       <Bounds fit observe margin={1.2}>
         <mesh geometry={geometry} scale={fitScale}>
-          <meshStandardMaterial color="#9aa4b2" flatShading roughness={0.72} metalness={0} />
+          {/* Grey only when the model carries no colours of its own - an
+              uploaded STL, or a plank whose colour could not be resolved. */}
+          <meshStandardMaterial
+            color={coloured ? '#ffffff' : '#9aa4b2'}
+            vertexColors={coloured}
+            flatShading
+            roughness={0.72}
+            metalness={0}
+          />
         </mesh>
         <PrintBedPlate />
       </Bounds>

@@ -15,6 +15,7 @@ import {
   PERSONALISATION_STATUS_CONFIG,
   QUEUE_STATUS_CONFIG,
 } from '@/components/production/status-config'
+import { TablePagination } from '@/components/production/table-pagination'
 import type {
   PackagingStatus,
   PersonalisationStatus,
@@ -31,6 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { TabItem } from '@/components/ui/tabs'
+import { usePagination } from '@/hooks/use-pagination'
 
 interface JobQueueTableProps {
   brand: string
@@ -96,6 +98,7 @@ export function JobQueueTable({ brand, jobs }: JobQueueTableProps): JSX.Element 
       ),
     [jobs, search, status, personalisation, packaging, periodRange],
   )
+  const page = usePagination(filtered)
 
   return (
     <div className="flex flex-col gap-4">
@@ -145,10 +148,11 @@ export function JobQueueTable({ brand, jobs }: JobQueueTableProps): JSX.Element 
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map(job => <JobQueueRow key={job.id} brand={brand} job={job} />)
+              page.items.map(job => <JobQueueRow key={job.id} brand={brand} job={job} />)
             )}
           </TableBody>
         </Table>
+        <TablePagination page={page} noun="jobs" />
       </Card>
     </div>
   )

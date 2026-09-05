@@ -6,6 +6,7 @@ import { useEffect, useState, type JSX } from 'react'
 import { getBatchDetail } from '@/app/dashboard/[brand]/production/batch-jobs-actions'
 import { BatchDetailGrid } from '@/components/production/batch-detail-grid'
 import { BatchDetailHeader } from '@/components/production/batch-detail-header'
+import { isBatchEditable, isBatchFull } from '@/components/production/batch-fullness'
 import { BatchJobsTable } from '@/components/production/batch-jobs-table'
 import { BatchPlatePreview } from '@/components/production/batch-plate-preview'
 import { BatchPrintButton } from '@/components/production/batch-print-button'
@@ -22,10 +23,6 @@ import {
 } from '@/components/ui/sheet'
 import type { Machine } from '@/lib/validators/machines'
 import type { ProductionJob } from '@/lib/validators/production'
-
-// Matches production.TargetBedUtilisationPercent (internal/production/planner.go),
-// same as BatchDetailView's copy - the threshold the backend enforces.
-const FULL_BATCH_UTILIZATION_PERCENT = 80
 
 interface BatchDetailSheetProps {
   brand: string
@@ -123,12 +120,11 @@ function BatchDetailSheetContent({ brand, data }: { brand: string; data: Loaded 
         brand={brand}
         batchId={batch.id}
         jobs={jobs}
-        canEdit={batch.status === 'pending_approval'}
-        isFull={(batch.bedUtilizationPercent ?? 0) >= FULL_BATCH_UTILIZATION_PERCENT}
+        canEdit={isBatchEditable(batch)}
+        isFull={isBatchFull(batch)}
       />
       <BatchPlatePreview
         batchId={batch.id}
-        batchNumber={batch.batchNumber}
         plateBboxXMm={batch.plateBboxXMm}
         plateBboxYMm={batch.plateBboxYMm}
         plateBboxZMm={batch.plateBboxZMm}

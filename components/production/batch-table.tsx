@@ -11,8 +11,10 @@ import {
 } from '@/components/production/date-range'
 import { FilterBar } from '@/components/production/filter-bar'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
+import { TablePagination } from '@/components/production/table-pagination'
 import type { BatchRecord, BatchStatus } from '@/components/production/types'
 import type { TabItem } from '@/components/ui/tabs'
+import { usePagination } from '@/hooks/use-pagination'
 
 interface BatchTableProps {
   brand: string
@@ -67,6 +69,7 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
       ),
     [batches, search, status, shortage, periodRange],
   )
+  const page = usePagination(filtered)
 
   return (
     <div className="flex flex-col gap-4">
@@ -84,7 +87,11 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
         period={period}
         onPeriodChange={setPeriod}
       />
-      <BatchTableGrid brand={brand} batches={filtered} />
+      <BatchTableGrid
+        brand={brand}
+        batches={page.items}
+        footer={<TablePagination page={page} noun="batches" />}
+      />
     </div>
   )
 }

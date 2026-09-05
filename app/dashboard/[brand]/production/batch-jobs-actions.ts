@@ -5,13 +5,14 @@ import { revalidatePath } from 'next/cache'
 import { toBatchRecord } from '@/components/production/adapters'
 import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
+import type { CompleteBatchJobsResult } from '@/lib/validators/batches'
 import type { Machine } from '@/lib/validators/machines'
 import {
   type FailJobResult,
   type ProductionJob,
   FailJobInputSchema,
 } from '@/lib/validators/production'
-import { getBatch } from '@/services/batches.service'
+import { BatchServiceError, completeBatchJobs, getBatch } from '@/services/batches.service'
 import { listMachines } from '@/services/machines.service'
 import {
   failProductionJob as failProductionJobCall,
@@ -115,6 +116,36 @@ export async function reprintJob(
   } catch (err) {
     const message =
       err instanceof ProductionServiceError ? err.message : 'Could not queue the reprint.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Signs off the selected planks on a bed.
+ *
+ * A selection rather than a switch: a plate comes off the printer with three
+ * good planks and one warped, and marking the whole bed Done would finish the
+ * warped one as though it had passed. The bed itself only becomes Done when
+ * nothing on it is outstanding - the backend decides that and reports how many
+ * are left, so the dialog can say "3 marked done, 1 still to go" without asking
+ * again.
+ */
+export async function completeBatchJobsAction(
+  brand: string,
+  batchId: string,
+  jobIds: string[],
+): Promise<ActionResult<CompleteBatchJobsResult>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const result = await completeBatchJobs(token, batchId, jobIds)
+    revalidatePath(`/dashboard/${brand}/production/batches`)
+    revalidatePath(`/dashboard/${brand}/production/batches/${batchId}`)
+    revalidatePath(`/dashboard/${brand}/production/jobs`)
+    return { ok: true, data: result }
+  } catch (err) {
+    const message =
+      err instanceof BatchServiceError ? err.message : 'Could not mark those jobs done.'
     return { ok: false, error: message }
   }
 }

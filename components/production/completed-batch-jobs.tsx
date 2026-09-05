@@ -96,7 +96,7 @@ function CompletedJobRow({ brand, job }: CompletedJobRowProps): JSX.Element {
     <li className="flex flex-col gap-1.5 px-3 py-2">
       <div className="flex items-center justify-between gap-3">
         <Link
-          href={`/dashboard/${brand}/production/jobs/${job.id}`}
+          href={`/dashboard/${brand}/production/jobs/${job.job_number}`}
           className="group flex min-w-0 flex-1 items-center gap-2"
         >
           <span className="font-mono text-xs font-medium">{job.job_number}</span>

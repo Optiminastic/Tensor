@@ -28,7 +28,6 @@ const BatchPlateViewer = dynamic(
 
 interface BatchPlatePreviewProps {
   batchId: string
-  batchNumber: string
   plateBboxXMm: number | null
   plateBboxYMm: number | null
   plateBboxZMm: number | null
@@ -42,7 +41,6 @@ function plateDimensionsLabel(x: number | null, y: number | null, z: number | nu
 
 export function BatchPlatePreview({
   batchId,
-  batchNumber,
   plateBboxXMm,
   plateBboxYMm,
   plateBboxZMm,
@@ -61,14 +59,21 @@ export function BatchPlatePreview({
           ) : null}
         </div>
         {/* Same-origin route: the handler mints the backend token from the
-            session, so no token is exposed to the browser. */}
+            session, so no token is exposed to the browser.
+
+            A bare `download`, deliberately. The plate is a 3MF when the bed
+            carries colour and an STL otherwise, and it is named after what is
+            on it - "114556-114557-BLUE.3mf". Naming it here instead would have
+            to guess both, and the guess was wrong: it hard-coded ".stl" onto
+            the batch number. Empty defers to the Content-Disposition the route
+            forwards, which is the only place that knows the real name. */}
         <a
           href={previewUrl}
-          download={`${batchNumber}.stl`}
+          download=""
           className={buttonVariants({ variant: 'secondary', size: 'sm' })}
         >
           <Download aria-hidden />
-          Download STL
+          Download plate
         </a>
       </CardHeader>
       <CardContent className="p-0">

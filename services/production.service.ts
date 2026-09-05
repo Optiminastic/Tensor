@@ -162,10 +162,35 @@ export async function validateJobPersonalisation(
   )
 }
 
+/**
+ * Which orders to list: `live` is what Shopify imported, `dummy` the seeded
+ * sample rows.
+ *
+ * Both stay in the client because the backend supports both and this is a
+ * typed client for that API, not for one page's current use. The Orders page
+ * asks only for `live` - a list that might be showing fabricated rows is worse
+ * than an empty one, since nothing on screen would say which it was.
+ */
 export type OrderSource = 'live' | 'dummy'
 
 export async function listOrders(token: string, source: OrderSource): Promise<Order[]> {
   return call(`/orders?source=${source}`, { headers: jsonHeaders(token) }, data =>
+    OrderSchema.array().parse(data),
+  )
+}
+
+/**
+ * Orders that produced no production jobs at all.
+ *
+ * A separate call rather than a field on the order DTO: "has jobs" is a join
+ * against production_jobs, and the backend already answers it with a dedicated
+ * query (ListOrdersWithoutJobs) rather than counting per row on every list.
+ *
+ * These are the quietest failures in the pipeline - an order that silently
+ * produced nothing looks identical to one that is simply new.
+ */
+export async function listOrdersWithoutJobs(token: string, source: OrderSource): Promise<Order[]> {
+  return call(`/orders?source=${source}&has_jobs=false`, { headers: jsonHeaders(token) }, data =>
     OrderSchema.array().parse(data),
   )
 }
@@ -298,6 +323,32 @@ export async function submitPackaging(
   return call(
     `/production-jobs/${encodeURIComponent(jobId)}/packaging`,
     { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => ProductionJobSchema.parse(data),
+  )
+}
+
+/**
+ * Uploads a model file and attaches it to a job in one request.
+ *
+ * One request rather than "store a file, then attach it": two calls leave a
+ * window where the file exists and the job still has nothing - an orphan asset
+ * nobody can find beside a job that still reads as waiting for one.
+ *
+ * This is the manual path, for products Tensor cannot build itself. A Dual Name
+ * Plank is rendered from the customer's own names and never comes through here.
+ */
+export async function uploadJobModel(
+  token: string,
+  jobId: string,
+  file: File,
+): Promise<ProductionJob> {
+  const form = new FormData()
+  form.set('file', file, file.name)
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/model`,
+    // No Content-Type: the runtime sets it with the multipart boundary, and
+    // naming it by hand produces a body the server cannot parse.
+    { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form },
     data => ProductionJobSchema.parse(data),
   )
 }

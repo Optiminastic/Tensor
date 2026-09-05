@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers'
 
+import { isAllBrands } from '@/components/dashboard/nav-config'
 import { auth } from '@/lib/auth'
 import { createLogger } from '@/lib/logger'
 import { clearPendingCookie, readPendingCookie } from '@/lib/shopify/pending'
@@ -21,6 +22,7 @@ import {
 import {
   ConnectionServiceError,
   deleteConnection as deleteConnectionRequest,
+  syncAllShopifyOrders as syncAllShopifyOrdersRequest,
   syncShopifyOrders as syncShopifyOrdersRequest,
   upsertConnection as upsertConnectionRequest,
 } from '@/services/connections.service'
@@ -161,11 +163,14 @@ export async function saveConnection(
   }
 }
 
-// syncShopifyOrders pulls in the brand's most recent Shopify orders on
-// demand, using the access token its existing product-catalog connection
-// already stored - no separate order-import OAuth grant needed. It runs only
-// when someone presses "Sync from Shopify" on the Orders page: there is no
-// webhook and no background poll behind it.
+// syncShopifyOrders starts an import of the brand's Shopify orders, using the
+// access token its existing product-catalog connection already stored - no
+// separate order-import OAuth grant needed. The import itself runs on a worker,
+// so this returns "started" rather than a count of what arrived.
+//
+// Pressing "Sync from Shopify" is the impatient path, not the only one: the
+// backend also pulls every connected store on a schedule, so an order placed
+// overnight is in Tensor before anybody arrives.
 export async function syncShopifyOrders(
   brandSlug: string,
 ): Promise<ActionResult<ShopifySyncResult>> {
@@ -173,7 +178,11 @@ export async function syncShopifyOrders(
   if (!token) return { ok: false, error }
 
   try {
-    const result = await syncShopifyOrdersRequest(token, brandSlug)
+    // ALL_BRANDS is a sentinel, not a brand: it has no connection to look up,
+    // so it syncs every connected store instead of failing.
+    const result = isAllBrands(brandSlug)
+      ? await syncAllShopifyOrdersRequest(token)
+      : await syncShopifyOrdersRequest(token, brandSlug)
     return { ok: true, data: result }
   } catch (err) {
     return { ok: false, error: describe(err) }

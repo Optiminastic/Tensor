@@ -62,7 +62,18 @@ export type ShopifyOrderConnection = z.infer<typeof ShopifyOrderConnectionSchema
 
 // syncShopifyConnection's response (internal/httpapi/shopify_oauth.go) - how
 // many orders the on-demand catch-up import just pulled in from Shopify.
+/**
+ * The answer to pressing Sync: the pull was accepted, not performed.
+ *
+ * It used to carry `imported`, a count of orders written during the request.
+ * The request was the problem - the browser abandons it after five seconds
+ * (TIMEOUT_MS below), the backend's context died with it, and the import
+ * stopped part way while still reporting a cheerful count of the handful that
+ * had landed. Thirty-five orders went missing from the Orders page that way.
+ * The backend now hands the pull to a worker, so there is no honest count to
+ * return at this point.
+ */
 export const ShopifySyncResultSchema = z.object({
-  imported: z.number(),
+  started: z.boolean(),
 })
 export type ShopifySyncResult = z.infer<typeof ShopifySyncResultSchema>

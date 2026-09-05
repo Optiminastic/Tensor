@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
 import { toOrderDetailRecord, toOrderJobPersonalisation } from '@/components/production/adapters'
+import { OrderDetailHeader } from '@/components/production/order-detail-header'
 import { OrderDetailView } from '@/components/production/order-detail-view'
 import type { OrderJobPersonalisation, OrderRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
@@ -40,10 +41,7 @@ export default async function OrderPage({ params }: OrderPageProps): Promise<JSX
           <ArrowLeft className="size-4" aria-hidden />
           Back to Orders
         </Link>
-        <div className="flex flex-col gap-2">
-          <h1 className="text-display text-3xl">Order {order.orderNumber}</h1>
-          <p className="text-muted-foreground text-sm">Full order detail.</p>
-        </div>
+        <OrderDetailHeader order={order} />
       </div>
       <OrderDetailView brand={brand} order={order} jobs={jobs} />
     </main>

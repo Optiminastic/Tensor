@@ -9,6 +9,7 @@ import {
   FleetMachineLiveSchema,
   FleetMachineSchema,
 } from '@/lib/validators/machine-fleet'
+import { type QueueItem, QueueItemSchema } from '@/lib/validators/print-queue'
 
 const log = createLogger('MachineFleetService')
 const TIMEOUT_MS = 15_000
@@ -130,5 +131,18 @@ export async function uploadToPrinter(
 export async function syncFleetMachines(token: string): Promise<FleetSyncResult> {
   return call('/machine-fleet/sync', { method: 'POST', headers: jsonHeaders(token) }, data =>
     FleetSyncResultSchema.parse(data),
+  )
+}
+
+/**
+ * BambuBuddy's print queue, live.
+ *
+ * Not cached and not stored: the queue changes whenever anyone touches
+ * BambuBuddy, and a stale board is worse than one that admits it cannot reach
+ * the printer host.
+ */
+export async function listPrintQueue(token: string): Promise<QueueItem[]> {
+  return call('/printing/queue', { headers: jsonHeaders(token) }, data =>
+    QueueItemSchema.array().parse(data),
   )
 }

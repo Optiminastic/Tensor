@@ -4,7 +4,11 @@ import { z } from 'zod'
 // Distinct from lib/validators/machines.ts, which is the machine_profiles
 // slicing-config/cost view - this is live per-unit print-state.
 
-export const FleetMachineStatusSchema = z.enum(['idle', 'running', 'off'])
+// 'error' is a printer the host can reach that is reporting a fault needing a
+// person. Kept distinct from 'off': an off printer is a scheduling fact, an
+// errored one is a request for attention, and collapsing them would hide a
+// broken machine behind a pill that reads like a deliberate shutdown.
+export const FleetMachineStatusSchema = z.enum(['idle', 'running', 'off', 'error'])
 export type FleetMachineStatus = z.infer<typeof FleetMachineStatusSchema>
 
 export const FleetFilamentSchema = z.object({
@@ -20,6 +24,17 @@ export const FleetMachineSchema = z.object({
   name: z.string(),
   image_url: z.string().nullable(),
   status: FleetMachineStatusSchema,
+  // Only ever set alongside status 'error'. A code rather than a sentence:
+  // BambuBuddy's HMS payload carries no description field and exposes no
+  // lookup, so the code is what an operator takes to Bambu's own HMS table.
+  status_reason: z.string().nullable(),
+  // What the unit is, as BambuBuddy reports it. Model is not decoration: a
+  // plate sliced for one model cannot run on another, and the fleet spans
+  // three (A2L, H2C, P2S).
+  model: z.string().nullish(),
+  location: z.string().nullish(),
+  ip_address: z.string().nullish(),
+  nozzle_count: z.number().nullish(),
   filaments: FleetFilamentSchema.array(),
   current_batch_id: z.string().nullable(),
   current_layer: z.number().nullable(),
