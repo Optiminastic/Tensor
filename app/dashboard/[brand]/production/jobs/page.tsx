@@ -5,6 +5,7 @@ import { toQueueItem } from '@/components/production/adapters'
 import { AutoRefresh } from '@/components/production/auto-refresh'
 import { JobQueueTable } from '@/components/production/job-queue-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
+import { RefreshButton } from '@/components/production/refresh-button'
 import type { ProductionJobQueueItem } from '@/components/production/types'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
@@ -46,10 +47,13 @@ export default async function ProductionJobsPage({
         intervalSeconds={env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS}
         enabled={env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS !== undefined}
       />
-      <ProductionPageHeader
-        title="Production Jobs"
-        description="Every job in the queue, from slicing through packaging."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <ProductionPageHeader
+          title="Production Jobs"
+          description="Every job in the queue, from slicing through packaging."
+        />
+        <RefreshButton noun="jobs" />
+      </div>
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
           {error}

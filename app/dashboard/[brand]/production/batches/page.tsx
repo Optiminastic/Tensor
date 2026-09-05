@@ -6,6 +6,7 @@ import { AutoCreateBatchesButton } from '@/components/production/auto-create-bat
 import { AutoRefresh } from '@/components/production/auto-refresh'
 import { BatchTable } from '@/components/production/batch-table'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
+import { RefreshButton } from '@/components/production/refresh-button'
 import type { BatchRecord } from '@/components/production/types'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
@@ -51,7 +52,10 @@ export default async function BatchManagementPage({
           title="Batch Management"
           description="Jobs grouped onto printer beds, ready for approval and dispatch."
         />
-        <AutoCreateBatchesButton brand={brand} />
+        <div className="flex items-start gap-2">
+          <RefreshButton noun="batches" />
+          <AutoCreateBatchesButton brand={brand} />
+        </div>
       </div>
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
