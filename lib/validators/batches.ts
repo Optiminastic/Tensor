@@ -41,6 +41,7 @@ export const BatchSchema = z.object({
   // Batches table shows these instead of a job count - standing at a printer,
   // the question is whose work is on the plate, not how many rows it holds.
   order_numbers: z.string().array().nullish(),
+  has_priority: z.boolean().nullish(),
   // The distinct filament colours on this bed, with the swatch to draw each.
   // hex is empty when the colour is not on the filament shelf - the name still
   // shows, so a colour nobody has registered is visible rather than hidden.

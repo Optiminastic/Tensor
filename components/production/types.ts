@@ -227,6 +227,13 @@ export type BatchStatus = 'pending_approval' | 'open' | 'in_progress' | 'complet
 
 export interface BatchRecord {
   id: string
+  /**
+   * Whether any plank on this bed came from an order that paid for priority
+   * dispatch. Any, not all: colour batching routinely puts one priority order
+   * on a plate with three standard ones, and requiring all four would leave the
+   * Priority tab empty on a floor that has priority work in it.
+   */
+  hasPriority: boolean
   batchNumber: string
   machineId: string | null
   status: BatchStatus

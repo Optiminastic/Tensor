@@ -6,6 +6,7 @@ import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { createJobsFromOrder } from '@/app/dashboard/[brand]/production/actions'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
+import { isPriorityShipping } from '@/components/production/priority'
 import { ORDER_STATUS_CONFIG, shopifyStatusConfig } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { OrderRecord } from '@/components/production/types'
@@ -122,8 +123,15 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
       {/* Truncated rather than wrapped: the delivery method is the longest
           free-text column ("FREE DISPATCH - BEST DEAL"), and letting it wrap
           set the height of every row in the table. */}
-      <TableCell className="text-muted-foreground max-w-44 truncate py-2 text-xs whitespace-nowrap">
-        {order.shippingTitle ?? '—'}
+      {/* A paid priority upgrade is a promise to the customer AND the reason
+          this order is batched ahead of the ones placed before it, so it reads
+          as a badge rather than as one more line of grey free text. */}
+      <TableCell className="max-w-44 py-2 text-xs whitespace-nowrap">
+        {isPriorityShipping(order.shippingTitle) ? (
+          <TonePill label="Priority" tone="danger" />
+        ) : (
+          <span className="text-muted-foreground block truncate">{order.shippingTitle ?? '—'}</span>
+        )}
       </TableCell>
       <TableCell className="py-2">
         <TonePill label={status.label} tone={status.tone} />

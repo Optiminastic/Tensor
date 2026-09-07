@@ -251,6 +251,7 @@ function toBatchStatus(status: string): BatchStatus {
 export function toBatchRecord(batch: Batch): BatchRecord {
   return {
     id: batch.id,
+    hasPriority: batch.has_priority ?? false,
     batchNumber: batch.batch_number,
     machineId: batch.machine_id ?? null,
     status: toBatchStatus(batch.status),
