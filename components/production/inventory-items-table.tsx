@@ -2,8 +2,10 @@
 
 import { useMemo, useState, type JSX } from 'react'
 
-import { AddInventoryItemDialog } from '@/components/production/add-inventory-item-dialog'
+import { InventoryItemActions } from '@/components/production/inventory-item-actions'
+import { InventoryItemDialog } from '@/components/production/inventory-item-dialog'
 import { TablePagination } from '@/components/production/table-pagination'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
@@ -83,7 +85,7 @@ export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps):
               Total value <span className={FIGURE}>{money(totalValue)}</span>
             </span>
           ) : null}
-          <AddInventoryItemDialog brand={brand} />
+          <InventoryItemDialog brand={brand} trigger={<Button>Add item</Button>} />
         </div>
       </div>
 
@@ -103,13 +105,18 @@ export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps):
                     {column}
                   </TableHeaderCell>
                 ))}
+                {/* Unlabelled: a header over a row-action menu names nothing
+                    the icon does not already say. */}
+                <TableHeaderCell className="w-12 py-2">
+                  <span className="sr-only">Actions</span>
+                </TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={COLUMNS.length}
+                    colSpan={COLUMNS.length + 1}
                     className="text-muted-foreground text-center text-sm"
                   >
                     No items match that search.
@@ -141,6 +148,9 @@ export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps):
                     </TableCell>
                     <TableCell className="text-muted-foreground py-2 text-xs whitespace-nowrap">
                       {new Date(item.updated_at).toLocaleDateString('en-IN')}
+                    </TableCell>
+                    <TableCell className="py-2 text-right">
+                      <InventoryItemActions brand={brand} item={item} />
                     </TableCell>
                   </TableRow>
                 ))

@@ -75,6 +75,25 @@ export async function saveInventoryItem(
   )
 }
 
+/**
+ * Edits an item in place, addressed by id.
+ *
+ * Separate from saveInventoryItem because that one is keyed on the NAME - it
+ * restocks an existing shelf. Editing through it could not rename anything: a
+ * new name would simply insert a second item and leave the old one behind.
+ */
+export async function updateInventoryItem(
+  token: string,
+  id: string,
+  input: NewInventoryItem,
+): Promise<InventoryItem> {
+  return call(
+    `/inventory-items/${id}`,
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => InventoryItemSchema.parse(data),
+  )
+}
+
 export async function deleteInventoryItem(token: string, id: string): Promise<void> {
   await call(
     `/inventory-items/${id}`,

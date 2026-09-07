@@ -1,9 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, type JSX } from 'react'
+import { useEffect, useState, type JSX, type ReactNode } from 'react'
 
-import { addInventoryItem } from '@/app/dashboard/[brand]/production/inventory-actions'
+import {
+  addInventoryItem,
+  editInventoryItem,
+} from '@/app/dashboard/[brand]/production/inventory-actions'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,16 +19,27 @@ import {
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { INVENTORY_UNITS, type InventoryUnit } from '@/lib/validators/inventory'
+import { INVENTORY_UNITS, type InventoryItem, type InventoryUnit } from '@/lib/validators/inventory'
 
-interface AddInventoryItemDialogProps {
+interface InventoryItemDialogProps {
   brand: string
+  /** The item being edited. Omitted to add a new one. */
+  item?: InventoryItem
+  /** Rendered as the trigger. Omitted when the caller drives `open` itself. */
+  trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 const DEFAULT_UNIT: InventoryUnit = 'piece'
 
 /**
- * Records a non-filament item: a box, an insert, a card, a roll of tape.
+ * Records a non-filament item, or edits one already on the shelf.
+ *
+ * One dialog for both because the questions are identical - the only difference
+ * is whether the answers start blank. Two dialogs would have meant two copies
+ * of the unit list and the price rule, which is exactly the pair that must not
+ * drift.
  *
  * Quantity and unit are one answer split across two inputs, because "40" means
  * nothing on a shelf that also holds half a kilogram of something. The unit is a
@@ -34,63 +48,75 @@ const DEFAULT_UNIT: InventoryUnit = 'piece'
  *
  * Price is per ONE unit and may be left blank. Blank is stored as null, not
  * zero: nobody having recorded a price is different from the item being free,
- * and zero would quietly understate the cost of every plank that ships with it.
+ * and zero would quietly understate the cost of every plank that carries it.
  */
-export function AddInventoryItemDialog({ brand }: AddInventoryItemDialogProps): JSX.Element {
+export function InventoryItemDialog({
+  brand,
+  item,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: InventoryItemDialogProps): JSX.Element {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [quantity, setQuantity] = useState('')
-  const [unit, setUnit] = useState<InventoryUnit>(DEFAULT_UNIT)
-  const [price, setPrice] = useState('')
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const open = controlledOpen ?? uncontrolledOpen
+  const setOpen = onOpenChange ?? setUncontrolledOpen
+
+  const [name, setName] = useState(item?.name ?? '')
+  const [quantity, setQuantity] = useState(item ? String(item.quantity) : '')
+  const [unit, setUnit] = useState<InventoryUnit>((item?.unit as InventoryUnit) ?? DEFAULT_UNIT)
+  const [price, setPrice] = useState(
+    item?.unit_price === null ? '' : String(item?.unit_price ?? ''),
+  )
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function reset(): void {
-    setName('')
-    setQuantity('')
-    setUnit(DEFAULT_UNIT)
-    setPrice('')
+  // Re-seed when the dialog reopens: the row behind it may have changed since
+  // this component mounted, and an edit form showing stale figures would write
+  // them straight back.
+  useEffect(() => {
+    if (!open) return
+    setName(item?.name ?? '')
+    setQuantity(item ? String(item.quantity) : '')
+    setUnit((item?.unit as InventoryUnit) ?? DEFAULT_UNIT)
+    setPrice(
+      item?.unit_price === null || item?.unit_price === undefined ? '' : String(item.unit_price),
+    )
     setError(null)
-  }
+  }, [open, item])
 
   async function save(): Promise<void> {
     setError(null)
     setPending(true)
-    const res = await addInventoryItem(brand, {
+    const payload = {
       name: name.trim(),
       quantity: Number(quantity || 0),
       unit,
       // Empty stays null rather than becoming 0 - see the note above.
       unit_price: price.trim() === '' ? null : Number(price),
-    })
+    }
+    const res = item
+      ? await editInventoryItem(brand, item.id, payload)
+      : await addInventoryItem(brand, payload)
     setPending(false)
     if (!res.ok) {
       setError(res.error ?? 'Could not save the item.')
       return
     }
     setOpen(false)
-    reset()
     router.refresh()
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={next => {
-        setOpen(next)
-        if (!next) reset()
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button>Add item</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add item</DialogTitle>
+          <DialogTitle>{item ? 'Edit item' : 'Add item'}</DialogTitle>
           <DialogDescription>
-            Anything on the shelf that is not filament. Adding a name that already exists updates
-            that item rather than creating a second one.
+            {item
+              ? 'Change what is on the shelf, or what one costs.'
+              : 'Anything on the shelf that is not filament. Adding a name that already exists updates that item rather than creating a second one.'}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
@@ -151,7 +177,7 @@ export function AddInventoryItemDialog({ brand }: AddInventoryItemDialogProps): 
               Cancel
             </Button>
             <Button onClick={() => void save()} disabled={pending || name.trim() === ''}>
-              {pending ? 'Saving…' : 'Save item'}
+              {pending ? 'Saving…' : item ? 'Save changes' : 'Save item'}
             </Button>
           </div>
         </div>

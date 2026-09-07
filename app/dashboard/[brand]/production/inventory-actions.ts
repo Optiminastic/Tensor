@@ -8,6 +8,7 @@ import {
   InventoryServiceError,
   deleteInventoryItem as removeItem,
   saveInventoryItem,
+  updateInventoryItem as patchItem,
 } from '@/services/inventory.service'
 
 interface ActionResult<T> {
@@ -36,6 +37,35 @@ export async function addInventoryItem(
   if (!token) return { ok: false, error }
   try {
     const item = await saveInventoryItem(token, parsed.data)
+    revalidatePath(`/dashboard/${brand}/production/inventory`)
+    return { ok: true, data: item }
+  } catch (err) {
+    const message =
+      err instanceof InventoryServiceError ? err.message : 'Could not save the inventory item.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Edits an item in place, addressed by id so a rename is a rename.
+ *
+ * Re-parsed here rather than trusted from the dialog: a server action's
+ * arguments are client-controlled, and the id in particular decides WHICH row
+ * is rewritten. The backend checks the payload again and owns the real guard.
+ */
+export async function editInventoryItem(
+  brand: string,
+  id: string,
+  input: unknown,
+): Promise<ActionResult<InventoryItem>> {
+  const parsed = NewInventoryItemSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the item details.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const item = await patchItem(token, id, parsed.data)
     revalidatePath(`/dashboard/${brand}/production/inventory`)
     return { ok: true, data: item }
   } catch (err) {
