@@ -104,7 +104,7 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // are still gated by the backend (assembly:submit / finishing:submit /
       // qc:submit / packaging:submit).
       { label: 'Packaging', href: '/production/packaging' },
-      { label: 'Filament Inventory', href: '/production/inventory', permission: 'filament:read' },
+      { label: 'Inventory', href: '/production/inventory', permission: 'filament:read' },
     ],
   },
   {

@@ -128,13 +128,13 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-display text-3xl">Filament Inventory</h1>
-          <p className="text-muted-foreground text-sm">
-            Stock per material and colour, with a reorder threshold.
-          </p>
-        </div>
+      {/* No <h1> here: the Inventory page owns the page title, and this is one
+          of two shelves under it. A second display-size heading inside a tab
+          panel would read as a second page. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-muted-foreground text-sm">
+          Stock per material and colour, with a reorder threshold.
+        </p>
         <div className="flex items-start gap-2">
           <FilamentSyncButton brand={brand} />
           <AddFilamentDialog brand={brand} />

@@ -1,25 +1,26 @@
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
-import { FilamentInventory } from '@/components/production/filament-inventory'
+import { InventoryTabs } from '@/components/production/inventory-tabs'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
+import type { InventoryItem } from '@/lib/validators/inventory'
 import type { Filament } from '@/lib/validators/production'
+import { InventoryServiceError, listInventoryItems } from '@/services/inventory.service'
 import { ProductionServiceError, listFilament } from '@/services/production.service'
 
-export const metadata: Metadata = { title: 'Filament Inventory' }
+export const metadata: Metadata = { title: 'Inventory' }
 
-interface FilamentInventoryPageProps {
+interface InventoryPageProps {
   params: Promise<{ brand: string }>
 }
 
-export default async function FilamentInventoryPage({
-  params,
-}: FilamentInventoryPageProps): Promise<JSX.Element> {
+export default async function InventoryPage({ params }: InventoryPageProps): Promise<JSX.Element> {
   const { brand } = await params
   await requirePermission('filament:read', `/dashboard/${brand}`)
 
   let filaments: Filament[] = []
+  let items: InventoryItem[] = []
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
@@ -30,6 +31,17 @@ export default async function FilamentInventoryPage({
     } catch (err) {
       error = err instanceof ProductionServiceError ? err.message : 'Could not load filament.'
     }
+    // Fetched separately so one shelf failing does not blank the other - they
+    // are different endpoints and a missing box count is no reason to hide the
+    // filament the floor is about to run out of.
+    try {
+      items = await listInventoryItems(token)
+    } catch (err) {
+      if (!error) {
+        error =
+          err instanceof InventoryServiceError ? err.message : 'Could not load inventory items.'
+      }
+    }
   }
 
   return (
@@ -39,7 +51,15 @@ export default async function FilamentInventoryPage({
           {error}
         </p>
       ) : (
-        <FilamentInventory brand={brand} filaments={filaments} />
+        <>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-display text-3xl">Inventory</h1>
+            <p className="text-muted-foreground text-sm">
+              Filament on the spool shelf, and everything else a plank ships with.
+            </p>
+          </div>
+          <InventoryTabs brand={brand} filaments={filaments} items={items} />
+        </>
       )}
     </main>
   )
