@@ -66,7 +66,10 @@ export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
           the list it was not even shown: jobs_count is only ever set on the
           single-batch detail, so every row here rendered a dash. */}
       <TableCell className="py-2">
-        <BatchOrderTags orderNumbers={batch.orderNumbers} />
+        <BatchOrderTags
+          orderNumbers={batch.orderNumbers}
+          priorityOrderNumbers={batch.priorityOrderNumbers}
+        />
       </TableCell>
       <TableCell numeric>{batch.unitsPerBed ?? '—'}</TableCell>
       <TableCell numeric>

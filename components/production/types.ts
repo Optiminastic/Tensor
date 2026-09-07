@@ -234,6 +234,12 @@ export interface BatchRecord {
    * Priority tab empty on a floor that has priority work in it.
    */
   hasPriority: boolean
+  /**
+   * Which of this bed's orderNumbers paid for priority dispatch. A parallel
+   * list rather than a richer orderNumbers shape: the Jobs column is a list of
+   * identifiers and stays one, and this only decides which tags are tinted.
+   */
+  priorityOrderNumbers: string[]
   batchNumber: string
   machineId: string | null
   status: BatchStatus

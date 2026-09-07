@@ -94,7 +94,16 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
       ),
     [batches, search, status, shortage, periodRange],
   )
-  const page = usePagination(filtered)
+  // Priority beds float to the top of whatever the filters left, ahead of
+  // paging, so an expedited plate is on the first page rather than wherever its
+  // batch number happened to fall. Stable, so the existing newest-first order
+  // survives inside each group.
+  const ordered = useMemo(() => {
+    const sorted = [...filtered]
+    sorted.sort((a, b) => Number(b.hasPriority) - Number(a.hasPriority))
+    return sorted
+  }, [filtered])
+  const page = usePagination(ordered)
 
   return (
     <div className="flex flex-col gap-4">

@@ -252,6 +252,7 @@ export function toBatchRecord(batch: Batch): BatchRecord {
   return {
     id: batch.id,
     hasPriority: batch.has_priority ?? false,
+    priorityOrderNumbers: batch.priority_order_numbers ?? [],
     batchNumber: batch.batch_number,
     machineId: batch.machine_id ?? null,
     status: toBatchStatus(batch.status),
