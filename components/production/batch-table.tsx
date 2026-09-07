@@ -43,10 +43,24 @@ function matchesSearch(batch: BatchRecord, search: string): boolean {
   return batch.batchNumber.toLowerCase().includes(search.trim().toLowerCase())
 }
 
+/**
+ * A bed that has finished printing.
+ *
+ * Its own tab is the place to look back at it; every other tab answers "what
+ * needs doing", and finished work is not that.
+ */
+function isFinished(batch: BatchRecord): boolean {
+  return batch.status === 'completed'
+}
+
 /** Whether a batch belongs under the selected tab. '' is All. */
 function matchesTab(batch: BatchRecord, tab: string): boolean {
   if (!tab) return true
-  if (tab === PRIORITY_TAB) return batch.hasPriority
+  // Priority asks a different KIND of question from the status tabs - "who is
+  // waiting on this" rather than "where has it got to" - so it has to exclude
+  // finished beds itself. The status tabs get it for free by construction: a
+  // completed bed cannot equal 'pending_approval' or 'open'.
+  if (tab === PRIORITY_TAB) return batch.hasPriority && !isFinished(batch)
   return batch.status === tab
 }
 
@@ -72,7 +86,9 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
       {
         value: PRIORITY_TAB,
         label: 'Priority',
-        count: batches.filter(b => b.hasPriority).length,
+        // Counted the same way the tab filters, or the number on the tab
+        // promises beds the tab will not show.
+        count: batches.filter(b => b.hasPriority && !isFinished(b)).length,
       },
       ...STATUSES.map(s => ({
         value: s,
