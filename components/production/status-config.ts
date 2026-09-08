@@ -189,7 +189,12 @@ export const MODEL_STATUS_CONFIG: Record<ModelStatus, { label: string; tone: Pil
   // the job looks identical otherwise, and the difference is whether anyone
   // has to act.
   failed: { label: 'Oops', tone: 'danger' },
-  // Not a product Tensor can build. Somebody has to supply the model, and
-  // supplying it is the approval.
-  approval_required: { label: 'Approval required', tone: 'warning' },
+  // Not a product Tensor can build - a photo frame, a night lamp. Somebody has
+  // to supply the model, and supplying it is the approval.
+  //
+  // Named for the thing that is missing rather than the ceremony around it:
+  // "Approval required" reads as a sign-off somebody else owes, when what is
+  // actually wanted is a file, from the person reading the row, using the
+  // button beside it.
+  approval_required: { label: 'Design file required', tone: 'warning' },
 }
