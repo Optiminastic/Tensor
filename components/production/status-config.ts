@@ -107,6 +107,11 @@ export const BAMBU_QUEUE_STATUS_CONFIG: Record<string, { label: string; tone: Pi
   completed: { label: 'Completed', tone: 'success' },
   cancelled: { label: 'Cancelled', tone: 'muted' },
   failed: { label: 'Failed', tone: 'danger' },
+  // Archives only. A plate BambuBuddy has filed away - it ran, or it was
+  // uploaded and superseded - and the live queue never carries it. Muted
+  // rather than success: "archived" says where the record is, not how the
+  // print went, and colouring it green would assert something unknown.
+  archived: { label: 'Archived', tone: 'muted' },
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   FleetMachineLiveSchema,
   FleetMachineSchema,
 } from '@/lib/validators/machine-fleet'
+import { type Archive, ArchiveSchema } from '@/lib/validators/print-history'
 import { type QueueItem, QueueItemSchema } from '@/lib/validators/print-queue'
 
 const log = createLogger('MachineFleetService')
@@ -144,5 +145,21 @@ export async function syncFleetMachines(token: string): Promise<FleetSyncResult>
 export async function listPrintQueue(token: string): Promise<QueueItem[]> {
   return call('/printing/queue', { headers: jsonHeaders(token) }, data =>
     QueueItemSchema.array().parse(data),
+  )
+}
+
+/**
+ * BambuBuddy's print history - what actually came off the beds.
+ *
+ * Read through for the same reason the queue is: BambuBuddy is the only system
+ * that watched the print, so it is the only one that knows how long it really
+ * took and why it stopped. Tensor's own batch rows say what was SENT.
+ *
+ * Bounded because this list never stops growing - every plate ever run stays in
+ * it - and a board shows a page, not an archive.
+ */
+export async function listPrintHistory(token: string, limit = 100): Promise<Archive[]> {
+  return call(`/printing/history?limit=${limit}`, { headers: jsonHeaders(token) }, data =>
+    ArchiveSchema.array().parse(data),
   )
 }

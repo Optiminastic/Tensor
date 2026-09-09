@@ -9,10 +9,12 @@ import type { BatchRecord } from '@/components/production/types'
 import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
+import type { Archive } from '@/lib/validators/print-history'
 import type { QueueItem } from '@/lib/validators/print-queue'
 import { listBatches } from '@/services/batches.service'
 import {
   listFleetMachines,
+  listPrintHistory,
   listPrintQueue,
   MachineFleetServiceError,
 } from '@/services/machine-fleet.service'
@@ -33,6 +35,8 @@ export default async function MachineManagementPage({
   let batches: BatchRecord[] = []
   let queue: QueueItem[] = []
   let queueError: string | null = null
+  let history: Archive[] = []
+  let historyError: string | null = null
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
@@ -60,13 +64,29 @@ export default async function MachineManagementPage({
     // rather than failing the page: the fleet and history still render, and
     // the tab says it could not reach BambuBuddy instead of showing an empty
     // list that reads as "nothing queued".
-    try {
-      queue = await listPrintQueue(token)
-    } catch (err) {
+    //
+    // Read together, because they fail together: both go through the same
+    // tunnel, and a page that fetched them one after the other would wait out
+    // two timeouts before rendering anything when BambuBuddy is unreachable.
+    const [queueResult, historyResult] = await Promise.allSettled([
+      listPrintQueue(token),
+      listPrintHistory(token),
+    ])
+    if (queueResult.status === 'fulfilled') {
+      queue = queueResult.value
+    } else {
       queueError =
-        err instanceof MachineFleetServiceError
-          ? err.message
+        queueResult.reason instanceof MachineFleetServiceError
+          ? queueResult.reason.message
           : 'Could not reach BambuBuddy to read the print queue.'
+    }
+    if (historyResult.status === 'fulfilled') {
+      history = historyResult.value
+    } else {
+      historyError =
+        historyResult.reason instanceof MachineFleetServiceError
+          ? historyResult.reason.message
+          : 'Could not reach BambuBuddy to read the print history.'
     }
   }
 
@@ -93,6 +113,8 @@ export default async function MachineManagementPage({
           batches={batches}
           queue={queue}
           queueError={queueError}
+          history={history}
+          historyError={historyError}
         />
       )}
     </main>

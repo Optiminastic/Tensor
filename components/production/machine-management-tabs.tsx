@@ -4,10 +4,12 @@ import { useMemo, useState, type JSX } from 'react'
 
 import { BatchTableGrid } from '@/components/production/batch-table-grid'
 import { FleetMachineTable } from '@/components/production/fleet-machine-table'
+import { PrintHistoryBoard } from '@/components/production/print-history-board'
 import { PrintQueueBoard } from '@/components/production/print-queue-board'
 import type { BatchRecord } from '@/components/production/types'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
+import type { Archive } from '@/lib/validators/print-history'
 import type { QueueItem } from '@/lib/validators/print-queue'
 
 /**
@@ -35,6 +37,9 @@ interface MachineManagementTabsProps {
   /** BambuBuddy's live queue. Empty when it could not be reached - see queueError. */
   queue: QueueItem[]
   queueError: string | null
+  /** BambuBuddy's print history. Empty when it could not be reached - see historyError. */
+  history: Archive[]
+  historyError: string | null
 }
 
 const QUEUED = 'queued'
@@ -47,19 +52,23 @@ export function MachineManagementTabs({
   batches,
   queue,
   queueError,
+  history,
+  historyError,
 }: MachineManagementTabsProps): JSX.Element {
   // Machines first: it is the page people arrive for, and it was the whole
   // page until now - opening somewhere else would move the ground under them.
   const [tab, setTab] = useState(MACHINES)
 
-  const { queued, history } = useMemo(
-    () => ({
-      // Locked and printing both count as queued: from an operator's point of
-      // view a bed that has been sent is committed, whether or not a printer
-      // has started pulling it yet.
-      queued: batches.filter(b => b.status === 'open' || b.status === 'in_progress'),
-      history: batches.filter(b => b.status === 'completed'),
-    }),
+  // Locked and printing both count as queued: from an operator's point of view
+  // a bed that has been sent is committed, whether or not a printer has started
+  // pulling it yet.
+  //
+  // Batches no longer back History. A Tensor batch records what was SENT; only
+  // BambuBuddy watched what happened, so a bed that FAILED on the printer never
+  // reached a history built from batch statuses - which is the one row an
+  // operator most needs to see.
+  const queued = useMemo(
+    () => batches.filter(b => b.status === 'open' || b.status === 'in_progress'),
     [batches],
   )
 
@@ -81,14 +90,30 @@ export function MachineManagementTabs({
       <Tabs tabs={tabs} value={tab} onValueChange={setTab} label="Machine management view" />
 
       {tab === QUEUED ? (
-        <div role="tabpanel" aria-labelledby={`tab-${QUEUED}`}>
-          {queued.length === 0 ? (
-            <Empty>
-              Nothing is queued. Lock a batch in Batch Management to send it to a printer.
-            </Empty>
-          ) : (
-            <BatchTableGrid brand={brand} batches={queued} />
-          )}
+        <div role="tabpanel" aria-labelledby={`tab-${QUEUED}`} className="flex flex-col gap-6">
+          {/* Two lists, in the order work moves through them. BambuBuddy's is
+              first because it is the one the printers actually pull from; the
+              board was built and imported but never rendered, so this tab
+              showed only Tensor's side of the handover. */}
+          <section className="flex flex-col gap-2">
+            <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              In BambuBuddy&rsquo;s queue
+            </h2>
+            <PrintQueueBoard items={liveQueue} error={queueError} />
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              Locked in Tensor, not yet handed over
+            </h2>
+            {queued.length === 0 ? (
+              <Empty>
+                Nothing is waiting. Lock a batch in Batch Management to send it to a printer.
+              </Empty>
+            ) : (
+              <BatchTableGrid brand={brand} batches={queued} />
+            )}
+          </section>
         </div>
       ) : null}
 
@@ -100,11 +125,7 @@ export function MachineManagementTabs({
 
       {tab === HISTORY ? (
         <div role="tabpanel" aria-labelledby={`tab-${HISTORY}`}>
-          {history.length === 0 ? (
-            <Empty>No completed batches yet.</Empty>
-          ) : (
-            <BatchTableGrid brand={brand} batches={history} />
-          )}
+          <PrintHistoryBoard items={history} error={historyError} />
         </div>
       ) : null}
     </div>
