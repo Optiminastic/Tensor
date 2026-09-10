@@ -73,6 +73,11 @@ export interface ProductionJobQueueItem {
   modelStatus: ModelStatus
   /** Why a generated model could not be built. Null unless modelStatus is 'failed'. */
   modelError: string | null
+  /**
+   * The customer's two names as the importer joined them - "HABEEB & FARSANA".
+   * Carried on the queue row so the page can be searched by either half.
+   */
+  personalisationName: string | null
 }
 
 /** Where a job's geometry comes from and whether it has arrived. */
@@ -186,6 +191,8 @@ export interface OrderRecord {
    * lineItems, which the list response deliberately leaves empty.
    */
   itemCount: number
+  /** Names the customer typed on the plank, for the search box. */
+  personalisationNames: string[]
   sourceName: string | null
   /**
    * Money as the store stated it, in decimal strings. Null means Shopify never

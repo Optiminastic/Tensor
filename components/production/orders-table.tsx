@@ -102,7 +102,11 @@ const TAB_STATUSES = (Object.keys(ORDER_STATUS_CONFIG) as OrderStatus[]).filter(
 
 function matchesSearch(order: OrderRecord, search: string): boolean {
   if (!search) return true
-  const haystack = `${order.orderNumber} ${order.customer ?? ''} ${order.customerEmail ?? ''}`
+  // The names the customer typed on the plank, alongside their own. Someone
+  // ringing up about "the Farsana one" has the plank's names, not the buyer's.
+  const haystack = `${order.orderNumber} ${order.customer ?? ''} ${order.customerEmail ?? ''} ${(
+    order.personalisationNames ?? []
+  ).join(' ')}`
     .trim()
     .toLowerCase()
   return haystack.includes(search.trim().toLowerCase())
@@ -185,7 +189,7 @@ export function OrdersTable({ brand, orders, orderIdsWithoutJobs }: OrdersTableP
         tabsLabel="Filter orders by payment status, missing jobs, or fulfilment"
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search order #, customer, email"
+        searchPlaceholder="Search order #, customer, name on plank"
         period={period}
         onPeriodChange={setPeriod}
       />

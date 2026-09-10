@@ -40,7 +40,11 @@ const SHORTAGE_OPTIONS = [
 
 function matchesSearch(batch: BatchRecord, search: string): boolean {
   if (!search) return true
-  return batch.batchNumber.toLowerCase().includes(search.trim().toLowerCase())
+  // "Which bed is 114873 on?" is the question the floor actually asks, and the
+  // batch number alone could not answer it - you had to open beds one at a
+  // time. orderNumbers is already on the record for the Jobs column.
+  const haystack = `${batch.batchNumber} ${batch.orderNumbers.join(' ')}`.toLowerCase()
+  return haystack.includes(search.trim().toLowerCase())
 }
 
 /**
@@ -133,7 +137,7 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
         ]}
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search batch #"
+        searchPlaceholder="Search batch # or order #"
         period={period}
         onPeriodChange={setPeriod}
       />

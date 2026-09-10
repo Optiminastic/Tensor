@@ -313,6 +313,10 @@ export const OrderSchema = z.object({
   return_status: z.string().nullish(),
   // Units on the order, summed across its lines - carried on the list response
   // so the table can render "2 items" without shipping every line item.
+  // The names the customer typed, so the orders page can be searched by them.
+  // The names alone - the full line_items document is deliberately not on the
+  // list response.
+  personalisation_names: z.string().array().nullish(),
   item_count: z.number().nullish(),
   source_name: z.string().nullish(),
   // Decimal strings, not numbers: the backend keeps the store's own precision

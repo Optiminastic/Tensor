@@ -77,6 +77,7 @@ export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
     // signing off.
     modelStatus: job.model_status ?? 'ready',
     modelError: job.model_error ?? null,
+    personalisationName: job.personalisation_name ?? null,
   }
 }
 
@@ -109,6 +110,7 @@ export function toOrderRecord(order: Order): OrderRecord {
     deliveryStatus: order.delivery_status ?? null,
     returnStatus: order.return_status ?? null,
     itemCount: order.item_count ?? 0,
+    personalisationNames: order.personalisation_names ?? [],
     sourceName: order.source_name ?? null,
     subtotal: order.subtotal_price ?? null,
     totalDiscounts: order.total_discounts ?? null,

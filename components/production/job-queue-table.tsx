@@ -60,7 +60,12 @@ const PACKAGING_OPTIONS = (Object.keys(PACKAGING_STATUS_CONFIG) as PackagingStat
 
 function matchesSearch(job: ProductionJobQueueItem, search: string): boolean {
   if (!search) return true
-  const haystack = `${job.jobNumber} ${job.description}`.trim().toLowerCase()
+  // The customer's own two names are included, because that is what somebody
+  // holding a plank actually has to search by - personalisationName is where
+  // the importer joins them ("HABEEB & FARSANA"), so either half matches.
+  const haystack = `${job.jobNumber} ${job.description} ${job.personalisationName ?? ''}`
+    .trim()
+    .toLowerCase()
   return haystack.includes(search.trim().toLowerCase())
 }
 
@@ -125,7 +130,7 @@ export function JobQueueTable({ brand, jobs }: JobQueueTableProps): JSX.Element 
         onSearchChange={setSearch}
         period={period}
         onPeriodChange={setPeriod}
-        searchPlaceholder="Search job #, description"
+        searchPlaceholder="Search job #, name, description"
       />
       <Card>
         <Table>
