@@ -122,6 +122,9 @@ export const PrintBatchResultSchema = z.object({
   filename: z.string(),
   file_id: z.number(),
   queued: z.boolean(),
+  // True when THIS call locked a Draft on the way to sending it. Nullish so an
+  // older backend that does not send it still parses.
+  locked: z.boolean().nullish(),
   already_sent: z.boolean(),
   note: z.string(),
 })

@@ -263,6 +263,7 @@ export function toBatchRecord(batch: Batch): BatchRecord {
     totalFilamentGrams: batch.total_filament_grams ?? null,
     bedUtilizationPercent: batch.bed_utilization_percent ?? null,
     plateSlicedAt: batch.plate_sliced_at ?? null,
+    queueItemId: batch.queue_item_id ?? null,
     sliceError: batch.plate_slice_error ?? null,
     printError: batch.print_error ?? null,
     packingStrategy: batch.packing_strategy ?? null,

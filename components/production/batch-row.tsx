@@ -8,6 +8,7 @@ import { BatchColourDots } from '@/components/production/batch-colour-dots'
 import { BatchDoneDialog } from '@/components/production/batch-done-dialog'
 import { batchFailure } from '@/components/production/batch-label'
 import { BatchOrderTags } from '@/components/production/batch-order-tags'
+import { BatchQueueButton } from '@/components/production/batch-queue-button'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
@@ -85,13 +86,28 @@ export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
           all of them, rather than only from inside one. The click must not also
           open the batch - the whole row is a link. */}
       <TableCell className="py-2 text-right">
-        <BatchDoneDialog
-          brand={brand}
-          batchId={batch.id}
-          batchNumber={batch.batchNumber}
-          status={batch.status}
-          stopPropagation
-        />
+        <div className="flex items-center justify-end gap-2">
+          {/* Queueing belongs in the list for the same reason finishing does:
+              the operator is looking at every bed at once and deciding which
+              one goes next. Requiring them to open each bed to send it is what
+              kept beds sitting locked and unsent. */}
+          <BatchQueueButton
+            brand={brand}
+            batchId={batch.id}
+            batchNumber={batch.batchNumber}
+            status={batch.status}
+            alreadyQueued={batch.queueItemId !== null}
+            unitsPerBed={batch.unitsPerBed}
+            compact
+          />
+          <BatchDoneDialog
+            brand={brand}
+            batchId={batch.id}
+            batchNumber={batch.batchNumber}
+            status={batch.status}
+            stopPropagation
+          />
+        </div>
       </TableCell>
     </TableRow>
   )

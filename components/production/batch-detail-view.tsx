@@ -6,7 +6,7 @@ import { BatchDoneDialog } from '@/components/production/batch-done-dialog'
 import { isBatchEditable, isBatchFull } from '@/components/production/batch-fullness'
 import { BatchJobsTable } from '@/components/production/batch-jobs-table'
 import { BatchPlatePreview } from '@/components/production/batch-plate-preview'
-import { BatchPrintButton } from '@/components/production/batch-print-button'
+import { BatchQueueButton } from '@/components/production/batch-queue-button'
 import type { BatchRecord } from '@/components/production/types'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -52,18 +52,20 @@ export function BatchDetailView({
           plateBboxYMm={batch.plateBboxYMm}
           plateBboxZMm={batch.plateBboxZMm}
         />
-        {/* Locked only, matching BatchDetailSheetContent: a Draft bed is still a
-            proposal the next planner pass can dissolve. */}
-        {batch.status === 'open' ? (
-          <div className="mt-4">
-            <BatchPrintButton
-              brand={brand}
-              batchId={batch.id}
-              batchNumber={batch.batchNumber}
-              plateSliced={batch.plateSlicedAt !== null}
-            />
-          </div>
-        ) : null}
+        {/* Which statuses can be queued is the button's own decision now, so
+            the two render sites and the row cannot drift apart. A Draft is
+            offered too: pressing it locks the bed first, which is what makes
+            sending it safe. */}
+        <div className="mt-4">
+          <BatchQueueButton
+            brand={brand}
+            batchId={batch.id}
+            batchNumber={batch.batchNumber}
+            status={batch.status}
+            alreadyQueued={batch.queueItemId !== null}
+            unitsPerBed={batch.unitsPerBed}
+          />
+        </div>
         {/* Finishing the bed. Beside Print rather than in the header: both are
             things you do to this plate, and the operator marking it done has
             just watched it come off the machine. */}

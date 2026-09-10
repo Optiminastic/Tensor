@@ -253,6 +253,8 @@ export interface BatchRecord {
   // actual bed. Gates "Send to printer": without a plate slice there is no
   // .gcode.3mf to send.
   plateSlicedAt: string | null
+  /** BambuBuddy's queue item, set once the bed has been sent. */
+  queueItemId: number | null
   // Why this batch is stuck, at the two points it can be. sliceError means
   // there is no print file; printError means there is one that nothing will
   // pick up. Both null on a healthy batch.
