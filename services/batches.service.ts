@@ -20,6 +20,11 @@ import { type ProductionJob, ProductionJobSchema } from '@/lib/validators/produc
 const log = createLogger('BatchService')
 const TIMEOUT_MS = 15_000
 const FILE_TIMEOUT_MS = 30_000
+// Calls that Tensor-Core serves by talking to BambuBuddy wait longer than
+// Tensor-Core itself does (its BambuBuddy client gives up at 30s). Below that,
+// the browser always aborts first and reports the wrong service as broken -
+// the backend never gets to say "could not reach BambuBuddy".
+const BAMBUBUDDY_TIMEOUT_MS = 35_000
 
 /**
  * Typed client for Tensor-Core's /batches and /machine-fleet/:id/queue
@@ -34,11 +39,21 @@ async function call<T>(path: string, init: RequestInit, parse: (data: unknown) =
     response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
       ...init,
       cache: 'no-store',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      // The caller's own signal wins, so a BambuBuddy-backed call can outwait
+      // the backend rather than being cut off at the default.
+      signal: init.signal ?? AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch (error) {
-    log.error({ path, err: error }, 'Tensor-Core is unreachable')
-    throw new BatchServiceError('Tensor-Core is unreachable. Is the backend running?')
+    // A timeout and a refused connection are different faults with different
+    // fixes, and calling both "unreachable" sent somebody looking for a
+    // stopped backend when Tensor-Core was up and waiting on BambuBuddy.
+    const timedOut = error instanceof Error && error.name === 'TimeoutError'
+    log.error({ path, err: error, timedOut }, 'Tensor-Core call failed')
+    throw new BatchServiceError(
+      timedOut
+        ? 'Tensor-Core did not answer in time. It may be waiting on BambuBuddy.'
+        : 'Tensor-Core is unreachable. Is the backend running?',
+    )
   }
 
   if (!response.ok) {
@@ -104,7 +119,11 @@ export async function approveBatch(
 export async function printBatch(token: string, id: string): Promise<PrintBatchResult> {
   return call(
     `/batches/${encodeURIComponent(id)}/print`,
-    { method: 'POST', headers: jsonHeaders(token) },
+    {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      signal: AbortSignal.timeout(BAMBUBUDDY_TIMEOUT_MS),
+    },
     data => PrintBatchResultSchema.parse(data),
   )
 }

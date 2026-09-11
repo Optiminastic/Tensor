@@ -13,7 +13,12 @@ import { type Archive, ArchiveSchema } from '@/lib/validators/print-history'
 import { type QueueItem, QueueItemSchema } from '@/lib/validators/print-queue'
 
 const log = createLogger('MachineFleetService')
-const TIMEOUT_MS = 15_000
+// Every endpoint here is served by Tensor-Core talking to BambuBuddy, whose
+// client gives up at 30s. Anything shorter means the browser always aborts
+// first and blames Tensor-Core for a fault that belongs to BambuBuddy - which
+// is exactly how "Tensor-Core is unreachable" appeared on a page whose other
+// panels had just loaded from Tensor-Core.
+const TIMEOUT_MS = 35_000
 
 /**
  * Typed client for Tensor-Core's /machine-fleet endpoints (the physical
@@ -31,8 +36,16 @@ async function call<T>(path: string, init: RequestInit, parse: (data: unknown) =
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch (error) {
-    log.error({ path, err: error }, 'Tensor-Core is unreachable')
-    throw new MachineFleetServiceError('Tensor-Core is unreachable. Is the backend running?')
+    // A timeout and a refused connection are different faults with different
+    // fixes; calling both "unreachable" sends somebody to restart a backend
+    // that is running.
+    const timedOut = error instanceof Error && error.name === 'TimeoutError'
+    log.error({ path, err: error, timedOut }, 'Tensor-Core call failed')
+    throw new MachineFleetServiceError(
+      timedOut
+        ? 'Tensor-Core did not answer in time. It may be waiting on BambuBuddy.'
+        : 'Tensor-Core is unreachable. Is the backend running?',
+    )
   }
 
   if (!response.ok) {
