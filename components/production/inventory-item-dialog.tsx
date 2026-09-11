@@ -68,6 +68,7 @@ export function InventoryItemDialog({
   const [price, setPrice] = useState(
     item?.unit_price === null ? '' : String(item?.unit_price ?? ''),
   )
+  const [code, setCode] = useState(item?.code ?? '')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,6 +83,7 @@ export function InventoryItemDialog({
     setPrice(
       item?.unit_price === null || item?.unit_price === undefined ? '' : String(item.unit_price),
     )
+    setCode(item?.code ?? '')
     setError(null)
   }, [open, item])
 
@@ -94,6 +96,10 @@ export function InventoryItemDialog({
       unit,
       // Empty stays null rather than becoming 0 - see the note above.
       unit_price: price.trim() === '' ? null : Number(price),
+      // Undefined, not null, when blank: the backend COALESCEs an absent code so
+      // an edit that does not touch the field leaves the handle alone. Sending
+      // null would clear it, and every bill of materials pointing at it with it.
+      code: code.trim() === '' ? undefined : code.trim().toUpperCase(),
     }
     const res = item
       ? await editInventoryItem(brand, item.id, payload)
@@ -126,6 +132,17 @@ export function InventoryItemDialog({
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Gift box - small"
+            />
+          </Field>
+          {/* Optional, and last of the identifying fields: a part only needs a
+              code once something references it. Upper-cased on save so
+              "led-001" and "LED-001" cannot become two parts. */}
+          <Field label="Part code (optional)" htmlFor="i-code">
+            <Input
+              id="i-code"
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              placeholder="e.g. LED-10CM"
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">

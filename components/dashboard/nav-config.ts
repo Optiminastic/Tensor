@@ -105,6 +105,10 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // qc:submit / packaging:submit).
       { label: 'Packaging', href: '/production/packaging' },
       { label: 'Inventory', href: '/production/inventory', permission: 'filament:read' },
+      // Below Inventory on purpose: the Registry is what Inventory is ABOUT.
+      // Inventory says how many LED strips are on the shelf; the Registry says
+      // which products need them, and what one costs.
+      { label: 'Registry', href: '/production/registry', permission: 'config:read' },
     ],
   },
   {

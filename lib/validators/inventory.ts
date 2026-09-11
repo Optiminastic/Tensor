@@ -33,6 +33,9 @@ export const InventoryItemSchema = z.object({
   unit: z.string(),
   // Null means nobody has recorded a price, which is different from free.
   unit_price: z.number().nullable(),
+  // The stable handle a bill of materials points at, so a BOM line survives the
+  // shelf being renamed. Null until the part is used by a product.
+  code: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
 })
@@ -46,6 +49,10 @@ export const NewInventoryItemSchema = z.object({
   quantity: z.number().nonnegative('A quantity cannot be negative.'),
   unit: z.enum(INVENTORY_UNITS),
   unit_price: z.number().nonnegative('A price cannot be negative.').nullable(),
+  // Optional, and omitted entirely by the Inventory dialog. The backend
+  // COALESCEs an absent code, so restocking a part never clears the handle a
+  // BOM points at.
+  code: z.string().trim().max(64, 'A part code is at most 64 characters.').nullish(),
 })
 
 export type NewInventoryItem = z.infer<typeof NewInventoryItemSchema>
