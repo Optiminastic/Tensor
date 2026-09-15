@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { jwt } from 'better-auth/plugins'
+import { cache } from 'react'
 
 import { authPool } from '@/lib/db'
 import { env } from '@/lib/env'
@@ -109,24 +110,35 @@ export type Session = typeof auth.$Infer.Session
  * redirecting to /login; this just makes sure a thrown error reaches that
  * same handling instead of surfacing as an unhandled exception.
  */
-export async function getSessionSafe(
+// Memoised per request, which is the difference between one session check and
+// five. Both layouts call these, every page calls them again through
+// resolveBackendToken, and every server action after that - and each call was a
+// DB-backed session validation. getToken is worse: minting stamps the user's
+// roles into the JWT, so it fetches them from Tensor-Core, and a page was
+// paying that round trip several times over.
+//
+// React cache() keys on the arguments and lives for one request, so this
+// changes nothing about freshness - a later request still revalidates - while
+// collapsing the duplicates within a single render. The same Headers object is
+// passed through by every caller in a request, which is what makes the key hit.
+export const getSessionSafe = cache(async function getSessionSafe(
   requestHeaders: Headers,
 ): Promise<Awaited<ReturnType<typeof auth.api.getSession>>> {
   return auth.api.getSession({ headers: requestHeaders }).catch((error: unknown) => {
     log.error({ err: error }, 'getSession threw; treating as unauthenticated')
     return null
   })
-}
+})
 
-/** Same as getSessionSafe, for auth.api.getToken. */
-export async function getTokenSafe(
+/** Same as getSessionSafe, for auth.api.getToken. Memoised for the same reason. */
+export const getTokenSafe = cache(async function getTokenSafe(
   requestHeaders: Headers,
 ): Promise<Awaited<ReturnType<typeof auth.api.getToken>> | null> {
   return auth.api.getToken({ headers: requestHeaders }).catch((error: unknown) => {
     log.error({ err: error }, 'getToken threw; treating as unauthenticated')
     return null
   })
-}
+})
 
 /** A user's display identity, for rendering "who did what" in activity views. */
 export interface UserDisplay {

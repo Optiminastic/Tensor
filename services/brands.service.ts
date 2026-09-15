@@ -1,3 +1,5 @@
+import { cache } from 'react'
+
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
@@ -58,11 +60,24 @@ function bearer(token: string): HeadersInit {
   }
 }
 
-export async function listBrands(accessToken: string): Promise<BrandProfile[]> {
+/**
+ * Every brand, memoised for the life of one request.
+ *
+ * Two nested layouts ask for this on every render - the dashboard shell for the
+ * brand switcher, and the [brand] layout purely to check the slug in the URL
+ * exists - so each page was paying the round trip twice for identical data.
+ * Keyed on the token, which is the same value throughout a request.
+ *
+ * cache() is per request, so this changes nothing about freshness: a newly
+ * created brand still appears on the next navigation.
+ */
+export const listBrands = cache(async function listBrands(
+  accessToken: string,
+): Promise<BrandProfile[]> {
   return request('/brands', { headers: bearer(accessToken) }, data =>
     BrandProfileSchema.array().parse(data),
   )
-}
+})
 
 export async function createBrand(
   accessToken: string,
