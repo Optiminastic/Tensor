@@ -6,6 +6,7 @@ import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { createJobsFromOrder } from '@/app/dashboard/[brand]/production/actions'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
+import { OrderItemsHoverCard } from '@/components/production/order-items-hover-card'
 import { isPriorityShipping } from '@/components/production/priority'
 import { ORDER_STATUS_CONFIG, shopifyStatusConfig } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
@@ -81,7 +82,18 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
           broke across them, which reads as two different orders at a glance. */}
       <TableCell className="py-2 font-mono text-sm whitespace-nowrap">
         <span className="flex items-center gap-1.5">
-          {order.orderNumber}
+          {/* Hovering the number previews what is on the order. The number is
+              the trigger rather than the whole row: a row-wide hover fires
+              while the cursor is only crossing the table on its way somewhere
+              else, and a card that appears unbidden over the next row is worse
+              than no card. */}
+          <OrderItemsHoverCard
+            orderId={order.id}
+            orderNumber={order.orderNumber}
+            itemCount={order.itemCount}
+          >
+            <span className="underline-offset-4 hover:underline">{order.orderNumber}</span>
+          </OrderItemsHoverCard>
           {/* This order produced no production jobs and never will on its own -
               the backend's import worker exhausted its retries. Create Job is
               the retry, so the warning belongs next to it, not hidden. */}
