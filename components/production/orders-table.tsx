@@ -94,11 +94,20 @@ const COLUMNS = [
   'Channel',
   'Return',
 ]
-// Pending is deliberately absent from the tab strip - see UNFULFILLED_TAB. It
-// stays in ORDER_STATUS_CONFIG, which also renders each row's payment pill, so
-// an order that ever does arrive pending still reads correctly.
+// Pending and Paid are deliberately absent from the tab strip.
+//
+// Paid because the store only imports orders that are already paid - all 429 of
+// them - so the tab selected exactly what All already showed, spending a slot
+// in the strip to filter nothing out.
+//
+// Pending for the reason given at UNFULFILLED_TAB. Both stay in
+// ORDER_STATUS_CONFIG, which also renders each row's payment pill, so an order
+// that ever does arrive in either state still reads correctly - and Refunded
+// and Cancelled keep their tabs, because those are states an order can still
+// move into.
+const HIDDEN_TAB_STATUSES: OrderStatus[] = ['pending', 'paid']
 const TAB_STATUSES = (Object.keys(ORDER_STATUS_CONFIG) as OrderStatus[]).filter(
-  status => status !== 'pending',
+  status => !HIDDEN_TAB_STATUSES.includes(status),
 )
 
 function matchesSearch(order: OrderRecord, search: string): boolean {
