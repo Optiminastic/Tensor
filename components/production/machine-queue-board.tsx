@@ -26,6 +26,7 @@ import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
 import type { BatchRecord, BatchStatus } from '@/components/production/types'
 import { Input } from '@/components/ui/input'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
+import { useQueryTab } from '@/hooks/use-query-tab'
 
 interface MachineQueueBoardProps {
   brand: string
@@ -44,6 +45,9 @@ const VIEW_TABS: TabItem[] = [
   { value: 'board', label: 'Board' },
   { value: 'list', label: 'List' },
 ]
+
+// What the `view` query param may say; anything else falls back to the board.
+const BOARD_VIEWS = ['board', 'list'] as const
 
 function FilterField({
   label,
@@ -79,7 +83,7 @@ export function MachineQueueBoard({
   const [localBatches, setLocalBatches] = useState(batches)
   const [search, setSearch] = useState('')
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod)
-  const [view, setView] = useState<'board' | 'list'>('board')
+  const [view, setView] = useQueryTab<'board' | 'list'>('view', 'board', BOARD_VIEWS)
   const [error, setError] = useState<string | null>(null)
 
   // A card is both draggable and clickable, and without an activation

@@ -15,6 +15,7 @@ import { TablePagination } from '@/components/production/table-pagination'
 import type { BatchRecord, BatchStatus } from '@/components/production/types'
 import type { TabItem } from '@/components/ui/tabs'
 import { usePagination } from '@/hooks/use-pagination'
+import { useQueryTab } from '@/hooks/use-query-tab'
 
 interface BatchTableProps {
   brand: string
@@ -75,7 +76,7 @@ function matchesShortage(batch: BatchRecord, shortage: string): boolean {
 
 export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useQueryTab<string>('status', '')
   const [shortage, setShortage] = useState('')
   // All time by default - see the same note on OrdersTable.
   const [period, setPeriod] = useState<PeriodValue>(ALL_TIME_PERIOD)

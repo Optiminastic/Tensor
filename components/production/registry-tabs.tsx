@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, type JSX } from 'react'
+import type { JSX } from 'react'
 
 import { ComponentRegistryTable } from '@/components/production/component-registry-table'
 import { DesignRegistryTable } from '@/components/production/design-registry-table'
 import { DesignTemplatesProvider } from '@/components/production/design-templates-context'
 import { ProductRegistryPanel } from '@/components/production/product-registry-panel'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
+import { useQueryTab } from '@/hooks/use-query-tab'
 import type { InventoryItem } from '@/lib/validators/inventory'
 import type { DesignTemplate, RegistryProductDetail } from '@/lib/validators/registry'
 
@@ -46,7 +47,7 @@ export function RegistryTabs({
   products,
   templates,
 }: RegistryTabsProps): JSX.Element {
-  const [tab, setTab] = useState(PRODUCTS_TAB)
+  const [tab, setTab] = useQueryTab<string>('tab', PRODUCTS_TAB)
 
   const tabs: TabItem[] = [
     { value: PRODUCTS_TAB, label: 'Products', count: products.length },

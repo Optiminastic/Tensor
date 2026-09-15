@@ -8,6 +8,7 @@ import { PrintHistoryBoard } from '@/components/production/print-history-board'
 import { PrintQueueBoard } from '@/components/production/print-queue-board'
 import type { BatchRecord } from '@/components/production/types'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
+import { useQueryTab } from '@/hooks/use-query-tab'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
 import type { Archive } from '@/lib/validators/print-history'
 import type { QueueItem } from '@/lib/validators/print-queue'
@@ -57,7 +58,7 @@ export function MachineManagementTabs({
 }: MachineManagementTabsProps): JSX.Element {
   // Machines first: it is the page people arrive for, and it was the whole
   // page until now - opening somewhere else would move the ground under them.
-  const [tab, setTab] = useState(MACHINES)
+  const [tab, setTab] = useQueryTab<string>('tab', MACHINES)
 
   // Locked and printing both count as queued: from an operator's point of view
   // a bed that has been sent is committed, whether or not a printer has started

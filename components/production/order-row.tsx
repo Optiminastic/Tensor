@@ -1,6 +1,7 @@
 'use client'
 
 import { AlertTriangle, Plus } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
@@ -92,7 +93,24 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
             orderNumber={order.orderNumber}
             itemCount={order.itemCount}
           >
-            <span className="underline-offset-4 hover:underline">{order.orderNumber}</span>
+            {/* A real anchor, so the browser's own openings work: ctrl/cmd
+                click, middle click, and "Open link in new tab". The row's
+                click handler stays for the convenience of clicking anywhere,
+                but it must not also fire here or a ctrl-click would open the
+                order in a new tab AND navigate this one.
+
+                prefetch={false} on purpose: a page of fifty orders would
+                otherwise prefetch fifty order-detail routes, each re-running
+                the layout chain on the server - the same round-trip
+                multiplication that made these pages slow. */}
+            <Link
+              href={href}
+              prefetch={false}
+              onClick={stopRowClick}
+              className="underline-offset-4 hover:underline"
+            >
+              {order.orderNumber}
+            </Link>
           </OrderItemsHoverCard>
           {/* This order produced no production jobs and never will on its own -
               the backend's import worker exhausted its retries. Create Job is

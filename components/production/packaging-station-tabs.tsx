@@ -17,10 +17,15 @@ import { PackagingQueueTable } from '@/components/production/packaging-queue-tab
 import { QcQueueTable } from '@/components/production/qc-queue-table'
 import type { DispatchReadyOrder } from '@/components/production/types'
 import type { TabItem } from '@/components/ui/tabs'
+import { useQueryTab } from '@/hooks/use-query-tab'
 import type { DispatchOrder } from '@/lib/validators/dispatch'
 import type { ProductionJob } from '@/lib/validators/production'
 
 type TabValue = 'assembly' | 'finishing' | 'qc' | 'packaging' | 'dispatch'
+
+// The values the URL may carry. Anything else falls back to the first station
+// rather than rendering a page with no station selected.
+const PACKAGING_TABS = ['assembly', 'finishing', 'qc', 'packaging', 'dispatch'] as const
 
 export interface DispatchPanelData {
   dispatches: DispatchOrder[]
@@ -74,7 +79,7 @@ export function PackagingStationTabs({
   batchNumbers,
   dispatch,
 }: PackagingStationTabsProps): JSX.Element {
-  const [tab, setTab] = useState<TabValue>('assembly')
+  const [tab, setTab] = useQueryTab<TabValue>('tab', 'assembly', PACKAGING_TABS)
   const [search, setSearch] = useState('')
   const [period, setPeriod] = useState<PeriodValue>(ALL_TIME_PERIOD)
 

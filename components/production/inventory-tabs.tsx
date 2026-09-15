@@ -5,6 +5,7 @@ import { useState, type JSX } from 'react'
 import { FilamentInventory } from '@/components/production/filament-inventory'
 import { InventoryItemsTable } from '@/components/production/inventory-items-table'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
+import { useQueryTab } from '@/hooks/use-query-tab'
 import type { InventoryItem } from '@/lib/validators/inventory'
 import type { Filament } from '@/lib/validators/production'
 
@@ -29,7 +30,7 @@ const OTHERS_TAB = 'others'
  * Filament stays the default because it is what the floor runs out of.
  */
 export function InventoryTabs({ brand, filaments, items }: InventoryTabsProps): JSX.Element {
-  const [tab, setTab] = useState(FILAMENT_TAB)
+  const [tab, setTab] = useQueryTab<string>('tab', FILAMENT_TAB)
 
   const tabs: TabItem[] = [
     { value: FILAMENT_TAB, label: 'Filament', count: filaments.length },

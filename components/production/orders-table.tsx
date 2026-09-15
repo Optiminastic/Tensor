@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table'
 import type { TabItem } from '@/components/ui/tabs'
 import { usePagination } from '@/hooks/use-pagination'
+import { useQueryTab } from '@/hooks/use-query-tab'
 
 interface OrdersTableProps {
   brand: string
@@ -134,7 +135,7 @@ function matchesTab(order: OrderRecord, tab: string, withoutJobs: Set<string>): 
 export function OrdersTable({ brand, orders, orderIdsWithoutJobs }: OrdersTableProps): JSX.Element {
   const withoutJobs = useMemo(() => new Set(orderIdsWithoutJobs), [orderIdsWithoutJobs])
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useQueryTab<string>('status', '')
   // All time, not the week-long DEFAULT_PERIOD: this table has always shown
   // every order, and opening it pre-filtered to a week would read as missing
   // data rather than as a filter the user applied.

@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/table'
 import type { TabItem } from '@/components/ui/tabs'
 import { usePagination } from '@/hooks/use-pagination'
+import { useQueryTab } from '@/hooks/use-query-tab'
 
 interface JobQueueTableProps {
   brand: string
@@ -71,7 +72,7 @@ function matchesSearch(job: ProductionJobQueueItem, search: string): boolean {
 
 export function JobQueueTable({ brand, jobs }: JobQueueTableProps): JSX.Element {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useQueryTab<string>('status', '')
   const [personalisation, setPersonalisation] = useState('')
   const [packaging, setPackaging] = useState('')
   // All time by default - see the same note on OrdersTable.
