@@ -10,9 +10,8 @@ import {
 } from '@/components/production/date-range'
 import { FilterBar } from '@/components/production/filter-bar'
 import { OrderRow } from '@/components/production/order-row'
-import { ORDER_STATUS_CONFIG } from '@/components/production/status-config'
 import { TablePagination } from '@/components/production/table-pagination'
-import type { OrderRecord, OrderStatus } from '@/components/production/types'
+import type { OrderRecord } from '@/components/production/types'
 import { Card } from '@/components/ui/card'
 import {
   Table,
@@ -39,12 +38,10 @@ interface OrdersTableProps {
 /**
  * The tab value for "made no jobs".
  *
- * It shares the tab strip with the payment statuses even though it is a
- * different KIND of question, and that is deliberate: an operator opening
- * Orders is looking for what needs attention, and making them find a second
- * control somewhere else to ask the most important question on the page would
- * be worse than the small inconsistency. The sentinel cannot collide with a
- * payment status - those come from ORDER_STATUS_CONFIG's keys.
+ * An operator opening Orders is looking for what needs attention, and this is
+ * the most important question on the page - so it sits in the tab strip rather
+ * than behind a second control somewhere else. The sentinel is hyphenated so it
+ * cannot collide with a status value.
  */
 const NO_JOBS_TAB = 'no-jobs'
 
@@ -94,21 +91,18 @@ const COLUMNS = [
   'Channel',
   'Return',
 ]
-// Pending and Paid are deliberately absent from the tab strip.
+// No payment status has a tab any more.
 //
-// Paid because the store only imports orders that are already paid - all 429 of
-// them - so the tab selected exactly what All already showed, spending a slot
-// in the strip to filter nothing out.
+// Every order the store imports is already paid - all 429 of them - so Paid
+// selected exactly what All showed, and Pending, Refunded and Cancelled
+// selected nothing at all. Four slots in the strip that never narrowed the
+// list. What remains asks questions with answers that differ: what has not
+// shipped, what made no jobs, what is finished.
 //
-// Pending for the reason given at UNFULFILLED_TAB. Both stay in
-// ORDER_STATUS_CONFIG, which also renders each row's payment pill, so an order
-// that ever does arrive in either state still reads correctly - and Refunded
-// and Cancelled keep their tabs, because those are states an order can still
-// move into.
-const HIDDEN_TAB_STATUSES: OrderStatus[] = ['pending', 'paid']
-const TAB_STATUSES = (Object.keys(ORDER_STATUS_CONFIG) as OrderStatus[]).filter(
-  status => !HIDDEN_TAB_STATUSES.includes(status),
-)
+// The statuses stay in ORDER_STATUS_CONFIG, which renders each row's payment
+// pill, so an order that does arrive refunded or cancelled still reads
+// correctly in the table - it simply has no tab of its own. Search and the
+// row's own pill are how it would be found.
 
 function matchesSearch(order: OrderRecord, search: string): boolean {
   if (!search) return true
@@ -160,19 +154,13 @@ export function OrdersTable({ brand, orders, orderIdsWithoutJobs }: OrdersTableP
         label: 'Unfulfilled',
         count: orders.filter(isUnfulfilled).length,
       },
-      ...TAB_STATUSES.map(s => ({
-        value: s,
-        label: ORDER_STATUS_CONFIG[s].label,
-        count: orders.filter(o => o.status === s).length,
-      })),
       {
         value: NO_JOBS_TAB,
         label: 'No jobs',
         count: orders.filter(o => withoutJobs.has(o.id)).length,
       },
-      // Last in the strip, after the payment statuses and the question that
-      // needs attention: Done is where finished work goes to be out of the way,
-      // not something to check.
+      // Last in the strip, after the question that needs attention: Done is
+      // where finished work goes to be out of the way, not something to check.
       { value: DONE_TAB, label: 'Done', count: orders.filter(isDone).length },
     ],
     [orders, withoutJobs],
