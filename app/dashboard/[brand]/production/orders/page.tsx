@@ -52,23 +52,40 @@ export default async function ProductionOrdersPage({
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
   } else {
-    try {
+    // All three at once. They share nothing but the token, so awaiting them in
+    // turn made each wait out the one before it - three round trips of dead
+    // time stacked on top of the layouts' own.
+    //
+    // allSettled rather than all, because each failure means something
+    // different here and that distinction is deliberate: losing the orders is
+    // an error on screen, losing the no-jobs ids is a tab that reads zero, and
+    // losing the connection check just hides a button. Promise.all would
+    // collapse all three into whichever rejected first.
+    const [ordersResult, withoutJobsResult, connectedResult] = await Promise.allSettled([
       // Always the real thing. The seeded sample orders are still in the
       // database and still reachable by id, they are simply not what this
       // page is for - an order list that might be showing fabricated rows is
       // worse than an empty one, because nothing on screen says which it is.
-      orders = (await listOrders(token, 'live')).map(toOrderRecord)
-    } catch (err) {
+      listOrders(token, 'live'),
+      listOrdersWithoutJobs(token, 'live'),
+      resolveShopifyConnected(token, brand),
+    ])
+
+    if (ordersResult.status === 'fulfilled') {
+      orders = ordersResult.value.map(toOrderRecord)
+    } else {
+      const err: unknown = ordersResult.reason
       error = err instanceof ProductionServiceError ? err.message : 'Could not load orders.'
     }
-    try {
-      orderIdsWithoutJobs = (await listOrdersWithoutJobs(token, 'live')).map(o => o.id)
-    } catch {
-      // A filter tab failing must not take the whole list with it: the orders
-      // are the page, and losing them to a missing count would be a worse
-      // outcome than a tab that reads zero.
+
+    // A filter tab failing must not take the whole list with it: the orders are
+    // the page, and losing them to a missing count would be a worse outcome
+    // than a tab that reads zero.
+    if (withoutJobsResult.status === 'fulfilled') {
+      orderIdsWithoutJobs = withoutJobsResult.value.map(o => o.id)
     }
-    shopifyConnected = await resolveShopifyConnected(token, brand)
+
+    shopifyConnected = connectedResult.status === 'fulfilled' && connectedResult.value
   }
 
   return (

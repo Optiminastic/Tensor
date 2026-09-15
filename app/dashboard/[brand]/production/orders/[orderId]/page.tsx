@@ -25,8 +25,16 @@ export default async function OrderPage({ params }: OrderPageProps): Promise<JSX
   let order: OrderRecord
   let jobs: OrderJobPersonalisation[]
   try {
-    order = toOrderDetailRecord(await getOrder(token, orderId))
-    jobs = (await listProductionJobsForOrder(token, orderId)).map(toOrderJobPersonalisation)
+    // Together, not one after the other. Both need only the token and the
+    // order id, so awaiting them in turn made the second wait out the first for
+    // nothing - a whole round trip of dead time on a page that already pays
+    // three in its layouts. Same shape as jobs/[jobId] and batches/[batchId].
+    const [rawOrder, rawJobs] = await Promise.all([
+      getOrder(token, orderId),
+      listProductionJobsForOrder(token, orderId),
+    ])
+    order = toOrderDetailRecord(rawOrder)
+    jobs = rawJobs.map(toOrderJobPersonalisation)
   } catch {
     notFound()
   }

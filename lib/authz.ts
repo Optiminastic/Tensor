@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { cache } from 'react'
 
-import { auth } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import type { Role } from '@/lib/validators/authz'
 import { fetchUserAuthz } from '@/services/authz.service'
 
@@ -24,7 +24,12 @@ const ANON: CurrentAuthz = { userId: null, roles: [], permissions: [] }
 // Wrapped in React cache so the layout and the page it renders resolve authz
 // once per request instead of each calling the backend.
 export const currentAuthz = cache(async (): Promise<CurrentAuthz> => {
-  const session = await auth.api.getSession({ headers: await headers() })
+  // getSessionSafe, not auth.api.getSession directly: the layouts already
+  // resolved the session this request, and that helper is memoised, so going
+  // through it reuses their answer instead of paying a second DB-backed
+  // session validation before the page can render. It also swallows a thrown
+  // session error the same way every other caller does.
+  const session = await getSessionSafe(await headers())
   if (!session) return ANON
 
   const authz = await fetchUserAuthz(session.user.id)
