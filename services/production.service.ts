@@ -268,6 +268,24 @@ export async function failProductionJob(
   )
 }
 
+// rerenderProductionJob queues a fresh render of a generated job's model.
+//
+// Deliberately available whatever the job's status. A queued job gets a better
+// model before it prints; a completed job's plank is already on a shelf, but its
+// model is what a reprint is built from and what the job page shows somebody
+// holding a complaint - and that is exactly the case this was added for, where a
+// plank printed with the wrong customer's names.
+//
+// Answers 202: OpenSCAD takes 20-45 seconds on the production worker, so the
+// model is not new yet when this returns.
+export async function rerenderProductionJob(token: string, jobId: string): Promise<ProductionJob> {
+  return call(
+    `/production-jobs/${encodeURIComponent(jobId)}/rerender`,
+    { method: 'POST', headers: jsonHeaders(token) },
+    data => ProductionJobSchema.parse(data),
+  )
+}
+
 // reportStationIssue flags a defect found at assembly, finishing or QC. It does
 // not change the job's sub-status - the job stays in its queue and can still be
 // completed - so this is additive to the station flow, not a branch of it.

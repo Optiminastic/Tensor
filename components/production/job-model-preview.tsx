@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import type { JSX } from 'react'
 
 import { JobModelUploadButton } from '@/components/production/job-model-upload-button'
+import { JobRerenderButton } from '@/components/production/job-rerender-button'
 import { ModelGeneratingPanel } from '@/components/production/model-generating-panel'
 import type { ModelStatus } from '@/components/production/types'
 import { buttonVariants } from '@/components/ui/button'
@@ -57,6 +58,13 @@ export function JobModelPreview({
                   : 'This product needs a model before it can be printed. Uploading one approves the job for batching.'}
               </p>
               {jobId ? <JobModelUploadButton jobId={jobId} size="md" /> : null}
+              {/* A failed render is the one empty state worth retrying rather
+                  than uploading around: the geometry is Tensor's to build, and
+                  the usual cause - an unresolvable colour, a name OpenSCAD
+                  could not set - is fixed elsewhere and then rebuilt here. */}
+              {jobId && modelStatus === 'failed' ? (
+                <JobRerenderButton jobId={jobId} size="md" />
+              ) : null}
             </>
           )}
         </CardContent>
@@ -71,6 +79,12 @@ export function JobModelPreview({
         <CardTitle>Product preview</CardTitle>
         <div className="flex items-center gap-2">
           {jobId ? <JobModelUploadButton jobId={jobId} hasModel /> : null}
+          {/* Only where Tensor owns the geometry. An uploaded design has no
+              template to rebuild from, and 'approval_required' is precisely the
+              status that says a person supplies this one. */}
+          {jobId && modelStatus !== 'approval_required' ? (
+            <JobRerenderButton jobId={jobId} />
+          ) : null}
           {/* Same-origin route: the handler mints the backend token from the
               session, so no token is exposed to the browser. */}
           {/* `download` with no value on purpose. Given a value, the browser
