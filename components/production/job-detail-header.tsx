@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 
 import { JobEditDialog } from '@/components/production/job-edit-dialog'
+import { ReprintDialog } from '@/components/production/reprint-dialog'
 import {
   PACKAGING_STATUS_CONFIG,
   PERSONALISATION_STATUS_CONFIG,
@@ -38,6 +39,22 @@ export function JobDetailHeader({ brand, job, batches, roles }: JobDetailHeaderP
         <TonePill label={`QC: ${qc.label}`} tone={qc.tone} />
         <TonePill label={`Packaging: ${packaging.label}`} tone={packaging.tone} />
         <TonePill label={`Personalisation: ${personalisation.label}`} tone={personalisation.tone} />
+        {/* Reprint belongs here as much as on the completed-batch board: this
+            is the page somebody opens holding a plank and a complaint, and
+            until now the only way to act on it was to find the bed it came off.
+            Only once it has printed - there is nothing to replace before that,
+            and the job can still be edited instead. */}
+        {job.statusRaw === 'completed' ? (
+          <ReprintDialog
+            brand={brand}
+            job={{
+              id: job.id,
+              jobNumber: job.jobNumber,
+              productName: job.description,
+              printFileID: job.printFileId ?? null,
+            }}
+          />
+        ) : null}
         <JobEditDialog brand={brand} job={job} batches={batches} roles={roles} />
       </div>
     </div>

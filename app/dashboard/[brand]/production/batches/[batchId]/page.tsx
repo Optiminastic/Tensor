@@ -9,6 +9,7 @@ import { BatchApproveDialog } from '@/components/production/batch-approve-dialog
 import { BatchDetailView } from '@/components/production/batch-detail-view'
 import { BatchEditDialog } from '@/components/production/batch-edit-dialog'
 import { BatchRebuildButton } from '@/components/production/batch-rebuild-button'
+import { BatchReprintDialog } from '@/components/production/batch-reprint-dialog'
 import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Machine } from '@/lib/validators/machines'
@@ -78,6 +79,21 @@ export default async function BatchPage({ params }: BatchPageProps): Promise<JSX
               models are the record a reprint is built from, so a mismatch found
               here is still worth correcting. */}
           <BatchRebuildButton brand={brand} batchId={batch.id} />
+          {/* And on a finished bed, the planks themselves. The machine board
+              offers this too, but Batch Management is where somebody goes
+              looking for a specific bed by number. */}
+          {batch.status === 'completed' ? (
+            <BatchReprintDialog
+              brand={brand}
+              batchId={batch.id}
+              batchNumber={batch.batchNumber}
+              jobs={jobs.map(job => ({
+                id: job.id,
+                jobNumber: job.job_number,
+                productName: job.product_name ?? null,
+              }))}
+            />
+          ) : null}
         </div>
       </div>
       <BatchDetailView brand={brand} batch={batch} jobs={jobs} machines={machines} />
