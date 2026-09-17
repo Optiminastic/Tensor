@@ -8,9 +8,14 @@ import {
   type Batch,
   type BatchApproveInput,
   type BatchPatchInput,
+  type BatchRebuildResult,
+  type BatchReprintInput,
+  type BatchReprintResult,
   type CompleteBatchJobsResult,
   type PrintBatchResult,
   AutoCreateBatchesResultSchema,
+  BatchRebuildResultSchema,
+  BatchReprintResultSchema,
   BatchSchema,
   CompleteBatchJobsResultSchema,
   PrintBatchResultSchema,
@@ -193,6 +198,46 @@ export async function completeBatchJobs(
     `/batches/${encodeURIComponent(batchId)}/jobs/complete`,
     { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify({ job_ids: jobIds }) },
     data => CompleteBatchJobsResultSchema.parse(data),
+  )
+}
+
+/**
+ * Checks a bed's models against the orders they were built from, and rebuilds
+ * the ones that disagree.
+ *
+ * Only the mismatches are re-rendered - a bed of four where one is wrong costs
+ * one render, not four - and the result names which were rebuilt, which were
+ * already correct, and which could not be checked. The bed's plate is rebuilt
+ * by the worker once the last render lands, so this answers before the models
+ * have changed.
+ */
+export async function rebuildBatchModels(
+  token: string,
+  batchId: string,
+): Promise<BatchRebuildResult> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}/rebuild`,
+    { method: 'POST', headers: jsonHeaders(token) },
+    data => BatchRebuildResultSchema.parse(data),
+  )
+}
+
+/**
+ * Reprints chosen planks from a finished bed onto a new locked one.
+ *
+ * A selection rather than the whole bed, because a bed is rarely wholly wrong -
+ * reprinting the planks that were fine is filament nobody needs. The reprints
+ * land on one new batch, locked and ready to send.
+ */
+export async function reprintBatchJobs(
+  token: string,
+  batchId: string,
+  input: BatchReprintInput,
+): Promise<BatchReprintResult> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}/reprint`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => BatchReprintResultSchema.parse(data),
   )
 }
 

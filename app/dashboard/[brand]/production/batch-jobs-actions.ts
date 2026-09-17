@@ -5,14 +5,25 @@ import { revalidatePath } from 'next/cache'
 import { toBatchRecord } from '@/components/production/adapters'
 import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
-import type { CompleteBatchJobsResult } from '@/lib/validators/batches'
+import {
+  type BatchRebuildResult,
+  type BatchReprintResult,
+  type CompleteBatchJobsResult,
+  BatchReprintInputSchema,
+} from '@/lib/validators/batches'
 import type { Machine } from '@/lib/validators/machines'
 import {
   type FailJobResult,
   type ProductionJob,
   FailJobInputSchema,
 } from '@/lib/validators/production'
-import { BatchServiceError, completeBatchJobs, getBatch } from '@/services/batches.service'
+import {
+  BatchServiceError,
+  completeBatchJobs,
+  getBatch,
+  rebuildBatchModels,
+  reprintBatchJobs,
+} from '@/services/batches.service'
 import { listMachines } from '@/services/machines.service'
 import {
   failProductionJob as failProductionJobCall,
@@ -90,6 +101,67 @@ export async function markJobPrintDone(
     return { ok: true, data: job }
   } catch (err) {
     const message = err instanceof ProductionServiceError ? err.message : 'Could not mark it done.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Checks every model on a bed against the order it was built from, and rebuilds
+ * the ones that disagree.
+ *
+ * Only the mismatches are re-rendered, so the answer names which jobs were
+ * wrong and why - "built as NAVYA & KRISHNA, ordered as APRAJITA & AJAY" - and
+ * which were already correct. The bed's plate is rebuilt by the worker once the
+ * last render lands, so this returns before the models have actually changed.
+ */
+export async function rebuildBatch(
+  brand: string,
+  batchId: string,
+): Promise<ActionResult<BatchRebuildResult>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const result = await rebuildBatchModels(token, batchId)
+    revalidatePath(`/dashboard/${brand}/production/batches/${batchId}`)
+    revalidatePath(`/dashboard/${brand}/production/batches`)
+    return { ok: true, data: result }
+  } catch (err) {
+    const message =
+      err instanceof BatchServiceError ? err.message : "Could not check this batch's models."
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Reprints the chosen planks off a finished bed onto a new locked one.
+ *
+ * A selection, not the whole bed: three of four planks are usually fine, and
+ * reprinting those is filament nobody needs. The chosen jobs are failed with the
+ * given reason and their reprints land together on one new batch, ready to send.
+ */
+export async function reprintBatch(
+  brand: string,
+  batchId: string,
+  input: unknown,
+): Promise<ActionResult<BatchReprintResult>> {
+  const parsed = BatchReprintInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Pick the planks to reprint and a reason.',
+    }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const result = await reprintBatchJobs(token, batchId, parsed.data)
+    revalidatePath(`/dashboard/${brand}/production/machines`)
+    revalidatePath(`/dashboard/${brand}/production/batches`)
+    revalidatePath(`/dashboard/${brand}/production/jobs`)
+    return { ok: true, data: result }
+  } catch (err) {
+    const message =
+      err instanceof BatchServiceError ? err.message : 'Could not reprint these planks.'
     return { ok: false, error: message }
   }
 }

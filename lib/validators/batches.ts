@@ -110,6 +110,62 @@ export const AddJobsToBatchInputSchema = z.object({
 })
 export type AddJobsToBatchInput = z.infer<typeof AddJobsToBatchInputSchema>
 
+/** One job the rebuild check spoke about, and why. */
+const RebuiltJobSchema = z.object({
+  job_number: z.string(),
+  reason: z.string(),
+})
+
+/**
+ * What checking a bed's models against its orders found.
+ *
+ * `correct` names the jobs rather than counting them: an operator deciding
+ * whether to trust a bed needs to see that the others were checked, not only
+ * that one was wrong. `skipped` is the jobs the check cannot speak for - an
+ * uploaded design has no template to compare against.
+ */
+export const BatchRebuildResultSchema = z.object({
+  batch_number: z.string(),
+  checked: z.number(),
+  queued: RebuiltJobSchema.array().default([]),
+  correct: z.string().array().default([]),
+  skipped: RebuiltJobSchema.array().default([]),
+  note: z.string(),
+})
+export type BatchRebuildResult = z.infer<typeof BatchRebuildResultSchema>
+
+/**
+ * What reprinting part of a finished bed produced.
+ *
+ * Each pair is the plank that was scrapped and the job that replaces it, so the
+ * operator can follow which became which; `batch` is the new locked bed holding
+ * them, ready to send.
+ */
+/**
+ * Which planks to reprint off a finished bed, and why.
+ *
+ * One reason for the selection, not one per job: they came off a single plate
+ * in a single state, and a per-plank reason is a form nobody fills in honestly.
+ */
+export const BatchReprintInputSchema = z.object({
+  job_ids: z.string().min(1).array().min(1),
+  reason: z.string().min(1),
+  notes: z.string().max(2000).nullish(),
+  filament_wasted_grams: z.number().min(0).nullish(),
+  time_wasted_minutes: z.number().int().min(0).nullish(),
+})
+export type BatchReprintInput = z.infer<typeof BatchReprintInputSchema>
+
+export const BatchReprintResultSchema = z.object({
+  batch: BatchSchema,
+  reprinted: z
+    .object({ failed_job_number: z.string(), reprint_job_number: z.string() })
+    .array()
+    .default([]),
+  note: z.string(),
+})
+export type BatchReprintResult = z.infer<typeof BatchReprintResultSchema>
+
 /**
  * What sending a locked batch to BambuBuddy reported back.
  *

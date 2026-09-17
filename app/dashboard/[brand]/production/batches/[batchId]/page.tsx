@@ -8,6 +8,7 @@ import { toBatchRecord } from '@/components/production/adapters'
 import { BatchApproveDialog } from '@/components/production/batch-approve-dialog'
 import { BatchDetailView } from '@/components/production/batch-detail-view'
 import { BatchEditDialog } from '@/components/production/batch-edit-dialog'
+import { BatchRebuildButton } from '@/components/production/batch-rebuild-button'
 import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Machine } from '@/lib/validators/machines'
@@ -56,22 +57,28 @@ export default async function BatchPage({ params }: BatchPageProps): Promise<JSX
             <p className="text-muted-foreground text-sm">Full batch detail.</p>
           </div>
         </div>
-        {batch.status === 'pending_approval' ? (
-          <BatchApproveDialog
-            brand={brand}
-            batchId={batch.id}
-            assignedMachineId={batch.machineId}
-            machines={machines}
-          />
-        ) : (
-          <BatchEditDialog
-            brand={brand}
-            batchId={batch.id}
-            status={batch.status}
-            machineId={batch.machineId}
-            machines={machines}
-          />
-        )}
+        <div className="flex flex-col items-end gap-3">
+          {batch.status === 'pending_approval' ? (
+            <BatchApproveDialog
+              brand={brand}
+              batchId={batch.id}
+              assignedMachineId={batch.machineId}
+              machines={machines}
+            />
+          ) : (
+            <BatchEditDialog
+              brand={brand}
+              batchId={batch.id}
+              status={batch.status}
+              machineId={batch.machineId}
+              machines={machines}
+            />
+          )}
+          {/* Offered on any bed, including a finished one: a completed bed's
+              models are the record a reprint is built from, so a mismatch found
+              here is still worth correcting. */}
+          <BatchRebuildButton brand={brand} batchId={batch.id} />
+        </div>
       </div>
       <BatchDetailView brand={brand} batch={batch} jobs={jobs} machines={machines} />
     </main>

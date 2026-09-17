@@ -96,7 +96,9 @@ export function BatchKanbanCard({ brand, batch, expandable }: BatchKanbanCardPro
         </p>
         <p className="text-subtle-foreground text-xs">Created {dateTime(batch.createdAt)}</p>
       </div>
-      {expandable && open ? <CompletedBatchJobs brand={brand} batchId={batch.id} /> : null}
+      {expandable && open ? (
+        <CompletedBatchJobs brand={brand} batchId={batch.id} batchNumber={batch.batchNumber} />
+      ) : null}
       <BatchDetailSheet
         brand={brand}
         batchId={batch.id}

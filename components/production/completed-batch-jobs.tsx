@@ -9,6 +9,7 @@ import {
   listBatchJobs,
   markJobPrintDone,
 } from '@/app/dashboard/[brand]/production/batch-jobs-actions'
+import { BatchReprintDialog } from '@/components/production/batch-reprint-dialog'
 import { ReprintDialog } from '@/components/production/reprint-dialog'
 import { Button } from '@/components/ui/button'
 import { countdown } from '@/lib/format'
@@ -17,6 +18,8 @@ import type { ProductionJob } from '@/lib/validators/production'
 interface CompletedBatchJobsProps {
   brand: string
   batchId: string
+  /** Shown in the reprint dialog, so it names the bed the planks came off. */
+  batchNumber: string
 }
 
 /** The jobs inside a completed batch, listed individually under its card on
@@ -24,7 +27,11 @@ interface CompletedBatchJobsProps {
  * so nothing is fetched until an operator opens a batch. Each row links to the
  * job's own page and offers the two decisions that follow a finished print:
  * Done (no assembly needed - straight to Finishing) or Reprint. */
-export function CompletedBatchJobs({ brand, batchId }: CompletedBatchJobsProps): JSX.Element {
+export function CompletedBatchJobs({
+  brand,
+  batchId,
+  batchNumber,
+}: CompletedBatchJobsProps): JSX.Element {
   const [jobs, setJobs] = useState<ProductionJob[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,11 +65,29 @@ export function CompletedBatchJobs({ brand, batchId }: CompletedBatchJobsProps):
   }
 
   return (
-    <ul className="border-border flex flex-col divide-y border-t">
-      {jobs.map(job => (
-        <CompletedJobRow key={job.id} brand={brand} job={job} />
-      ))}
-    </ul>
+    <div className="flex flex-col">
+      <ul className="border-border flex flex-col divide-y border-t">
+        {jobs.map(job => (
+          <CompletedJobRow key={job.id} brand={brand} job={job} />
+        ))}
+      </ul>
+      {/* Reprinting several planks at once, rather than one row at a time. Each
+          row's own Reprint is right for a single bad plank; this is for the bed
+          that came off wrong, and it puts the replacements on ONE new locked
+          batch instead of leaving the planner to scatter them. */}
+      <div className="flex justify-end px-3 py-2">
+        <BatchReprintDialog
+          brand={brand}
+          batchId={batchId}
+          batchNumber={batchNumber}
+          jobs={jobs.map(job => ({
+            id: job.id,
+            jobNumber: job.job_number,
+            productName: job.product_name ?? null,
+          }))}
+        />
+      </div>
+    </div>
   )
 }
 
