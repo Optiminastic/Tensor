@@ -170,10 +170,14 @@ export type BatchReprintInput = z.infer<typeof BatchReprintInputSchema>
 
 export const BatchReprintResultSchema = z.object({
   batch: BatchSchema,
+  // nullish for the same reason as the rebuild result above: an empty Go slice
+  // arrives as null, and one schema tolerating it beside another that does not
+  // is how this bites again later.
   reprinted: z
     .object({ failed_job_number: z.string(), reprint_job_number: z.string() })
     .array()
-    .default([]),
+    .nullish()
+    .transform(pairs => pairs ?? []),
   note: z.string(),
 })
 export type BatchReprintResult = z.infer<typeof BatchReprintResultSchema>
