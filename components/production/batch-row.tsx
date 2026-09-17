@@ -2,13 +2,16 @@
 
 import { AlertTriangle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import type { JSX, KeyboardEvent } from 'react'
+import { useState, type JSX, type KeyboardEvent } from 'react'
 
+import { listBatchJobs } from '@/app/dashboard/[brand]/production/batch-jobs-actions'
+import { BatchActionsMenu } from '@/components/production/batch-actions-menu'
 import { BatchColourDots } from '@/components/production/batch-colour-dots'
 import { BatchDoneDialog } from '@/components/production/batch-done-dialog'
 import { batchFailure } from '@/components/production/batch-label'
 import { BatchOrderTags } from '@/components/production/batch-order-tags'
 import { BatchQueueButton } from '@/components/production/batch-queue-button'
+import { BatchReprintDialog } from '@/components/production/batch-reprint-dialog'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
@@ -24,11 +27,27 @@ interface BatchRowProps {
 
 export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
   const router = useRouter()
+  const [reprintJobs, setReprintJobs] = useState<
+    { id: string; jobNumber: string; productName: string | null }[] | null
+  >(null)
   const status = BATCH_STATUS_CONFIG[batch.status]
   const failure = batchFailure(batch)
   const href = `/dashboard/${brand}/production/batches/${batch.id}`
 
   const openDetail = (): void => router.push(href)
+
+  async function loadJobsForReprint(): Promise<void> {
+    const res = await listBatchJobs(batch.id)
+    if (!res.ok || !res.data) return
+    setReprintJobs(
+      res.data.map(job => ({
+        id: job.id,
+        jobNumber: job.job_number,
+        productName: job.product_name ?? null,
+      })),
+    )
+  }
+
   const onKeyDown = (event: KeyboardEvent<HTMLTableRowElement>): void => {
     if (event.key === 'Enter') openDetail()
   }
@@ -107,7 +126,27 @@ export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
             status={batch.status}
             stopPropagation
           />
+          <BatchActionsMenu
+            brand={brand}
+            batchId={batch.id}
+            batchNumber={batch.batchNumber}
+            status={batch.status}
+            onReprint={() => void loadJobsForReprint()}
+          />
         </div>
+        {/* Mounted once its jobs are loaded, and opened by that same act: the
+            dialog cannot live inside the menu, which unmounts when an item is
+            chosen. */}
+        {reprintJobs ? (
+          <BatchReprintDialog
+            brand={brand}
+            batchId={batch.id}
+            batchNumber={batch.batchNumber}
+            jobs={reprintJobs}
+            defaultOpen
+            onClosed={() => setReprintJobs(null)}
+          />
+        ) : null}
       </TableCell>
     </TableRow>
   )

@@ -55,6 +55,14 @@ interface BatchReprintDialogProps {
   batchId: string
   batchNumber: string
   jobs: { id: string; jobNumber: string; productName: string | null }[]
+  /**
+   * Opens on mount, for a caller that has already decided - the batch list's
+   * actions menu, which loads the bed's jobs precisely because reprint was
+   * chosen. Elsewhere the trigger is the way in.
+   */
+  defaultOpen?: boolean
+  /** Lets such a caller drop the dialog again once it closes. */
+  onClosed?: () => void
 }
 
 export function BatchReprintDialog({
@@ -62,9 +70,11 @@ export function BatchReprintDialog({
   batchId,
   batchNumber,
   jobs,
+  defaultOpen = false,
+  onClosed,
 }: BatchReprintDialogProps): JSX.Element {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const [picked, setPicked] = useState<string[]>([])
   const [reason, setReason] = useState('')
   const [notes, setNotes] = useState('')
@@ -108,6 +118,7 @@ export function BatchReprintDialog({
       open={open}
       onOpenChange={next => {
         setOpen(next)
+        if (!next) onClosed?.()
         if (next) {
           setPicked([])
           setReason('')
@@ -116,12 +127,14 @@ export function BatchReprintDialog({
         }
       }}
     >
-      <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
-          <RotateCcw className="size-3.5" aria-hidden />
-          Reprint planks
-        </Button>
-      </DialogTrigger>
+      {defaultOpen ? null : (
+        <DialogTrigger asChild>
+          <Button variant="secondary" size="sm">
+            <RotateCcw className="size-3.5" aria-hidden />
+            Reprint planks
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Reprint from {batchNumber}</DialogTitle>

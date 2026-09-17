@@ -6,6 +6,7 @@ import { toBatchRecord } from '@/components/production/adapters'
 import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
 import {
+  type BatchDeleteResult,
   type BatchRebuildResult,
   type BatchReprintResult,
   type CompleteBatchJobsResult,
@@ -20,6 +21,7 @@ import {
 import {
   BatchServiceError,
   completeBatchJobs,
+  deleteBatch,
   getBatch,
   rebuildBatchModels,
   reprintBatchJobs,
@@ -101,6 +103,31 @@ export async function markJobPrintDone(
     return { ok: true, data: job }
   } catch (err) {
     const message = err instanceof ProductionServiceError ? err.message : 'Could not mark it done.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Deletes a bed, returning its jobs to the queue.
+ *
+ * Not a tidy-up of a row: the bed's plate is withdrawn from BambuBuddy, its
+ * reserved filament is given back, and its jobs go to the pool to be re-planned.
+ * The backend refuses a bed that is printing or has printed, and says which.
+ */
+export async function deleteBatchAction(
+  brand: string,
+  batchId: string,
+): Promise<ActionResult<BatchDeleteResult>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const result = await deleteBatch(token, batchId)
+    revalidatePath(`/dashboard/${brand}/production/batches`)
+    revalidatePath(`/dashboard/${brand}/production/machines`)
+    revalidatePath(`/dashboard/${brand}/production/jobs`)
+    return { ok: true, data: result }
+  } catch (err) {
+    const message = err instanceof BatchServiceError ? err.message : 'Could not delete this batch.'
     return { ok: false, error: message }
   }
 }

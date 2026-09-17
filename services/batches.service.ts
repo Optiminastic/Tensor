@@ -8,12 +8,14 @@ import {
   type Batch,
   type BatchApproveInput,
   type BatchPatchInput,
+  type BatchDeleteResult,
   type BatchRebuildResult,
   type BatchReprintInput,
   type BatchReprintResult,
   type CompleteBatchJobsResult,
   type PrintBatchResult,
   AutoCreateBatchesResultSchema,
+  BatchDeleteResultSchema,
   BatchRebuildResultSchema,
   BatchReprintResultSchema,
   BatchSchema,
@@ -198,6 +200,22 @@ export async function completeBatchJobs(
     `/batches/${encodeURIComponent(batchId)}/jobs/complete`,
     { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify({ job_ids: jobIds }) },
     data => CompleteBatchJobsResultSchema.parse(data),
+  )
+}
+
+/**
+ * Deletes a bed and returns its jobs to the pool.
+ *
+ * The jobs are not deleted with it - they go back to be re-planned - which is
+ * why the result reports how many were released. Refused on a bed that is
+ * printing (a machine is working on it) or has printed (that bed is the record
+ * of what was made).
+ */
+export async function deleteBatch(token: string, batchId: string): Promise<BatchDeleteResult> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}`,
+    { method: 'DELETE', headers: jsonHeaders(token) },
+    data => BatchDeleteResultSchema.parse(data),
   )
 }
 

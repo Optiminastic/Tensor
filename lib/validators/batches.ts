@@ -110,6 +110,20 @@ export const AddJobsToBatchInputSchema = z.object({
 })
 export type AddJobsToBatchInput = z.infer<typeof AddJobsToBatchInputSchema>
 
+/**
+ * What deleting a bed freed.
+ *
+ * `jobs_released` is the point: the jobs are not deleted with the bed, they go
+ * back to the pool to be re-planned, and telling the operator how many went back
+ * is the difference between "a row disappeared" and "that work is still coming".
+ */
+export const BatchDeleteResultSchema = z.object({
+  batch_number: z.string(),
+  jobs_released: z.number(),
+  note: z.string(),
+})
+export type BatchDeleteResult = z.infer<typeof BatchDeleteResultSchema>
+
 /** One job the rebuild check spoke about, and why. */
 const RebuiltJobSchema = z.object({
   job_number: z.string(),
