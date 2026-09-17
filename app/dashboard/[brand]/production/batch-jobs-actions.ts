@@ -7,9 +7,12 @@ import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
 import {
   type BatchDeleteResult,
+  type BatchQueueOptions,
+  type BatchQueueResult,
   type BatchRebuildResult,
   type BatchReprintResult,
   type CompleteBatchJobsResult,
+  BatchQueueInputSchema,
   BatchReprintInputSchema,
 } from '@/lib/validators/batches'
 import type { Machine } from '@/lib/validators/machines'
@@ -23,6 +26,8 @@ import {
   completeBatchJobs,
   deleteBatch,
   getBatch,
+  getBatchQueueOptions,
+  queueBatchToMachine,
   rebuildBatchModels,
   reprintBatchJobs,
 } from '@/services/batches.service'
@@ -103,6 +108,63 @@ export async function markJobPrintDone(
     return { ok: true, data: job }
   } catch (err) {
     const message = err instanceof ProductionServiceError ? err.message : 'Could not mark it done.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Which printers could run this bed, and what the others are missing.
+ *
+ * Read when the Queue dialog opens rather than with the page: a queue tab can
+ * hold dozens of beds, and each row would otherwise carry thirteen printers'
+ * worth of AMS state nobody has asked to see.
+ */
+export async function loadBatchQueueOptions(
+  batchId: string,
+): Promise<ActionResult<BatchQueueOptions>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const options = await getBatchQueueOptions(token, batchId)
+    return { ok: true, data: options }
+  } catch (err) {
+    const message =
+      err instanceof BatchServiceError
+        ? err.message
+        : 'Could not read which printers can take this batch.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Sends a bed to the printer somebody picked, locking a Draft on the way.
+ *
+ * The machine id is re-checked against the bed's colours by the backend. The
+ * dropdown only offers eligible printers, but a server action's arguments are
+ * client-controlled - the dialog is a convenience, not the rule.
+ */
+export async function queueBatchToMachineAction(
+  brand: string,
+  batchId: string,
+  input: unknown,
+): Promise<ActionResult<BatchQueueResult>> {
+  const parsed = BatchQueueInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Pick a printer to send this batch to.',
+    }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const result = await queueBatchToMachine(token, batchId, parsed.data)
+    revalidatePath(`/dashboard/${brand}/production/machines`)
+    revalidatePath(`/dashboard/${brand}/production/batches`)
+    return { ok: true, data: result }
+  } catch (err) {
+    const message =
+      err instanceof BatchServiceError ? err.message : 'Could not send this batch to that printer.'
     return { ok: false, error: message }
   }
 }

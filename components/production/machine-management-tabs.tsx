@@ -60,18 +60,27 @@ export function MachineManagementTabs({
   // page until now - opening somewhere else would move the ground under them.
   const [tab, setTab] = useQueryTab<string>('tab', MACHINES)
 
-  // Locked and printing both count as queued: from an operator's point of view
-  // a bed that has been sent is committed, whether or not a printer has started
-  // pulling it yet.
+  // Every bed that has yet to print, drafts included.
+  //
+  // Drafts used to be excluded on the grounds that they belong to Batch
+  // Management, where they are built. That held while Tensor sent beds to
+  // printers by itself - a draft really was somebody else's problem until the
+  // dispatcher locked it. Now that a person chooses the printer, this is the
+  // page where that choice is made, and a draft that cannot be seen here is a
+  // bed that cannot be queued at all.
+  //
+  // Ordered the way work moves: drafts, then locked, then printing.
   //
   // Batches no longer back History. A Tensor batch records what was SENT; only
   // BambuBuddy watched what happened, so a bed that FAILED on the printer never
   // reached a history built from batch statuses - which is the one row an
   // operator most needs to see.
-  const queued = useMemo(
-    () => batches.filter(b => b.status === 'open' || b.status === 'in_progress'),
-    [batches],
-  )
+  const queued = useMemo(() => {
+    const rank: Record<string, number> = { pending_approval: 0, open: 1, in_progress: 2 }
+    return batches
+      .filter(b => b.status in rank)
+      .sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9))
+  }, [batches])
 
   // Only work that has yet to run. BambuBuddy keeps finished and cancelled
   // items in the same list, and a queue that counts them is not a queue.
@@ -105,11 +114,11 @@ export function MachineManagementTabs({
 
           <section className="flex flex-col gap-2">
             <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-              Locked in Tensor, not yet handed over
+              Waiting in Tensor, not yet handed over
             </h2>
             {queued.length === 0 ? (
               <Empty>
-                Nothing is waiting. Lock a batch in Batch Management to send it to a printer.
+                Nothing is waiting. Batches appear here as soon as the planner builds them.
               </Empty>
             ) : (
               <BatchTableGrid brand={brand} batches={queued} />

@@ -197,6 +197,99 @@ export const BatchReprintResultSchema = z.object({
 export type BatchReprintResult = z.infer<typeof BatchReprintResultSchema>
 
 /**
+ * A colour the bed needs, and the swatch to draw it.
+ *
+ * `hex` is empty when the colour is not on the filament shelf. The name still
+ * shows: a colour nobody has registered is a thing to fix, not a thing to hide.
+ */
+const QueueColourSchema = z.object({ name: z.string(), hex: z.string() })
+
+/**
+ * One printer, and whether it can take this bed.
+ *
+ * Ineligible machines are listed too, with `missing` naming the colours they do
+ * not hold. A printer an operator can see standing idle, absent from the list
+ * with no explanation, is the kind of thing that gets worked around rather than
+ * fixed.
+ */
+const QueueMachineSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  model: z.string(),
+  status: z.string(),
+  // Empty Go slices marshal as null - the same trap the rebuild result hit.
+  loaded: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+  missing: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+  eligible: z.boolean(),
+  // The printer the backend would pick: the closest colour match, idle before
+  // busy. A suggestion the operator can override, not a decision.
+  suggested: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
+  reason: z.string().nullish(),
+})
+export type QueueMachine = z.infer<typeof QueueMachineSchema>
+
+/** What the Queue dialog draws: the bed's colours, and who can print them. */
+export const BatchQueueOptionsSchema = z.object({
+  batch_number: z.string(),
+  status: z.string(),
+  colours: QueueColourSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  machines: QueueMachineSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  // False when Tensor cannot compare the bed's colours against what the
+  // printers hold: an AMS reports a colour only as a hex, an order names it in
+  // words, and the filament shelf is the only thing that holds both. Every
+  // machine is offered in that case, and the note says why.
+  colours_verified: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
+  note: z.string(),
+})
+export type BatchQueueOptions = z.infer<typeof BatchQueueOptionsSchema>
+
+/** Which machine to send the bed to. */
+export const BatchQueueInputSchema = z.object({
+  machine_id: z.string().min(1),
+  // Sends to a printer that does not hold the bed's colours. Never the default:
+  // the shop's rule is that a bed whose colours nobody has loaded waits.
+  skip_colour_check: z.boolean().optional(),
+})
+export type BatchQueueInput = z.infer<typeof BatchQueueInputSchema>
+
+/**
+ * What queueing to a chosen machine did.
+ *
+ * `pinned` is the honest part: the plate can reach BambuBuddy's queue and still
+ * not be tied to the printer that was picked, because the queue entry does not
+ * exist until slicing finishes. It prints either way - possibly on another
+ * machine of the same model - and the note says which happened.
+ */
+export const BatchQueueResultSchema = z.object({
+  batch_number: z.string(),
+  machine_name: z.string(),
+  filename: z.string(),
+  queued: z.boolean(),
+  locked: z.boolean(),
+  pinned: z.boolean(),
+  note: z.string(),
+})
+export type BatchQueueResult = z.infer<typeof BatchQueueResultSchema>
+
+/**
  * What sending a locked batch to BambuBuddy reported back.
  *
  * `queued: false` is not necessarily a failure - the plate can reach

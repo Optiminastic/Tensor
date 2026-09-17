@@ -6,7 +6,7 @@ import { BatchDoneDialog } from '@/components/production/batch-done-dialog'
 import { isBatchEditable, isBatchFull } from '@/components/production/batch-fullness'
 import { BatchJobsTable } from '@/components/production/batch-jobs-table'
 import { BatchPlatePreview } from '@/components/production/batch-plate-preview'
-import { BatchQueueButton } from '@/components/production/batch-queue-button'
+import { BatchQueueDialog } from '@/components/production/batch-queue-dialog'
 import type { BatchRecord } from '@/components/production/types'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -52,18 +52,17 @@ export function BatchDetailView({
           plateBboxYMm={batch.plateBboxYMm}
           plateBboxZMm={batch.plateBboxZMm}
         />
-        {/* Which statuses can be queued is the button's own decision now, so
-            the two render sites and the row cannot drift apart. A Draft is
-            offered too: pressing it locks the bed first, which is what makes
-            sending it safe. */}
+        {/* Which statuses can be queued is the dialog's own decision, so the
+            two render sites and the row cannot drift apart. A Draft is offered
+            too: sending it locks the bed first, which is what makes sending it
+            safe. */}
         <div className="mt-4">
-          <BatchQueueButton
+          <BatchQueueDialog
             brand={brand}
             batchId={batch.id}
             batchNumber={batch.batchNumber}
             status={batch.status}
             alreadyQueued={batch.queueItemId !== null}
-            unitsPerBed={batch.unitsPerBed}
           />
         </div>
         {/* Finishing the bed. Beside Print rather than in the header: both are

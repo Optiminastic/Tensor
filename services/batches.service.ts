@@ -9,6 +9,9 @@ import {
   type BatchApproveInput,
   type BatchPatchInput,
   type BatchDeleteResult,
+  type BatchQueueInput,
+  type BatchQueueOptions,
+  type BatchQueueResult,
   type BatchRebuildResult,
   type BatchReprintInput,
   type BatchReprintResult,
@@ -16,6 +19,8 @@ import {
   type PrintBatchResult,
   AutoCreateBatchesResultSchema,
   BatchDeleteResultSchema,
+  BatchQueueOptionsSchema,
+  BatchQueueResultSchema,
   BatchRebuildResultSchema,
   BatchReprintResultSchema,
   BatchSchema,
@@ -256,6 +261,47 @@ export async function reprintBatchJobs(
     `/batches/${encodeURIComponent(batchId)}/reprint`,
     { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
     data => BatchReprintResultSchema.parse(data),
+  )
+}
+
+/**
+ * Which printers could run this bed, and what the others are missing.
+ *
+ * Read from Tensor's mirror of the fleet rather than from BambuBuddy directly,
+ * so opening the dialog costs one query instead of thirteen calls over the
+ * tunnel.
+ */
+export async function getBatchQueueOptions(
+  token: string,
+  batchId: string,
+): Promise<BatchQueueOptions> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}/queue-options`,
+    { headers: jsonHeaders(token) },
+    data => BatchQueueOptionsSchema.parse(data),
+  )
+}
+
+/**
+ * Sends a bed to one chosen printer, locking it first if it is still a Draft.
+ *
+ * Slower than the other calls because Tensor uploads the plate and waits for
+ * BambuBuddy to accept it, so it gets the BambuBuddy timeout.
+ */
+export async function queueBatchToMachine(
+  token: string,
+  batchId: string,
+  input: BatchQueueInput,
+): Promise<BatchQueueResult> {
+  return call(
+    `/batches/${encodeURIComponent(batchId)}/queue`,
+    {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(BAMBUBUDDY_TIMEOUT_MS),
+    },
+    data => BatchQueueResultSchema.parse(data),
   )
 }
 

@@ -10,7 +10,7 @@ import { BatchColourDots } from '@/components/production/batch-colour-dots'
 import { BatchDoneDialog } from '@/components/production/batch-done-dialog'
 import { batchFailure } from '@/components/production/batch-label'
 import { BatchOrderTags } from '@/components/production/batch-order-tags'
-import { BatchQueueButton } from '@/components/production/batch-queue-button'
+import { BatchQueueDialog } from '@/components/production/batch-queue-dialog'
 import { BatchReprintDialog } from '@/components/production/batch-reprint-dialog'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
@@ -110,13 +110,12 @@ export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
               the operator is looking at every bed at once and deciding which
               one goes next. Requiring them to open each bed to send it is what
               kept beds sitting locked and unsent. */}
-          <BatchQueueButton
+          <BatchQueueDialog
             brand={brand}
             batchId={batch.id}
             batchNumber={batch.batchNumber}
             status={batch.status}
             alreadyQueued={batch.queueItemId !== null}
-            unitsPerBed={batch.unitsPerBed}
             compact
           />
           <BatchDoneDialog
