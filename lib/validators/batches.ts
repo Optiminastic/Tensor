@@ -127,9 +127,21 @@ const RebuiltJobSchema = z.object({
 export const BatchRebuildResultSchema = z.object({
   batch_number: z.string(),
   checked: z.number(),
-  queued: RebuiltJobSchema.array().default([]),
-  correct: z.string().array().default([]),
-  skipped: RebuiltJobSchema.array().default([]),
+  // nullish, not just default: `default` fills in for undefined only, and Go
+  // marshals an empty slice as null - so a check that found nothing to rebuild
+  // (the happy answer) failed to parse and read on screen as "could not check
+  // this batch's models". The API sends [] now; this stays tolerant of both.
+  queued: RebuiltJobSchema.array()
+    .nullish()
+    .transform(jobs => jobs ?? []),
+  correct: z
+    .string()
+    .array()
+    .nullish()
+    .transform(names => names ?? []),
+  skipped: RebuiltJobSchema.array()
+    .nullish()
+    .transform(jobs => jobs ?? []),
   note: z.string(),
 })
 export type BatchRebuildResult = z.infer<typeof BatchRebuildResultSchema>
