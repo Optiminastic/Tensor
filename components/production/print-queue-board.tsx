@@ -29,35 +29,48 @@ interface PrintQueueBoardProps {
 }
 
 /**
- * The colours a queued plate will actually print in - one chip per slot.
+ * The colours a queued plate will actually print in, named where Tensor can
+ * name them.
  *
  * Read from the SLICED file, so this is the ground truth about what comes off
- * the bed rather than what anyone intended. That makes it worth reading
+ * the bed rather than what anyone intended - which makes it worth reading
  * carefully: a bed whose order says blue and whose chips say white alone is a
  * bed that will print white.
  *
- * Two details here are not cosmetic. The ring is border-strong rather than
- * border, because a #FFFFFF spool drawn with a faint ring on a light row is
- * indistinguishable from no chip at all - which is precisely how a plate that
- * had lost its second colour went unnoticed. And an absent declaration says so
- * in words instead of rendering nothing, because "no chip" and "white chip"
- * must not look the same.
+ * Naming matters as much as the swatch. Two anonymous dots say a plate needs
+ * two colours; they do not say WHICH, and "the gold one" is how the floor talks
+ * about a spool. An unnamed colour shows its hex instead - a gap in the colour
+ * map, not a reason to hide what the plate will do.
+ *
+ * The ring is border-strong rather than border, because a #FFFFFF spool drawn
+ * with a faint ring on a light row is indistinguishable from no chip at all -
+ * which is precisely how a plate that had lost its second colour went
+ * unnoticed.
  */
-function FilamentSwatches({ colours }: { colours: string[] }): JSX.Element {
-  if (colours.length === 0) {
+function FilamentSwatches({
+  filaments,
+}: {
+  filaments: { hex: string; name?: string | null }[]
+}): JSX.Element {
+  if (filaments.length === 0) {
     return <span className="text-subtle-foreground">no colour declared</span>
   }
   return (
-    <span className="flex items-center gap-1">
-      {colours.map((colour, i) => (
-        <span
-          key={`${colour}-${i}`}
-          // Inline because the hex is data, not design: there is no token for
-          // "whatever colour the operator happened to load".
-          style={{ backgroundColor: colour }}
-          className="border-border-strong size-3 rounded-full border"
-          title={`Slot ${i + 1}: ${colour}`}
-        />
+    <span className="flex flex-wrap items-center gap-1.5">
+      {filaments.map((filament, i) => (
+        <span key={`${filament.hex}-${i}`} className="flex items-center gap-1">
+          <span
+            aria-hidden
+            // Inline because the hex is data, not design: there is no token for
+            // "whatever colour the operator happened to load".
+            style={{ backgroundColor: filament.hex }}
+            className="border-border-strong size-3 shrink-0 rounded-full border"
+            title={`Slot ${i + 1}: ${filament.hex}`}
+          />
+          <span className="font-mono text-[11px] tabular-nums">
+            {filament.name || filament.hex}
+          </span>
+        </span>
       ))}
     </span>
   )
@@ -147,7 +160,7 @@ export function PrintQueueBoard({ items, error }: PrintQueueBoardProps): JSX.Ele
                   ) : null}
                   <span className="flex items-center gap-1.5">
                     {item.filament_type}
-                    <FilamentSwatches colours={item.filament_colours ?? []} />
+                    <FilamentSwatches filaments={filamentsOf(item)} />
                   </span>
                   {item.batch_name ? <span>Batch {item.batch_name}</span> : null}
                   {item.created_by ? <span>by {item.created_by}</span> : null}
@@ -185,4 +198,15 @@ export function PrintQueueBoard({ items, error }: PrintQueueBoardProps): JSX.Ele
       })}
     </div>
   )
+}
+
+/**
+ * The colours to draw for one queue item.
+ *
+ * Prefers the named list, falling back to the bare hexes so an item served by
+ * an older backend still shows its colours rather than nothing.
+ */
+function filamentsOf(item: QueueItem): { hex: string; name?: string | null }[] {
+  if (item.filaments.length > 0) return item.filaments
+  return (item.filament_colours ?? []).map(hex => ({ hex }))
 }

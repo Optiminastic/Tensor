@@ -195,6 +195,21 @@ export async function listOrdersWithoutJobs(token: string, source: OrderSource):
   )
 }
 
+/**
+ * Orders holding at least one line Tensor does not generate.
+ *
+ * "At least one", not "all": a mixed order still needs somebody to deal with
+ * the part that is not a plank, and hiding it because the rest is automated is
+ * how that part gets forgotten. The backend decides what counts as generated -
+ * the rule matches SKU segments and product-name substrings, and a copy of it
+ * here would drift.
+ */
+export async function listNonDnpOrders(token: string, source: OrderSource): Promise<Order[]> {
+  return call(`/orders?source=${source}&dnp=false`, { headers: jsonHeaders(token) }, data =>
+    OrderSchema.array().parse(data),
+  )
+}
+
 export async function getOrder(token: string, id: string): Promise<OrderDetail> {
   return call(`/orders/${encodeURIComponent(id)}`, { headers: jsonHeaders(token) }, data =>
     OrderDetailSchema.parse(data),

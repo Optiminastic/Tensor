@@ -231,6 +231,11 @@ export type QueueSlot = z.infer<typeof QueueSlotSchema>
 const QueueTraySchema = z.object({
   hex: z.string(),
   type: z.string(),
+  // Where the spool is, in the numbering printed on the machine ("AMS 1 · slot
+  // 4"). Computed by the backend, which can see the whole machine: an AMS unit
+  // reports an id of its own choosing - the A2L's AMS Lite says 6 - so
+  // numbering from the raw id would name a unit the printer does not have.
+  label: z.string().nullish(),
   ams_id: z.number().nullish(),
   tray_id: z.number().nullish(),
   remaining_grams: z.number().nullish(),

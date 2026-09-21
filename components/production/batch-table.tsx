@@ -33,7 +33,17 @@ const STATUSES = Object.keys(BATCH_STATUS_CONFIG) as BatchStatus[]
  * to jump the queue is the answer. Cannot collide with a status - those come
  * from BATCH_STATUS_CONFIG's keys.
  */
-const PRIORITY_TAB = 'priority'
+/**
+ * A bed is either still going to print or it has printed. Those are the two
+ * states anyone acts on.
+ *
+ * The strip used to carry All, Priority and one tab per status, which split the
+ * beds still in flight across three tabs - Draft, Locked, Printing - none of
+ * which changes what an operator does next. Pending holds all three; the status
+ * column still says which, and the filter bar still narrows by it.
+ */
+const PENDING_TAB = 'pending'
+const COMPLETED_TAB = 'completed'
 const SHORTAGE_OPTIONS = [
   { value: 'yes', label: 'Shortage' },
   { value: 'no', label: 'No shortage' },
@@ -60,13 +70,11 @@ function isFinished(batch: BatchRecord): boolean {
 
 /** Whether a batch belongs under the selected tab. '' is All. */
 function matchesTab(batch: BatchRecord, tab: string): boolean {
-  if (!tab) return true
-  // Priority asks a different KIND of question from the status tabs - "who is
-  // waiting on this" rather than "where has it got to" - so it has to exclude
-  // finished beds itself. The status tabs get it for free by construction: a
-  // completed bed cannot equal 'pending_approval' or 'open'.
-  if (tab === PRIORITY_TAB) return batch.hasPriority && !isFinished(batch)
-  return batch.status === tab
+  if (tab === COMPLETED_TAB) return isFinished(batch)
+  // Pending is the default and the catch-all: anything not finished is still
+  // work. Defined as "not completed" rather than by listing the statuses, so a
+  // status added later lands in front of somebody instead of vanishing.
+  return !isFinished(batch)
 }
 
 function matchesShortage(batch: BatchRecord, shortage: string): boolean {
@@ -76,7 +84,9 @@ function matchesShortage(batch: BatchRecord, shortage: string): boolean {
 
 export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useQueryTab<string>('status', '')
+  // Pending by default: the beds that still need something done to them are
+  // the reason anyone opens this page.
+  const [status, setStatus] = useQueryTab<string>('status', PENDING_TAB)
   const [shortage, setShortage] = useState('')
   // All time by default - see the same note on OrdersTable.
   const [period, setPeriod] = useState<PeriodValue>(ALL_TIME_PERIOD)
@@ -85,21 +95,18 @@ export function BatchTable({ brand, batches }: BatchTableProps): JSX.Element {
 
   const tabs: TabItem[] = useMemo(
     () => [
-      { value: '', label: 'All', count: batches.length },
-      // First after All, not last: these are the beds with a promised date on
-      // them, so the tab is worth reaching for before the status filters.
       {
-        value: PRIORITY_TAB,
-        label: 'Priority',
-        // Counted the same way the tab filters, or the number on the tab
-        // promises beds the tab will not show.
-        count: batches.filter(b => b.hasPriority && !isFinished(b)).length,
+        value: PENDING_TAB,
+        label: 'Pending Batch',
+        // Counted the same way the tab filters, or the number promises beds
+        // the tab will not show.
+        count: batches.filter(b => !isFinished(b)).length,
       },
-      ...STATUSES.map(s => ({
-        value: s,
-        label: BATCH_STATUS_CONFIG[s].label,
-        count: batches.filter(b => b.status === s).length,
-      })),
+      {
+        value: COMPLETED_TAB,
+        label: 'Completed Batch',
+        count: batches.filter(isFinished).length,
+      },
     ],
     [batches],
   )

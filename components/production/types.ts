@@ -60,6 +60,12 @@ export interface ProductionJobQueueItem {
   // batchable or already batched. Read-only: it explains, it never causes.
   batchingBlockedReason: string | null
   /**
+   * True for a product Tensor renders itself. The floor's question is the
+   * opposite one - "what here is NOT a plank?" - because those are the jobs
+   * that need somebody to supply a model or pick a part.
+   */
+  isGenerated: boolean
+  /**
    * Null when the job has no geometry yet. Every product except the Dual Name
    * Plank needs a person to supply it - a plank is rendered from the
    * customer's own names - so this is what the queue's upload action keys on.

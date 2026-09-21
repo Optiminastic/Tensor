@@ -37,6 +37,14 @@ export const QueueItemSchema = z.object({
   filament_type: z.string(),
   // One entry per material on the plate.
   filament_colours: z.string().array().nullish(),
+  // The same colours with the shop's name for each, read from the SLICED file
+  // so they are what will actually print. `name` is empty when no colour has
+  // been mapped to that hex.
+  filaments: z
+    .object({ hex: z.string(), name: z.string().nullish() })
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
   estimated_cost: z.number().nullish(),
   nozzle_diameter: z.number().nullish(),
   layer_height: z.number().nullish(),

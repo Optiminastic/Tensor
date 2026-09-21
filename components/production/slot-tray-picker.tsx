@@ -93,16 +93,14 @@ function trayKey(tray: QueueTray): string {
 }
 
 /**
- * A tray in the numbering printed on the machine.
+ * A tray, named the way the machine names it.
  *
- * Both ids come back from zero while Bambu labels from one, so an operator told
- * "AMS 0, slot 1" would walk to the wrong slot. The hex rides along because the
- * dropdown cannot draw a swatch, and the hex is the thing being matched.
+ * The label comes from the backend, which can see every unit on the printer and
+ * numbers them by position - an AMS reports an id of its own choosing, so "+1"
+ * on the raw id would send somebody looking for AMS 7 on a single-unit machine.
+ * With no label the colour stands in, because a wrong slot number is worse than
+ * none.
  */
 function trayLabel(tray: QueueTray): string {
-  const where =
-    typeof tray.ams_id === 'number' && typeof tray.tray_id === 'number'
-      ? `AMS ${tray.ams_id + 1} · slot ${tray.tray_id + 1}`
-      : 'unknown slot'
-  return `${where} — ${tray.hex}`
+  return tray.label ? `${tray.label} — ${tray.hex}` : tray.hex
 }

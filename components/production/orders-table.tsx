@@ -29,6 +29,13 @@ interface OrdersTableProps {
   brand: string
   orders: OrderRecord[]
   /**
+   * Orders holding at least one line Tensor does not generate, by id. Resolved
+   * on the server for the same reason the no-jobs list is: the order DTO
+   * carries no line items, and the rule for what counts as generated lives in
+   * the backend.
+   */
+  nonDnpOrderIds: string[]
+  /**
    * Orders that produced no production jobs at all, by id. Resolved on the
    * server because the order DTO carries no job count.
    */
@@ -44,6 +51,11 @@ interface OrdersTableProps {
  * cannot collide with a status value.
  */
 const NO_JOBS_TAB = 'no-jobs'
+
+/**
+ * The tab value for "holds something Tensor does not make itself".
+ */
+const NON_DNP_TAB = 'non-dnp'
 
 /**
  * The tab value for "already shipped".
@@ -127,16 +139,29 @@ function isUnfulfilled(order: OrderRecord): boolean {
 }
 
 /** Whether an order belongs under the selected tab. '' is All. */
-function matchesTab(order: OrderRecord, tab: string, withoutJobs: Set<string>): boolean {
+/** The id sets the tabs filter on, grouped so this stays within the parameter limit. */
+interface OrderTabSets {
+  withoutJobs: Set<string>
+  nonDnp: Set<string>
+}
+
+function matchesTab(order: OrderRecord, tab: string, sets: OrderTabSets): boolean {
+  if (tab === NON_DNP_TAB) return sets.nonDnp.has(order.id)
   if (!tab) return true
-  if (tab === NO_JOBS_TAB) return withoutJobs.has(order.id)
+  if (tab === NO_JOBS_TAB) return sets.withoutJobs.has(order.id)
   if (tab === DONE_TAB) return isDone(order)
   if (tab === UNFULFILLED_TAB) return isUnfulfilled(order)
   return order.status === tab
 }
 
-export function OrdersTable({ brand, orders, orderIdsWithoutJobs }: OrdersTableProps): JSX.Element {
+export function OrdersTable({
+  brand,
+  orders,
+  orderIdsWithoutJobs,
+  nonDnpOrderIds,
+}: OrdersTableProps): JSX.Element {
   const withoutJobs = useMemo(() => new Set(orderIdsWithoutJobs), [orderIdsWithoutJobs])
+  const nonDnp = useMemo(() => new Set(nonDnpOrderIds), [nonDnpOrderIds])
   const [search, setSearch] = useState('')
   const [status, setStatus] = useQueryTab<string>('status', '')
   // All time, not the week-long DEFAULT_PERIOD: this table has always shown
@@ -159,11 +184,18 @@ export function OrdersTable({ brand, orders, orderIdsWithoutJobs }: OrdersTableP
         label: 'No jobs',
         count: orders.filter(o => withoutJobs.has(o.id)).length,
       },
+      {
+        // On a floor that is mostly Dual Name Planks, these are the orders
+        // that need a person: a model to upload, a part to pick.
+        value: NON_DNP_TAB,
+        label: 'Non-DNP',
+        count: orders.filter(o => nonDnp.has(o.id)).length,
+      },
       // Last in the strip, after the question that needs attention: Done is
       // where finished work goes to be out of the way, not something to check.
       { value: DONE_TAB, label: 'Done', count: orders.filter(isDone).length },
     ],
-    [orders, withoutJobs],
+    [orders, withoutJobs, nonDnp],
   )
 
   const filtered = useMemo(
@@ -171,10 +203,10 @@ export function OrdersTable({ brand, orders, orderIdsWithoutJobs }: OrdersTableP
       orders.filter(
         order =>
           matchesSearch(order, search) &&
-          matchesTab(order, status, withoutJobs) &&
+          matchesTab(order, status, { withoutJobs, nonDnp }) &&
           isWithinDateRange(order.submittedAt, periodRange),
       ),
-    [orders, search, status, periodRange, withoutJobs],
+    [orders, search, status, periodRange, withoutJobs, nonDnp],
   )
   const page = usePagination(filtered)
 

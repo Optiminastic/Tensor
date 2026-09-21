@@ -56,6 +56,11 @@ export const ProductionJobSchema = z.object({
   // Why a generated model could not be built, in the renderer's own words.
   // Null unless model_status is 'failed'.
   model_error: z.string().nullish(),
+  // True for a product Tensor renders itself - a Dual Name Plank and its
+  // siblings. Computed by the backend from IsGeneratedProduct, which matches
+  // SKU segments and product-name substrings; re-deriving it here would be a
+  // second copy of that rule, and the two would drift.
+  is_generated: z.boolean().nullish(),
   variant_title: z.string().nullish(),
   // Every custom attribute for this line, verbatim and in the order the
   // customer answered. This is where the two names and the heart count live:

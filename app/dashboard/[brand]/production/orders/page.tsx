@@ -12,6 +12,7 @@ import { listConnections } from '@/services/connections.service'
 import {
   ProductionServiceError,
   listOrders,
+  listNonDnpOrders,
   listOrdersWithoutJobs,
 } from '@/services/production.service'
 
@@ -46,30 +47,33 @@ export default async function ProductionOrdersPage({
   // Fetched here rather than derived, because the order DTO carries no job
   // count - see listOrdersWithoutJobs.
   let orderIdsWithoutJobs: string[] = []
+  let nonDnpOrderIds: string[] = []
   let error: string | null = null
   let shopifyConnected = false
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
   } else {
-    // All three at once. They share nothing but the token, so awaiting them in
-    // turn made each wait out the one before it - three round trips of dead
+    // All four at once. They share nothing but the token, so awaiting them in
+    // turn made each wait out the one before it - four round trips of dead
     // time stacked on top of the layouts' own.
     //
     // allSettled rather than all, because each failure means something
     // different here and that distinction is deliberate: losing the orders is
-    // an error on screen, losing the no-jobs ids is a tab that reads zero, and
-    // losing the connection check just hides a button. Promise.all would
-    // collapse all three into whichever rejected first.
-    const [ordersResult, withoutJobsResult, connectedResult] = await Promise.allSettled([
-      // Always the real thing. The seeded sample orders are still in the
-      // database and still reachable by id, they are simply not what this
-      // page is for - an order list that might be showing fabricated rows is
-      // worse than an empty one, because nothing on screen says which it is.
-      listOrders(token, 'live'),
-      listOrdersWithoutJobs(token, 'live'),
-      resolveShopifyConnected(token, brand),
-    ])
+    // an error on screen, losing either set of tab ids is a tab that reads
+    // zero, and losing the connection check just hides a button. Promise.all
+    // would collapse all four into whichever rejected first.
+    const [ordersResult, withoutJobsResult, nonDnpResult, connectedResult] =
+      await Promise.allSettled([
+        // Always the real thing. The seeded sample orders are still in the
+        // database and still reachable by id, they are simply not what this
+        // page is for - an order list that might be showing fabricated rows is
+        // worse than an empty one, because nothing on screen says which it is.
+        listOrders(token, 'live'),
+        listOrdersWithoutJobs(token, 'live'),
+        listNonDnpOrders(token, 'live'),
+        resolveShopifyConnected(token, brand),
+      ])
 
     if (ordersResult.status === 'fulfilled') {
       orders = ordersResult.value.map(toOrderRecord)
@@ -83,6 +87,9 @@ export default async function ProductionOrdersPage({
     // than a tab that reads zero.
     if (withoutJobsResult.status === 'fulfilled') {
       orderIdsWithoutJobs = withoutJobsResult.value.map(o => o.id)
+    }
+    if (nonDnpResult.status === 'fulfilled') {
+      nonDnpOrderIds = nonDnpResult.value.map(o => o.id)
     }
 
     shopifyConnected = connectedResult.status === 'fulfilled' && connectedResult.value
@@ -103,7 +110,12 @@ export default async function ProductionOrdersPage({
           No live orders yet. Click Sync from Shopify to pull in the latest orders.
         </p>
       ) : (
-        <OrdersTable brand={brand} orders={orders} orderIdsWithoutJobs={orderIdsWithoutJobs} />
+        <OrdersTable
+          brand={brand}
+          orders={orders}
+          orderIdsWithoutJobs={orderIdsWithoutJobs}
+          nonDnpOrderIds={nonDnpOrderIds}
+        />
       )}
     </main>
   )

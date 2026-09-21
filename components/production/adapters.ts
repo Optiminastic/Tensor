@@ -71,6 +71,9 @@ export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
     createdAt: job.created_at,
     issueReason: job.issue_reason ?? null,
     batchingBlockedReason: job.batching_blocked_reason ?? null,
+    // Defaults to true, so an older backend that does not send it does not fill
+    // the Non-DNP tab with every plank on the floor.
+    isGenerated: job.is_generated ?? true,
     printFileId: job.print_file_id ?? null,
     // Defaults to 'ready' rather than 'approval_required': an older backend
     // that does not send this must not make every job look like it needs

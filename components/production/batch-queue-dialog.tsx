@@ -23,19 +23,15 @@ import { Select } from '@/components/ui/select'
 import type { BatchQueueOptions, BatchStatus, QueueTray } from '@/lib/validators/batches'
 
 /**
- * Where a spool physically is, in the numbering printed on the machine.
+ * Where a spool is, as the machine itself labels it.
  *
- * The API reports both ids from zero, while Bambu's own labelling starts at
- * one - so an operator told "AMS 0, slot 1" would be looking at the wrong slot.
- * A tray with no recorded position falls back to its colour rather than
- * inventing a location.
+ * The label is the backend's, because only that side sees every unit on the
+ * printer: an AMS reports an id of its own choosing - the A2L's AMS Lite says
+ * 6 - so adding one to the raw id named a unit the machine does not have. With
+ * no label recorded the colour stands in rather than a guessed location.
  */
 function slotLabel(tray: QueueTray): string {
-  // typeof rather than a null check: the ids are nullish in the schema, and
-  // slot 0 is a real slot - so a falsy test would hide the first tray of every
-  // machine.
-  if (typeof tray.ams_id !== 'number' || typeof tray.tray_id !== 'number') return tray.hex
-  return `AMS ${tray.ams_id + 1} · slot ${tray.tray_id + 1}`
+  return tray.label || tray.hex
 }
 
 interface BatchQueueDialogProps {
