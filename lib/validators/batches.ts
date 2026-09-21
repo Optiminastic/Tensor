@@ -205,6 +205,39 @@ export type BatchReprintResult = z.infer<typeof BatchReprintResultSchema>
 const QueueColourSchema = z.object({ name: z.string(), hex: z.string() })
 
 /**
+ * One filament slot the plate asks for, in the plate's own order.
+ *
+ * Slot 1 is the plank body Tensor adds itself; the rest are the lettering
+ * colours an order asked for. This is the authoritative list of what the bed
+ * needs - the `colours` array is job-derived and omits the body entirely.
+ */
+const QueueSlotSchema = z.object({
+  index: z.number(),
+  hex: z.string(),
+  name: z.string().nullish(),
+  material: z.string().nullish(),
+})
+export type QueueSlot = z.infer<typeof QueueSlotSchema>
+
+/**
+ * One AMS slot: what is in it, and where it physically is.
+ *
+ * The position is what lets the dialog say "AMS 1, slot 2" instead of showing a
+ * colour with no way to find it, and it is what a filament mapping is built
+ * from when the plate is sent. Both ids are nullable: a machine synced before
+ * Tensor recorded them has neither, and slot 0 is a real slot, so absent must
+ * stay distinguishable from zero.
+ */
+const QueueTraySchema = z.object({
+  hex: z.string(),
+  type: z.string(),
+  ams_id: z.number().nullish(),
+  tray_id: z.number().nullish(),
+  remaining_grams: z.number().nullish(),
+})
+export type QueueTray = z.infer<typeof QueueTraySchema>
+
+/**
  * One printer, and whether it can take this bed.
  *
  * Ineligible machines are listed too, with `missing` naming the colours they do
@@ -220,6 +253,17 @@ const QueueMachineSchema = z.object({
   // Empty Go slices marshal as null - the same trap the rebuild result hit.
   loaded: z
     .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+  trays: QueueTraySchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  // The spool to use for each plate slot, in slot order, as ams_mapping
+  // integers. A default from nearest colour - the operator sees it beside both
+  // swatches and can change any of it.
+  suggested_slot_trays: z
+    .number()
     .array()
     .nullish()
     .transform(v => v ?? []),
@@ -249,14 +293,9 @@ export const BatchQueueOptionsSchema = z.object({
   machines: QueueMachineSchema.array()
     .nullish()
     .transform(v => v ?? []),
-  // False when Tensor cannot compare the bed's colours against what the
-  // printers hold: an AMS reports a colour only as a hex, an order names it in
-  // words, and the filament shelf is the only thing that holds both. Every
-  // machine is offered in that case, and the note says why.
-  colours_verified: z
-    .boolean()
+  slots: QueueSlotSchema.array()
     .nullish()
-    .transform(v => v ?? false),
+    .transform(v => v ?? []),
   note: z.string(),
 })
 export type BatchQueueOptions = z.infer<typeof BatchQueueOptionsSchema>
@@ -264,9 +303,11 @@ export type BatchQueueOptions = z.infer<typeof BatchQueueOptionsSchema>
 /** Which machine to send the bed to. */
 export const BatchQueueInputSchema = z.object({
   machine_id: z.string().min(1),
-  // Sends to a printer that does not hold the bed's colours. Never the default:
-  // the shop's rule is that a bed whose colours nobody has loaded waits.
-  skip_colour_check: z.boolean().optional(),
+  // Which spool prints each plate slot, in slot order. The operator picks these
+  // looking at the bed's swatches and the printer's trays side by side; Tensor
+  // deliberately does not infer them, because an AMS reports a colour as a bare
+  // hex and a guess here prints a plank in the wrong colour.
+  slot_trays: z.number().array(),
 })
 export type BatchQueueInput = z.infer<typeof BatchQueueInputSchema>
 

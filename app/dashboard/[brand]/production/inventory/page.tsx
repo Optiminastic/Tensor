@@ -4,8 +4,14 @@ import type { JSX } from 'react'
 import { InventoryTabs } from '@/components/production/inventory-tabs'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
+import type { ColourMapEntry, UnmappedColour } from '@/lib/validators/colour-map'
 import type { InventoryItem } from '@/lib/validators/inventory'
 import type { Filament } from '@/lib/validators/production'
+import {
+  ColourMapServiceError,
+  listColourMap,
+  listUnmappedColours,
+} from '@/services/colour-map.service'
 import { InventoryServiceError, listInventoryItems } from '@/services/inventory.service'
 import { ProductionServiceError, listFilament } from '@/services/production.service'
 
@@ -21,6 +27,8 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
 
   let filaments: Filament[] = []
   let items: InventoryItem[] = []
+  let colourMap: ColourMapEntry[] = []
+  let unmappedColours: UnmappedColour[] = []
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
@@ -42,6 +50,20 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
           err instanceof InventoryServiceError ? err.message : 'Could not load inventory items.'
       }
     }
+    // The colour map and the unmapped spools travel together - one is the
+    // record, the other is the work left - and both are read separately again
+    // so a colour-map outage cannot blank the shelf an operator came for.
+    try {
+      ;[colourMap, unmappedColours] = await Promise.all([
+        listColourMap(token),
+        listUnmappedColours(token),
+      ])
+    } catch (err) {
+      if (!error) {
+        error =
+          err instanceof ColourMapServiceError ? err.message : 'Could not load the colour map.'
+      }
+    }
   }
 
   return (
@@ -58,7 +80,13 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
               Filament on the spool shelf, and everything else a plank ships with.
             </p>
           </div>
-          <InventoryTabs brand={brand} filaments={filaments} items={items} />
+          <InventoryTabs
+            brand={brand}
+            filaments={filaments}
+            items={items}
+            colourMap={colourMap}
+            unmappedColours={unmappedColours}
+          />
         </>
       )}
     </main>

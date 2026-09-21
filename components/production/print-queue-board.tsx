@@ -28,9 +28,25 @@ interface PrintQueueBoardProps {
   error?: string | null
 }
 
-/** The colour chips for a plate - one per material it uses. */
-function FilamentSwatches({ colours }: { colours: string[] }): JSX.Element | null {
-  if (colours.length === 0) return null
+/**
+ * The colours a queued plate will actually print in - one chip per slot.
+ *
+ * Read from the SLICED file, so this is the ground truth about what comes off
+ * the bed rather than what anyone intended. That makes it worth reading
+ * carefully: a bed whose order says blue and whose chips say white alone is a
+ * bed that will print white.
+ *
+ * Two details here are not cosmetic. The ring is border-strong rather than
+ * border, because a #FFFFFF spool drawn with a faint ring on a light row is
+ * indistinguishable from no chip at all - which is precisely how a plate that
+ * had lost its second colour went unnoticed. And an absent declaration says so
+ * in words instead of rendering nothing, because "no chip" and "white chip"
+ * must not look the same.
+ */
+function FilamentSwatches({ colours }: { colours: string[] }): JSX.Element {
+  if (colours.length === 0) {
+    return <span className="text-subtle-foreground">no colour declared</span>
+  }
   return (
     <span className="flex items-center gap-1">
       {colours.map((colour, i) => (
@@ -39,8 +55,8 @@ function FilamentSwatches({ colours }: { colours: string[] }): JSX.Element | nul
           // Inline because the hex is data, not design: there is no token for
           // "whatever colour the operator happened to load".
           style={{ backgroundColor: colour }}
-          className="border-border size-3 rounded-full border"
-          title={colour}
+          className="border-border-strong size-3 rounded-full border"
+          title={`Slot ${i + 1}: ${colour}`}
         />
       ))}
     </span>

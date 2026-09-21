@@ -8,6 +8,7 @@ import {
   loadBatchQueueOptions,
   queueBatchToMachineAction,
 } from '@/app/dashboard/[brand]/production/batch-jobs-actions'
+import { SlotTrayPicker } from '@/components/production/slot-tray-picker'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,7 +20,23 @@ import {
 } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
-import type { BatchQueueOptions, BatchStatus } from '@/lib/validators/batches'
+import type { BatchQueueOptions, BatchStatus, QueueTray } from '@/lib/validators/batches'
+
+/**
+ * Where a spool physically is, in the numbering printed on the machine.
+ *
+ * The API reports both ids from zero, while Bambu's own labelling starts at
+ * one - so an operator told "AMS 0, slot 1" would be looking at the wrong slot.
+ * A tray with no recorded position falls back to its colour rather than
+ * inventing a location.
+ */
+function slotLabel(tray: QueueTray): string {
+  // typeof rather than a null check: the ids are nullish in the schema, and
+  // slot 0 is a real slot - so a falsy test would hide the first tray of every
+  // machine.
+  if (typeof tray.ams_id !== 'number' || typeof tray.tray_id !== 'number') return tray.hex
+  return `AMS ${tray.ams_id + 1} · slot ${tray.tray_id + 1}`
+}
 
 interface BatchQueueDialogProps {
   brand: string
@@ -62,6 +79,9 @@ export function BatchQueueDialog({
   const [options, setOptions] = useState<BatchQueueOptions | null>(null)
   const [loading, setLoading] = useState(false)
   const [machineId, setMachineId] = useState('')
+  // The spool chosen for each plate slot, in slot order. Seeded from the
+  // machine's suggestion and overridden by the operator.
+  const [slotTrays, setSlotTrays] = useState<number[]>([])
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -81,11 +101,10 @@ export function BatchQueueDialog({
       // Preselect the printer that already holds the closest match to this
       // bed's colours, so the common case is one press. Falls back to the first
       // eligible machine when the backend could not suggest one.
-      setMachineId(
-        res.data.machines.find(m => m.suggested)?.id ??
-          res.data.machines.find(m => m.eligible)?.id ??
-          '',
-      )
+      const machine =
+        res.data.machines.find(m => m.suggested) ?? res.data.machines.find(m => m.eligible)
+      setMachineId(machine?.id ?? '')
+      setSlotTrays(machine?.suggested_slot_trays ?? [])
     })
     return () => {
       cancelled = true
@@ -97,14 +116,31 @@ export function BatchQueueDialog({
     event.stopPropagation()
   }
 
+  // Changing printer changes which spools exist, so the previous picks are
+  // meaningless - re-seed from the new machine's own suggestion rather than
+  // carrying indices that point at another printer's trays.
+  function chooseMachine(id: string): void {
+    setMachineId(id)
+    const machine = options?.machines.find(m => m.id === id)
+    setSlotTrays(machine?.suggested_slot_trays ?? [])
+  }
+
   async function submit(): Promise<void> {
     if (!machineId) {
       setError('Pick a printer to send this batch to.')
       return
     }
+    const slots = options?.slots ?? []
+    if (slotTrays.length !== slots.length || slotTrays.some(i => !Number.isFinite(i) || i < 0)) {
+      setError('Choose a spool for every slot on this bed.')
+      return
+    }
     setPending(true)
     setError(null)
-    const res = await queueBatchToMachineAction(brand, batchId, { machine_id: machineId })
+    const res = await queueBatchToMachineAction(brand, batchId, {
+      machine_id: machineId,
+      slot_trays: slotTrays,
+    })
     setPending(false)
     if (!res.ok || !res.data) {
       setError(res.error ?? 'Could not send this batch to that printer.')
@@ -166,40 +202,20 @@ export function BatchQueueDialog({
             <p className="text-muted-foreground text-sm">Reading the fleet…</p>
           ) : options ? (
             <div className="flex flex-col gap-4">
-              <Field label="Colours on this bed" htmlFor="queue-colours">
-                <div id="queue-colours" className="flex flex-wrap gap-2">
-                  {options.colours.map(colour => (
-                    <span
-                      key={colour.name}
-                      className="border-border flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs"
-                    >
-                      <span
-                        aria-hidden
-                        className="border-border size-3 rounded-full border"
-                        style={colour.hex ? { backgroundColor: colour.hex } : undefined}
-                      />
-                      {colour.name}
-                    </span>
-                  ))}
-                </div>
-              </Field>
-
               <Field
                 label="Printer"
                 htmlFor="queue-machine"
                 required
                 hint={
-                  options.colours_verified
-                    ? eligible.length > 0
-                      ? `${eligible.length} of ${options.machines.length} hold these colours`
-                      : undefined
-                    : 'Colours unverified — compare the swatches yourself'
+                  eligible.length > 0
+                    ? `${eligible.length} of ${options.machines.length} have enough spools loaded`
+                    : undefined
                 }
               >
                 <Select
                   id="queue-machine"
                   value={machineId}
-                  onChange={e => setMachineId(e.target.value)}
+                  onChange={e => chooseMachine(e.target.value)}
                   aria-label="Printer to queue this batch on"
                 >
                   <option value="">Pick a printer</option>
@@ -211,39 +227,56 @@ export function BatchQueueDialog({
                     </option>
                   ))}
                 </Select>
-                {/* What the chosen printer is actually holding.
+                {/* What the chosen printer is actually holding, and WHERE.
                     An <option> cannot draw a swatch, and when Tensor cannot
                     verify the colours itself this is the only way the operator
                     can do the comparison - the bed's colours are above, the
-                    machine's are here, side by side. */}
-                {selected && selected.loaded.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    machine's are here, side by side. The slot number is what
+                    turns "it has blue somewhere" into something you can walk
+                    over and check. */}
+                {selected && selected.trays.length > 0 ? (
+                  <div className="mt-2 flex flex-col gap-1">
                     <span className="text-subtle-foreground text-[10px] tracking-wide uppercase">
                       {selected.name} holds
                     </span>
-                    {selected.loaded.map(hex => (
-                      <span
-                        key={hex}
-                        title={hex}
-                        aria-label={hex}
-                        className="border-border size-3.5 rounded-full border"
-                        style={{ backgroundColor: hex }}
-                      />
-                    ))}
+                    <div className="flex flex-wrap gap-1.5">
+                      {selected.trays.map(tray => (
+                        <span
+                          key={`${tray.ams_id ?? 'x'}-${tray.tray_id ?? 'x'}-${tray.hex}`}
+                          className="border-border flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs"
+                        >
+                          <span
+                            aria-hidden
+                            className="border-border size-3 shrink-0 rounded-full border"
+                            style={{ backgroundColor: tray.hex }}
+                          />
+                          <span className="font-mono tabular-nums">{slotLabel(tray)}</span>
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
               </Field>
 
-              {options.note ? (
-                <p
-                  className={
-                    options.colours_verified
-                      ? 'text-muted-foreground text-xs'
-                      : 'text-warning text-xs'
-                  }
+              {selected && options.slots.length > 0 ? (
+                <Field
+                  label="Which spool prints what"
+                  htmlFor="queue-slots"
+                  hint="Check these against the machine before sending"
                 >
-                  {options.note}
-                </p>
+                  <div id="queue-slots">
+                    <SlotTrayPicker
+                      slots={options.slots}
+                      trays={selected.trays}
+                      value={slotTrays}
+                      onChange={setSlotTrays}
+                    />
+                  </div>
+                </Field>
+              ) : null}
+
+              {options.note ? (
+                <p className="text-muted-foreground text-xs">{options.note}</p>
               ) : null}
               {error ? (
                 <p role="alert" className="text-danger text-sm">

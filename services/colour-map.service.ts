@@ -1,0 +1,103 @@
+// Server-only by placement (called from server actions and server components).
+import { env } from '@/lib/env'
+import { createLogger } from '@/lib/logger'
+import {
+  type ColourMapEntry,
+  type ColourMapUpsert,
+  type UnmappedColour,
+  ColourMapEntrySchema,
+  UnmappedColourSchema,
+} from '@/lib/validators/colour-map'
+
+const log = createLogger('ColourMapService')
+const TIMEOUT_MS = 15_000
+
+/**
+ * Typed client for Tensor-Core's colour map.
+ *
+ * It sits under /filament-inventory because that is what it describes, and it
+ * is guarded by the same filament permissions — one Inventory page is one thing
+ * to be allowed to read and to keep.
+ */
+export class ColourMapServiceError extends Error {}
+
+async function call<T>(path: string, init: RequestInit, parse: (data: unknown) => T): Promise<T> {
+  let response: Response
+  try {
+    response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
+      ...init,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    })
+  } catch (error) {
+    log.warn({ path, error }, 'Tensor-Core is unreachable')
+    throw new ColourMapServiceError('Could not reach Tensor-Core.')
+  }
+
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((body: { detail?: string }) => body.detail)
+      .catch(() => undefined)
+    log.warn({ path, status: response.status, detail }, 'Tensor-Core rejected the request')
+    throw new ColourMapServiceError(detail ?? 'Could not read the colour map.')
+  }
+
+  if (response.status === 204) return parse(undefined)
+  return parse(await response.json())
+}
+
+function jsonHeaders(token: string): HeadersInit {
+  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+}
+
+export async function listColourMap(token: string): Promise<ColourMapEntry[]> {
+  return call('/filament-inventory/colour-map', { headers: jsonHeaders(token) }, data =>
+    ColourMapEntrySchema.array().parse(data),
+  )
+}
+
+/**
+ * Every spool loaded across the fleet that Tensor cannot name.
+ *
+ * This is the list that makes the map fillable: eleven of the fourteen hexes in
+ * these machines are unknown to Tensor and to BambuBuddy's own catalogue, so
+ * without it an operator would be typing hex codes by hand.
+ */
+export async function listUnmappedColours(token: string): Promise<UnmappedColour[]> {
+  return call('/filament-inventory/colour-map/unmapped', { headers: jsonHeaders(token) }, data =>
+    UnmappedColourSchema.array().parse(data),
+  )
+}
+
+export async function upsertColourMapping(
+  token: string,
+  input: ColourMapUpsert,
+): Promise<ColourMapEntry> {
+  return call(
+    '/filament-inventory/colour-map',
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => ColourMapEntrySchema.parse(data),
+  )
+}
+
+/** Makes one recorded hex the swatch this colour renders as. */
+export async function setColourMappingPrimary(token: string, id: string): Promise<ColourMapEntry> {
+  return call(
+    `/filament-inventory/colour-map/${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: jsonHeaders(token),
+      body: JSON.stringify({ is_primary: true }),
+    },
+    data => ColourMapEntrySchema.parse(data),
+  )
+}
+
+export async function deleteColourMapping(token: string, id: string): Promise<void> {
+  return call(
+    `/filament-inventory/colour-map/${encodeURIComponent(id)}`,
+    { method: 'DELETE', headers: jsonHeaders(token) },
+    () => undefined,
+  )
+}
