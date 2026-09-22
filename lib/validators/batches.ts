@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { ProductionJobSchema } from '@/lib/validators/production'
+
 // Mirrors Tensor-Core's batchResponse (internal/httpapi/batches.go). A batch is
 // a set of production jobs merged onto one printer bed - see
 // lib/validators/production.ts for the job/order side of the pipeline.
@@ -370,3 +372,35 @@ export const PrintBatchResultSchema = z.object({
 })
 
 export type PrintBatchResult = z.infer<typeof PrintBatchResultSchema>
+
+/**
+ * One product waiting to go on a bed, as offered when building one by hand.
+ *
+ * `compatibility_key` is opaque and comes from the backend: two products may
+ * share a bed exactly when theirs match. It is deliberately not decomposed into
+ * colour and material here — the rule folds in colour normalisation, and a
+ * second implementation of that in TypeScript would drift quietly into a plate
+ * that prints in the wrong colour.
+ */
+export const BatchableJobSchema = ProductionJobSchema.extend({
+  compatibility_key: z.string(),
+  colour_label: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+})
+export type BatchableJob = z.infer<typeof BatchableJobSchema>
+
+export const BatchableJobsSchema = z.object({
+  jobs: BatchableJobSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  /** How many products one plate holds, so the dialog counts places. */
+  units_per_bed: z.number(),
+})
+export type BatchableJobs = z.infer<typeof BatchableJobsSchema>
+
+export const CustomBatchInputSchema = z.object({
+  job_ids: z.string().array().min(1, 'Choose at least one product for this bed.'),
+})
+export type CustomBatchInput = z.infer<typeof CustomBatchInputSchema>

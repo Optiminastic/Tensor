@@ -1,0 +1,228 @@
+'use client'
+
+import { Layers, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState, type JSX } from 'react'
+
+import {
+  createCustomBatchAction,
+  loadBatchableJobs,
+} from '@/app/dashboard/[brand]/production/batch-jobs-actions'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import type { BatchableJob } from '@/lib/validators/batches'
+
+interface CustomBatchDialogProps {
+  brand: string
+}
+
+/**
+ * Building a bed by hand.
+ *
+ * The planner decides what shares a plate, and for the ordinary run of planks
+ * it decides well. It cannot decide everything: a customer rings up wanting
+ * their two planks together, a blue spool is nearly out and should be finished
+ * off, a reprint ought to ride along with the order it belongs to. None of
+ * those is a rule worth teaching the planner, and all of them are obvious to
+ * the person looking at the orders.
+ *
+ * The first pick decides the bed. A plate is sliced once against one filament
+ * load, so everything after it must share that colour, material and nozzle
+ * setup — and rather than letting somebody choose a second colour and then
+ * refusing them, the products that cannot join simply stop being offered. The
+ * constraint is the same one the planner obeys; what changes is who chooses
+ * within it.
+ */
+export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Element {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [jobs, setJobs] = useState<BatchableJob[]>([])
+  const [unitsPerBed, setUnitsPerBed] = useState(4)
+  const [chosen, setChosen] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+
+  // Read when the dialog opens, never with the page: the pool changes as beds
+  // are planned, and a list fetched at page load would offer products another
+  // bed has since claimed.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    setChosen([])
+
+    void loadBatchableJobs().then(res => {
+      if (cancelled) return
+      setLoading(false)
+      if (!res.ok || !res.data) {
+        setError(res.error ?? 'Could not read the products waiting.')
+        return
+      }
+      setJobs(res.data.jobs)
+      setUnitsPerBed(res.data.units_per_bed)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+
+  const chosenJobs = useMemo(() => jobs.filter(j => chosen.includes(j.id)), [jobs, chosen])
+  // The bed's signature, set by whatever was picked first.
+  const bedKey = chosenJobs[0]?.compatibility_key ?? ''
+  const placesUsed = chosenJobs.reduce((n, j) => n + (j.quantity || 1), 0)
+
+  function toggle(job: BatchableJob): void {
+    setError('')
+    setChosen(prev =>
+      prev.includes(job.id) ? prev.filter(id => id !== job.id) : [...prev, job.id],
+    )
+  }
+
+  async function create(): Promise<void> {
+    setPending(true)
+    setError('')
+    const res = await createCustomBatchAction(brand, { job_ids: chosen })
+    setPending(false)
+    if (!res.ok) {
+      setError(res.error ?? 'Could not create the batch.')
+      return
+    }
+    setOpen(false)
+    router.refresh()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="secondary" size="sm">
+          <Layers className="size-3.5" aria-hidden />
+          Create custom batch
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Build a bed by hand</DialogTitle>
+          <DialogDescription>
+            {bedKey
+              ? `A ${chosenJobs[0]?.colour_label || 'single'} bed — ${placesUsed} of ${unitsPerBed} places used. Only products that can share this plate are shown.`
+              : `Pick the first product. A plate holds ${unitsPerBed} and prints one colour, so that choice decides what else can go on.`}
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <p className="text-muted-foreground text-sm">Reading what is waiting…</p>
+        ) : (
+          <JobPicker
+            jobs={jobs}
+            chosen={chosen}
+            bedKey={bedKey}
+            placesUsed={placesUsed}
+            unitsPerBed={unitsPerBed}
+            onToggle={toggle}
+          />
+        )}
+
+        {error ? (
+          <p role="alert" className="text-danger text-sm">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground text-xs">
+            {chosen.length === 0
+              ? 'Nothing chosen yet'
+              : `${chosen.length} ${chosen.length === 1 ? 'product' : 'products'}, ${placesUsed} of ${unitsPerBed} places`}
+          </span>
+          <Button
+            type="button"
+            onClick={() => void create()}
+            disabled={pending || chosen.length === 0}
+          >
+            {pending ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
+            {pending ? 'Creating…' : 'Create batch'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+interface JobPickerProps {
+  jobs: BatchableJob[]
+  chosen: string[]
+  bedKey: string
+  placesUsed: number
+  unitsPerBed: number
+  onToggle: (job: BatchableJob) => void
+}
+
+function JobPicker({
+  jobs,
+  chosen,
+  bedKey,
+  placesUsed,
+  unitsPerBed,
+  onToggle,
+}: JobPickerProps): JSX.Element {
+  // Once the bed has a colour, everything that cannot share it is hidden rather
+  // than greyed. A disabled row invites somebody to work out why it is disabled;
+  // the honest answer — "this bed is blue now" — is already in the header.
+  const offered = bedKey ? jobs.filter(j => j.compatibility_key === bedKey) : jobs
+
+  if (jobs.length === 0) {
+    return (
+      <p className="text-muted-foreground py-6 text-center text-sm">
+        Nothing is waiting to be batched. Every queued product is already on a bed.
+      </p>
+    )
+  }
+
+  return (
+    <div className="border-border max-h-80 overflow-y-auto rounded-md border">
+      {offered.map(job => {
+        const picked = chosen.includes(job.id)
+        const units = job.quantity || 1
+        // Full means full: a bed with three of four places cannot take a job of
+        // two, and offering it only to refuse on create wastes the click.
+        const wouldOverflow = !picked && placesUsed + units > unitsPerBed
+        return (
+          <label
+            key={job.id}
+            className={`border-border flex items-center gap-3 border-b p-2 text-sm last:border-b-0 ${
+              wouldOverflow ? 'opacity-40' : 'hover:bg-surface-muted cursor-pointer'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={picked}
+              disabled={wouldOverflow}
+              onChange={() => onToggle(job)}
+              aria-label={`Add ${job.job_number} to this bed`}
+            />
+            <span className="font-mono text-xs tabular-nums">{job.job_number}</span>
+            <span className="min-w-0 flex-1 truncate">
+              {job.product_name ?? 'Untitled product'}
+            </span>
+            <span className="text-muted-foreground text-xs">{job.colour_label}</span>
+            {units > 1 ? <span className="font-mono text-xs tabular-nums">×{units}</span> : null}
+          </label>
+        )
+      })}
+      {bedKey && offered.length === chosen.length ? (
+        <p className="text-muted-foreground p-3 text-center text-xs">
+          Nothing else waiting matches this bed.
+        </p>
+      ) : null}
+    </div>
+  )
+}

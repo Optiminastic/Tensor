@@ -6,14 +6,17 @@ import { toBatchRecord } from '@/components/production/adapters'
 import type { BatchRecord } from '@/components/production/types'
 import { resolveBackendToken } from '@/lib/backend-token'
 import {
+  type Batch,
   type BatchDeleteResult,
   type BatchQueueOptions,
   type BatchQueueResult,
   type BatchRebuildResult,
   type BatchReprintResult,
+  type BatchableJobs,
   type CompleteBatchJobsResult,
   BatchQueueInputSchema,
   BatchReprintInputSchema,
+  CustomBatchInputSchema,
 } from '@/lib/validators/batches'
 import type { Machine } from '@/lib/validators/machines'
 import {
@@ -24,9 +27,11 @@ import {
 import {
   BatchServiceError,
   completeBatchJobs,
+  createCustomBatch,
   deleteBatch,
   getBatch,
   getBatchQueueOptions,
+  listBatchableJobs,
   queueBatchToMachine,
   rebuildBatchModels,
   reprintBatchJobs,
@@ -176,6 +181,58 @@ export async function queueBatchToMachineAction(
  * reserved filament is given back, and its jobs go to the pool to be re-planned.
  * The backend refuses a bed that is printing or has printed, and says which.
  */
+/**
+ * Every product waiting to go on a bed, for building one by hand.
+ *
+ * Read on demand rather than with the page: the pool changes as beds are
+ * planned, and a list fetched when the Batches page loaded would offer products
+ * another bed has since claimed.
+ */
+export async function loadBatchableJobs(): Promise<ActionResult<BatchableJobs>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const jobs = await listBatchableJobs(token)
+    return { ok: true, data: jobs }
+  } catch (err) {
+    const message =
+      err instanceof BatchServiceError ? err.message : 'Could not read the products waiting.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Builds a Draft bed from products somebody chose.
+ *
+ * The backend re-checks every one of them - eligibility, one colour, the unit
+ * cap - because these ids are client-controlled and the list they came from may
+ * have been on screen for minutes.
+ */
+export async function createCustomBatchAction(
+  brand: string,
+  input: unknown,
+): Promise<ActionResult<Batch>> {
+  const parsed = CustomBatchInputSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Choose at least one product for this bed.',
+    }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const batch = await createCustomBatch(token, parsed.data)
+    revalidatePath(`/dashboard/${brand}/production/batches`)
+    revalidatePath(`/dashboard/${brand}/production/machines`)
+    revalidatePath(`/dashboard/${brand}/production/jobs`)
+    return { ok: true, data: batch }
+  } catch (err) {
+    const message = err instanceof BatchServiceError ? err.message : 'Could not create the batch.'
+    return { ok: false, error: message }
+  }
+}
+
 export async function deleteBatchAction(
   brand: string,
   batchId: string,

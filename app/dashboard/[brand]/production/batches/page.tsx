@@ -5,6 +5,7 @@ import { toBatchRecord } from '@/components/production/adapters'
 import { AutoCreateBatchesButton } from '@/components/production/auto-create-batches-button'
 import { AutoRefresh } from '@/components/production/auto-refresh'
 import { BatchTable } from '@/components/production/batch-table'
+import { CustomBatchDialog } from '@/components/production/custom-batch-dialog'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import { RefreshButton } from '@/components/production/refresh-button'
 import type { BatchRecord } from '@/components/production/types'
@@ -54,6 +55,10 @@ export default async function BatchManagementPage({
         />
         <div className="flex items-start gap-2">
           <RefreshButton noun="batches" />
+          {/* Beside the automatic run rather than hidden in a menu: building a
+              bed by hand is the same job, done by a person, and the two are
+              chosen between rather than one being the exception. */}
+          <CustomBatchDialog brand={brand} />
           <AutoCreateBatchesButton brand={brand} />
         </div>
       </div>

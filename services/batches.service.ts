@@ -15,7 +15,9 @@ import {
   type BatchRebuildResult,
   type BatchReprintInput,
   type BatchReprintResult,
+  type BatchableJobs,
   type CompleteBatchJobsResult,
+  type CustomBatchInput,
   type PrintBatchResult,
   AutoCreateBatchesResultSchema,
   BatchDeleteResultSchema,
@@ -24,6 +26,7 @@ import {
   BatchRebuildResultSchema,
   BatchReprintResultSchema,
   BatchSchema,
+  BatchableJobsSchema,
   CompleteBatchJobsResultSchema,
   PrintBatchResultSchema,
 } from '@/lib/validators/batches'
@@ -339,4 +342,25 @@ export async function fetchBatchPreview(token: string, id: string): Promise<Resp
     throw new BatchServiceError(detail ?? `Request failed (${response.status})`)
   }
   return response
+}
+
+/**
+ * Every product eligible to be put on a bed by hand.
+ *
+ * The same pool the planner draws from, so a job it would refuse — held,
+ * flagged, personalisation unresolved — is not offered here either.
+ */
+export async function listBatchableJobs(token: string): Promise<BatchableJobs> {
+  return call('/batches/batchable-jobs', { headers: jsonHeaders(token) }, data =>
+    BatchableJobsSchema.parse(data),
+  )
+}
+
+/** Builds a Draft bed from products somebody chose. */
+export async function createCustomBatch(token: string, input: CustomBatchInput): Promise<Batch> {
+  return call(
+    '/batches/custom',
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => BatchSchema.parse(data),
+  )
 }
