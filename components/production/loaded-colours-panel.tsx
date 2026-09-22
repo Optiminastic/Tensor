@@ -1,11 +1,12 @@
 'use client'
 
-import { Check, Pencil, Trash2, X } from 'lucide-react'
+import { Check, Pencil, RefreshCw, Trash2, X } from 'lucide-react'
 import { useMemo, useState, type JSX } from 'react'
 
 import {
   addColourMapping,
   editColourMapping,
+  fetchLoadedColours,
   removeColourMapping,
 } from '@/app/dashboard/[brand]/production/inventory/colour-map-actions'
 import { Button } from '@/components/ui/button'
@@ -48,25 +49,91 @@ export function LoadedColoursPanel({
     [entries],
   )
 
-  if (loaded.length === 0) return null
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState('')
+  // Hexes that were not here before the last Fetch. Marked rather than filtered:
+  // a new spool belongs in the list beside the others, and pulling it out into
+  // its own section would mean naming it somewhere different from everything
+  // else.
+  const [justAppeared, setJustAppeared] = useState<string[]>([])
+  const [checked, setChecked] = useState(false)
 
-  const unnamed = loaded.filter(c => c.mapped_as === '').length
+  // The list itself stays a prop. Every action here revalidates, so the server
+  // component re-renders with fresh data - and holding a copy in state would
+  // mean a spool named through this panel kept showing as unnamed, because the
+  // copy was seeded once and never told.
+  async function fetchFromPrinters(): Promise<void> {
+    setFetching(true)
+    setFetchError('')
+    const before = new Set(loaded.map(s => s.hex))
+
+    const res = await fetchLoadedColours(brand)
+    setFetching(false)
+    if (!res.ok || !res.data) {
+      setFetchError(res.error ?? 'Could not read the printers.')
+      return
+    }
+    setJustAppeared(res.data.filter(s => !before.has(s.hex)).map(s => s.hex))
+    setChecked(true)
+  }
+
+  if (loaded.length === 0 && !checked) return null
+
+  const spools = loaded
+  const unnamed = spools.filter(c => c.mapped_as === '').length
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-medium">
-          {loaded.length} {loaded.length === 1 ? 'spool' : 'spools'} loaded across the fleet
-        </h2>
-        <p className="text-muted-foreground text-xs">
-          {unnamed > 0
-            ? `${unnamed} of them Tensor cannot name yet. Until each is named, a bed in that colour cannot be queued — Tensor will not guess which spool is which.`
-            : 'All named. Change any of them if a spool was called the wrong thing.'}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-sm font-medium">
+            {spools.length} {spools.length === 1 ? 'spool' : 'spools'} loaded across the fleet
+          </h2>
+          <p className="text-muted-foreground text-xs">
+            {unnamed > 0
+              ? `${unnamed} of them Tensor cannot name yet. Until each is named, a bed in that colour cannot be queued — Tensor will not guess which spool is which.`
+              : 'All named. Change any of them if a spool was called the wrong thing.'}
+          </p>
+        </div>
+        {/* This list is a mirror the fleet sync refreshes every minute, which is
+            the wrong speed for somebody who has just walked over and changed a
+            spool: they come back, see the old colour, and cannot tell whether
+            Tensor is behind or the AMS missed the swap. This goes and asks. */}
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => void fetchFromPrinters()}
+          disabled={fetching}
+          title="Re-read every printer's AMS and list what is loaded now"
+        >
+          <RefreshCw className={`size-3.5 ${fetching ? 'animate-spin' : ''}`} aria-hidden />
+          {fetching ? 'Reading printers…' : 'Fetch from printers'}
+        </Button>
       </div>
+
+      {fetchError ? (
+        <p role="alert" className="text-danger text-xs">
+          {fetchError}
+        </p>
+      ) : null}
+      {checked && !fetchError ? (
+        <p className="text-muted-foreground text-xs" role="status">
+          {justAppeared.length > 0
+            ? `${justAppeared.length} new ${justAppeared.length === 1 ? 'colour' : 'colours'} since last time — marked below. Name ${justAppeared.length === 1 ? 'it' : 'them'} and beds in that colour can be queued.`
+            : 'Nothing new — the printers are holding the colours already listed.'}
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-2">
-        {loaded.map(colour => (
-          <LoadedRow key={colour.hex} brand={brand} colour={colour} names={names} />
+        {spools.map(colour => (
+          <LoadedRow
+            key={colour.hex}
+            brand={brand}
+            colour={colour}
+            names={names}
+            isNew={justAppeared.includes(colour.hex)}
+          />
         ))}
       </div>
       {/* The list above is what the printers hold. A colour can also be
@@ -82,9 +149,11 @@ interface LoadedRowProps {
   brand: string
   colour: LoadedColour
   names: string[]
+  /** Appeared in the printers only on the last Fetch. */
+  isNew: boolean
 }
 
-function LoadedRow({ brand, colour, names }: LoadedRowProps): JSX.Element {
+function LoadedRow({ brand, colour, names, isNew }: LoadedRowProps): JSX.Element {
   const mapped = colour.mapped_as !== ''
   const [editing, setEditing] = useState(!mapped)
   // The manufacturer's own name for this exact hex is the best starting point
@@ -135,13 +204,20 @@ function LoadedRow({ brand, colour, names }: LoadedRowProps): JSX.Element {
   }
 
   return (
-    <div className="border-border flex flex-wrap items-center gap-3 rounded-md border p-2">
+    <div
+      className={`flex flex-wrap items-center gap-3 rounded-md border p-2 ${
+        isNew ? 'border-accent bg-accent/5' : 'border-border'
+      }`}
+    >
       <span
         aria-hidden
         className="border-border size-6 shrink-0 rounded-full border"
         style={{ backgroundColor: colour.hex }}
       />
       <span className="font-mono text-xs tabular-nums">{colour.hex}</span>
+      {isNew ? (
+        <span className="text-accent text-[10px] font-medium tracking-wide uppercase">New</span>
+      ) : null}
       <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
         in {colour.machines.join(', ')}
       </span>

@@ -72,6 +72,21 @@ export async function listLoadedColours(token: string): Promise<LoadedColour[]> 
   )
 }
 
+/**
+ * Asks the printers what they are holding, right now, and returns the result.
+ *
+ * The plain list reads a mirror the fleet sync refreshes every sixty seconds,
+ * which is wrong for the moment somebody has just changed a spool and come back
+ * to name it. This re-reads BambuBuddy first.
+ */
+export async function refreshLoadedColours(token: string): Promise<LoadedColour[]> {
+  return call(
+    '/filament-inventory/colour-map/refresh',
+    { method: 'POST', headers: jsonHeaders(token) },
+    data => LoadedColourSchema.array().parse(data),
+  )
+}
+
 export async function upsertColourMapping(
   token: string,
   input: ColourMapUpsert,

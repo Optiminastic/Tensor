@@ -5,12 +5,14 @@ import { revalidatePath } from 'next/cache'
 import { resolveBackendToken } from '@/lib/backend-token'
 import {
   type ColourMapEntry,
+  type LoadedColour,
   ColourMapPatchSchema,
   ColourMapUpsertSchema,
 } from '@/lib/validators/colour-map'
 import {
   ColourMapServiceError,
   deleteColourMapping,
+  refreshLoadedColours,
   setColourMappingPrimary,
   updateColourMapping,
   upsertColourMapping,
@@ -45,6 +47,27 @@ export async function addColourMapping(
   } catch (err) {
     const message =
       err instanceof ColourMapServiceError ? err.message : 'Could not record that colour.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Re-reads the printers and returns every spool they are holding.
+ *
+ * For the operator who has just swapped a spool and come back to name it: the
+ * page's own copy is refreshed by a sixty-second sync, and waiting on it looks
+ * indistinguishable from the AMS having missed the change.
+ */
+export async function fetchLoadedColours(brand: string): Promise<ActionResult<LoadedColour[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const loaded = await refreshLoadedColours(token)
+    revalidateColourMap(brand)
+    return { ok: true, data: loaded }
+  } catch (err) {
+    const message =
+      err instanceof ColourMapServiceError ? err.message : 'Could not read the printers.'
     return { ok: false, error: message }
   }
 }
