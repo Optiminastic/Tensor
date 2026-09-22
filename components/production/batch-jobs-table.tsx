@@ -7,7 +7,7 @@ import { useState, type JSX } from 'react'
 
 import { removeJobFromBatchAction } from '@/app/dashboard/[brand]/production/actions'
 import { AddJobsToBatchDialog } from '@/components/production/add-jobs-to-batch-dialog'
-import { orderNumberFromJobNumber } from '@/components/production/order-number'
+import { orderNumberFor } from '@/components/production/order-number'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -92,7 +92,7 @@ export function BatchJobsTable({
                         : 'bg-surface-muted text-muted-foreground'
                     }`}
                   >
-                    {orderNumberFromJobNumber(job.job_number)}
+                    {orderNumberFor(job.order_number, job.job_number)}
                   </span>
                 </TableCell>
                 <TableCell>{job.product_name ?? job.description}</TableCell>

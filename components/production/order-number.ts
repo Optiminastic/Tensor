@@ -1,14 +1,23 @@
 /**
- * The customer's order number, taken from a job number.
+ * The order a plank belongs to, as the floor refers to it.
  *
- * A job is named after the order it came from - "JOB-114652", or
- * "JOB-114652-2" for the second plank of the same order - so the order number is
- * the first run of digits in it. Mirrors orderNumberFromJobNumber in
- * Tensor-Core's batch_plate_name.go, which names the merged plate the same way.
+ * Prefer the order's own number, which the backend now sends. Reading it out
+ * of the job number is the fallback, and was never more than a convention: an
+ * imported job is numbered after its order, so JOB-115251 belongs to
+ * T3DPS-115251 — but a job numbered from a sequence matched no order at all,
+ * and a bed built to reprint somebody's plank was labelled for nobody.
  *
- * Falls back to the whole job number when there are no digits, so a
- * hand-created job still shows something a person can search for.
+ * Reduced to digits so the column reads as it always has. The store prefix is
+ * the same on every row here and says nothing that distinguishes one from the
+ * next.
  */
+export function orderNumberFor(orderNumber: string | null | undefined, jobNumber: string): string {
+  const digits = /(\d+)\s*$/.exec(orderNumber ?? '')
+  if (digits) return digits[1] ?? ''
+  return orderNumberFromJobNumber(jobNumber)
+}
+
+/** The digits in a job number, as a last resort. */
 export function orderNumberFromJobNumber(jobNumber: string): string {
   const match = /\d+/.exec(jobNumber)
   return match ? match[0] : jobNumber

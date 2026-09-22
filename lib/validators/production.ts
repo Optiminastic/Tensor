@@ -22,6 +22,14 @@ export const ProductionJobSchema = z.object({
   id: z.string(),
   job_number: z.string(),
   order_id: z.string().nullish(),
+  /**
+   * The store's own number for that order, e.g. T3DPS-115251.
+   *
+   * Sent so a list need not read it out of the job number, which holds only
+   * for jobs numbered after their order — not for one numbered from a
+   * sequence, which then named no order at all.
+   */
+  order_number: z.string().nullish(),
   batch_id: z.string().nullish(),
   description: z.string(),
   quantity: z.number(),

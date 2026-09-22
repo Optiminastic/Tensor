@@ -8,7 +8,7 @@ import {
   completeBatchJobsAction,
   listBatchJobs,
 } from '@/app/dashboard/[brand]/production/batch-jobs-actions'
-import { orderNumberFromJobNumber } from '@/components/production/order-number'
+import { orderNumberFor } from '@/components/production/order-number'
 import type { BatchStatus } from '@/components/production/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -74,7 +74,7 @@ function PlankList({ loading, jobs, selected, onToggle }: PlankListProps): JSX.E
                   : 'bg-surface-muted text-muted-foreground'
               }`}
             >
-              {orderNumberFromJobNumber(job.job_number)}
+              {orderNumberFor(job.order_number, job.job_number)}
             </span>
             <span className="flex-1">{job.product_name ?? job.description}</span>
             <span className="text-muted-foreground text-xs">{settled ? job.status : ''}</span>
