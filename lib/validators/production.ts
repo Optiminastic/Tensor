@@ -420,3 +420,40 @@ export const FilamentSyncResultSchema = z.object({
 })
 
 export type FilamentSyncResult = z.infer<typeof FilamentSyncResultSchema>
+
+/**
+ * One product waiting to go on a bed, as offered when building one by hand.
+ *
+ * Defined here rather than in batches.ts, beside the schema it extends. Doing
+ * it across module boundaries meant a top-level `.extend()` running before the
+ * other module had finished evaluating, which is a circular-import crash
+ * waiting for whichever import order the bundler picks that day.
+ *
+ * `compatibility_key` is opaque and comes from the backend: two products may
+ * share a bed exactly when theirs match. It is deliberately not decomposed into
+ * colour and material here — the rule folds in colour normalisation, and a
+ * second implementation of that in TypeScript would drift quietly into a plate
+ * that prints in the wrong colour.
+ */
+export const BatchableJobSchema = ProductionJobSchema.extend({
+  compatibility_key: z.string(),
+  colour_label: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+})
+export type BatchableJob = z.infer<typeof BatchableJobSchema>
+
+export const BatchableJobsSchema = z.object({
+  jobs: BatchableJobSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  /** How many products one plate holds, so the dialog counts places. */
+  units_per_bed: z.number(),
+})
+export type BatchableJobs = z.infer<typeof BatchableJobsSchema>
+
+export const CustomBatchInputSchema = z.object({
+  job_ids: z.string().array().min(1, 'Choose at least one product for this bed.'),
+})
+export type CustomBatchInput = z.infer<typeof CustomBatchInputSchema>

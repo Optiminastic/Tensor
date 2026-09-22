@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import type { BatchableJob } from '@/lib/validators/batches'
+import type { BatchableJob } from '@/lib/validators/production'
 
 interface CustomBatchDialogProps {
   brand: string
