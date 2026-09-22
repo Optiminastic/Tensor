@@ -9,6 +9,10 @@ export interface TabItem {
   label: string
   // An optional count shown beside the label (mono), like "Review 3".
   count?: number
+  // 'live' colours the count to mark it as something happening right now
+  // rather than something waiting. Saturated colour carries meaning here and
+  // nothing else: a tab whose number is quiet is a tab nobody has to look at.
+  countTone?: 'default' | 'live'
 }
 
 interface TabsProps {
@@ -78,7 +82,14 @@ export function Tabs({ tabs, value, onValueChange, label, className }: TabsProps
           >
             {tab.label}
             {typeof tab.count === 'number' ? (
-              <span className="font-mono text-xs tabular-nums">{tab.count}</span>
+              <span
+                className={cn(
+                  'font-mono text-xs tabular-nums',
+                  tab.countTone === 'live' && 'text-danger font-semibold',
+                )}
+              >
+                {tab.count}
+              </span>
             ) : null}
           </button>
         )

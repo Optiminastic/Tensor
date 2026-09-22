@@ -101,8 +101,21 @@ export function MachineManagementTabs({
     [queue],
   )
 
+  // The number on the tab answers "is anything on a printer right now".
+  //
+  // While BambuBuddy holds work, that is the only count worth showing, in red:
+  // those plates are on machines, and adding the beds still waiting in Tensor
+  // would bury the urgent number inside a larger calm one. With BambuBuddy
+  // empty there is nothing live to report, so it falls back to what is waiting
+  // to be sent, quietly.
+  const live = liveQueue.length
   const tabs: TabItem[] = [
-    { value: QUEUED, label: 'Queued', count: liveQueue.length + queued.length },
+    {
+      value: QUEUED,
+      label: 'Queued',
+      count: live > 0 ? live : queued.length,
+      countTone: live > 0 ? 'live' : 'default',
+    },
     { value: MACHINES, label: 'Machines', count: machines.length },
     { value: HISTORY, label: 'History', count: history.length },
   ]
