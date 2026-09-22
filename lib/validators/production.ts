@@ -474,6 +474,21 @@ export const BatchableJobSchema = ProductionJobSchema.extend({
     .boolean()
     .nullish()
     .transform(v => v ?? false),
+  /**
+   * Already printed. Choosing it makes a NEW job rather than moving this one —
+   * this row records a print that really happened. So picking it prints a
+   * second plank, which is sometimes exactly right and never something to do
+   * without meaning to.
+   */
+  reprint: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
+  /** Where an already-printed plank actually is: waiting for QC, packing... */
+  finished_stage: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
 })
 export type BatchableJob = z.infer<typeof BatchableJobSchema>
 

@@ -85,6 +85,7 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
   const movingOffLocked = new Set(
     chosenJobs.filter(j => j.bed_locked && j.on_bed).map(j => j.on_bed),
   ).size
+  const reprinting = chosenJobs.filter(j => j.reprint).length
 
   function toggle(job: BatchableJob): void {
     setError('')
@@ -150,6 +151,9 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
               : `${chosen.length} ${chosen.length === 1 ? 'product' : 'products'}, ${placesUsed} of ${unitsPerBed} places`}
             {movingOffLocked > 0
               ? ` — rebuilds ${movingOffLocked} locked ${movingOffLocked === 1 ? 'bed' : 'beds'}`
+              : ''}
+            {reprinting > 0
+              ? ` — ${reprinting} already printed, ${reprinting === 1 ? 'a second one' : 'second copies'} will be made`
               : ''}
           </span>
           <Button
@@ -240,6 +244,14 @@ function JobPicker({
               <span className="text-subtle-foreground text-xs">
                 {job.unavailable_reason}
                 {job.on_bed ? ` ${job.on_bed}` : ''}
+              </span>
+            ) : job.reprint ? (
+              // Already printed. Saying where it actually is matters more than
+              // saying it can be picked: "waiting for QC" is usually the real
+              // answer to why the order is still open, and printing a second
+              // plank is a deliberate choice rather than the obvious one.
+              <span className="text-warning text-xs">
+                {job.finished_stage} — picking it reprints
               </span>
             ) : job.on_bed ? (
               // Where it is coming FROM. A locked bed is warned about rather
