@@ -28,10 +28,10 @@ import {
   PrintBatchResultSchema,
 } from '@/lib/validators/batches'
 import {
-  type BatchableJobs,
+  type BatchableOrders,
   type CustomBatchInput,
   type ProductionJob,
-  BatchableJobsSchema,
+  BatchableOrdersSchema,
   ProductionJobSchema,
 } from '@/lib/validators/production'
 
@@ -353,9 +353,9 @@ export async function fetchBatchPreview(token: string, id: string): Promise<Resp
  * The same pool the planner draws from, so a job it would refuse — held,
  * flagged, personalisation unresolved — is not offered here either.
  */
-export async function listBatchableJobs(token: string): Promise<BatchableJobs> {
+export async function listBatchableJobs(token: string): Promise<BatchableOrders> {
   return call('/batches/batchable-jobs', { headers: jsonHeaders(token) }, data =>
-    BatchableJobsSchema.parse(data),
+    BatchableOrdersSchema.parse(data),
   )
 }
 

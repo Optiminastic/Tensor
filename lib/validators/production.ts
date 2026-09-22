@@ -443,71 +443,77 @@ export type FilamentSyncResult = z.infer<typeof FilamentSyncResultSchema>
  * second implementation of that in TypeScript would drift quietly into a plate
  * that prints in the wrong colour.
  */
-export const BatchableJobSchema = ProductionJobSchema.extend({
+/**
+ * One unfulfilled order's planks of one colour, waiting to go on a bed.
+ *
+ * Orders, not jobs. Somebody building a bed is looking at an orders page and
+ * thinking "these four customers are waiting" — a list of JOB-1000008 makes
+ * them translate. `job_ids` is what actually goes on the plate and is what gets
+ * sent; it is never shown.
+ *
+ * Grouped by order AND colour, because an order can hold a blue plank and a
+ * gold one and those cannot share a plate. Two rows for that order is honest
+ * and rare.
+ */
+export const BatchableOrderSchema = z.object({
+  order_number: z.string(),
+  job_ids: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+  products: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+  units: z.number(),
+  /**
+   * Opaque, from the backend: two rows may share a bed exactly when theirs
+   * match. Not decomposed here — the rule folds in colour normalisation, and a
+   * second implementation of that in TypeScript would drift quietly into a
+   * plate that prints in the wrong colour.
+   */
   compatibility_key: z.string(),
   colour_label: z
     .string()
     .nullish()
     .transform(v => v ?? ''),
-  /**
-   * Whether this product can go on a bed right now.
-   *
-   * Unavailable ones are still listed. Somebody opens this dialog having just
-   * counted forty-three unfulfilled orders on the Orders page, and a list that
-   * silently showed nine of them answers that with a shrug — most are on locked
-   * beds already heading for a printer, which is worth saying rather than
-   * hiding.
-   */
   available: z
     .boolean()
     .nullish()
     .transform(v => v ?? true),
-  /** Why not, in words. Empty when available. */
   unavailable_reason: z
     .string()
     .nullish()
     .transform(v => v ?? ''),
-  /** The bed it already sits on, so "locked" has somewhere to point. */
   on_bed: z
     .string()
     .nullish()
     .transform(v => v ?? ''),
-  /**
-   * Its bed is approved. Taking a plank off one is allowed and is not free:
-   * that bed's plate comes out of BambuBuddy's queue and its filament is given
-   * back before it is rebuilt without this plank. Worth saying before the
-   * click.
-   */
   bed_locked: z
     .boolean()
     .nullish()
     .transform(v => v ?? false),
-  /**
-   * Already printed. Choosing it makes a NEW job rather than moving this one —
-   * this row records a print that really happened. So picking it prints a
-   * second plank, which is sometimes exactly right and never something to do
-   * without meaning to.
-   */
   reprint: z
     .boolean()
     .nullish()
     .transform(v => v ?? false),
-  /** Where an already-printed plank actually is: waiting for QC, packing... */
   finished_stage: z
     .string()
     .nullish()
     .transform(v => v ?? ''),
 })
-export type BatchableJob = z.infer<typeof BatchableJobSchema>
+export type BatchableOrder = z.infer<typeof BatchableOrderSchema>
 
-export const BatchableJobsSchema = z.object({
-  jobs: BatchableJobSchema.array()
+export const BatchableOrdersSchema = z.object({
+  orders: BatchableOrderSchema.array()
     .nullish()
     .transform(v => v ?? []),
   /** How many products one plate holds, so the dialog counts places. */
   units_per_bed: z.number(),
 })
-export type BatchableJobs = z.infer<typeof BatchableJobsSchema>
+export type BatchableOrders = z.infer<typeof BatchableOrdersSchema>
 
 export const CustomBatchInputSchema = z.object({
   job_ids: z.string().array().min(1, 'Choose at least one product for this bed.'),
