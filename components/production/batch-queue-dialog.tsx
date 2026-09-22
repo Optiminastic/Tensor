@@ -204,7 +204,7 @@ export function BatchQueueDialog({
                 required
                 hint={
                   eligible.length > 0
-                    ? `${eligible.length} of ${options.machines.length} have enough spools loaded`
+                    ? `${eligible.length} of ${options.machines.length} can print this bed`
                     : undefined
                 }
               >
@@ -223,6 +223,17 @@ export function BatchQueueDialog({
                     </option>
                   ))}
                 </Select>
+                {/* Why this one. Tensor picks the printer that frees up
+                    soonest among those whose AMS actually holds the bed's
+                    colours, and says so rather than presenting the choice as
+                    given - an operator who can read the reason can tell a good
+                    pick from a stale one, and override it. Shown only while
+                    the pre-selected printer is still the selected one. */}
+                {options.auto_reason && selected?.suggested ? (
+                  <p className="text-subtle-foreground mt-2 text-xs">
+                    Chosen by Tensor: {options.auto_reason}.
+                  </p>
+                ) : null}
                 {/* What the chosen printer is actually holding, and WHERE.
                     An <option> cannot draw a swatch, and when Tensor cannot
                     verify the colours itself this is the only way the operator

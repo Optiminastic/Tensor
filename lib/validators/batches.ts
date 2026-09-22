@@ -301,6 +301,11 @@ export const BatchQueueOptionsSchema = z.object({
   slots: QueueSlotSchema.array()
     .nullish()
     .transform(v => v ?? []),
+  /** Why the backend pre-selected the printer it did. Empty when none fits. */
+  auto_reason: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
   note: z.string(),
 })
 export type BatchQueueOptions = z.infer<typeof BatchQueueOptionsSchema>

@@ -79,7 +79,19 @@ export function MachineManagementTabs({
     const rank: Record<string, number> = { pending_approval: 0, open: 1, in_progress: 2 }
     return batches
       .filter(b => b.status in rank)
-      .sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9))
+      .sort((a, b) => {
+        const stage = (rank[a.status] ?? 9) - (rank[b.status] ?? 9)
+        if (stage !== 0) return stage
+        // Urgent beds first. A reprint is forced to urgent when it is cloned,
+        // and a reprint is a customer already past their date - so the one rule
+        // allowed to jump the queue is the one that is already late.
+        if (a.hasPriority !== b.hasPriority) return a.hasPriority ? -1 : 1
+        // Then oldest first. The batch number comes from a sequence and the
+        // planner builds beds oldest-order-first, so ascending batch number IS
+        // first-come-first-served; the list arrives newest-first for the
+        // Batches page, which is the opposite of what a queue wants.
+        return bedAge(a.batchNumber) - bedAge(b.batchNumber)
+      })
   }, [batches])
 
   // Only work that has yet to run. BambuBuddy keeps finished and cancelled
@@ -148,4 +160,16 @@ function Empty({ children }: { children: React.ReactNode }): JSX.Element {
       {children}
     </p>
   )
+}
+
+/**
+ * A bed's place in line, from its number.
+ *
+ * Batch numbers come from a sequence, so the numeric part orders beds by when
+ * they were planned. A number that does not parse sorts last rather than first:
+ * an unreadable one should not jump the whole queue.
+ */
+function bedAge(batchNumber: string): number {
+  const digits = batchNumber.replace(/\D/g, '')
+  return digits === '' ? Number.MAX_SAFE_INTEGER : Number(digits)
 }
