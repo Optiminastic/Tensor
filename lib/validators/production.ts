@@ -441,6 +441,29 @@ export const BatchableJobSchema = ProductionJobSchema.extend({
     .string()
     .nullish()
     .transform(v => v ?? ''),
+  /**
+   * Whether this product can go on a bed right now.
+   *
+   * Unavailable ones are still listed. Somebody opens this dialog having just
+   * counted forty-three unfulfilled orders on the Orders page, and a list that
+   * silently showed nine of them answers that with a shrug — most are on locked
+   * beds already heading for a printer, which is worth saying rather than
+   * hiding.
+   */
+  available: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? true),
+  /** Why not, in words. Empty when available. */
+  unavailable_reason: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  /** The bed it already sits on, so "locked" has somewhere to point. */
+  on_bed: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
 })
 export type BatchableJob = z.infer<typeof BatchableJobSchema>
 

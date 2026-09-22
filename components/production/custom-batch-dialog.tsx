@@ -79,6 +79,7 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
   // The bed's signature, set by whatever was picked first.
   const bedKey = chosenJobs[0]?.compatibility_key ?? ''
   const placesUsed = chosenJobs.reduce((n, j) => n + (j.quantity || 1), 0)
+  const available = jobs.filter(j => j.available).length
 
   function toggle(job: BatchableJob): void {
     setError('')
@@ -114,7 +115,7 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
           <DialogDescription>
             {bedKey
               ? `A ${chosenJobs[0]?.colour_label || 'single'} bed — ${placesUsed} of ${unitsPerBed} places used. Only products that can share this plate are shown.`
-              : `Pick the first product. A plate holds ${unitsPerBed} and prints one colour, so that choice decides what else can go on.`}
+              : `Every product from an unfulfilled order. ${available} of ${jobs.length} can be moved; the rest say why not. A plate holds ${unitsPerBed} and prints one colour, so the first pick decides what else can go on.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -177,12 +178,21 @@ function JobPicker({
   // Once the bed has a colour, everything that cannot share it is hidden rather
   // than greyed. A disabled row invites somebody to work out why it is disabled;
   // the honest answer — "this bed is blue now" — is already in the header.
-  const offered = bedKey ? jobs.filter(j => j.compatibility_key === bedKey) : jobs
+  // Two different kinds of "cannot pick this", shown two different ways.
+  //
+  // Colour: once the bed has one, everything that cannot share it is HIDDEN. A
+  // greyed row would invite working out why, and the answer - this bed is blue
+  // now - is already in the header.
+  //
+  // Availability: those stay VISIBLE, greyed, with the reason. Somebody opens
+  // this having just counted forty-three unfulfilled orders, and quietly
+  // showing nine of them answers that with a shrug.
+  const offered = bedKey ? jobs.filter(j => j.compatibility_key === bedKey || !j.available) : jobs
 
   if (jobs.length === 0) {
     return (
       <p className="text-muted-foreground py-6 text-center text-sm">
-        Nothing is waiting to be batched. Every queued product is already on a bed.
+        Nothing is outstanding. Every product from an unfulfilled order has been printed.
       </p>
     )
   }
@@ -195,17 +205,18 @@ function JobPicker({
         // Full means full: a bed with three of four places cannot take a job of
         // two, and offering it only to refuse on create wastes the click.
         const wouldOverflow = !picked && placesUsed + units > unitsPerBed
+        const blocked = !job.available || wouldOverflow
         return (
           <label
             key={job.id}
             className={`border-border flex items-center gap-3 border-b p-2 text-sm last:border-b-0 ${
-              wouldOverflow ? 'opacity-40' : 'hover:bg-surface-muted cursor-pointer'
+              blocked ? 'opacity-50' : 'hover:bg-surface-muted cursor-pointer'
             }`}
           >
             <input
               type="checkbox"
               checked={picked}
-              disabled={wouldOverflow}
+              disabled={blocked}
               onChange={() => onToggle(job)}
               aria-label={`Add ${job.job_number} to this bed`}
             />
@@ -214,13 +225,24 @@ function JobPicker({
               {job.product_name ?? 'Untitled product'}
             </span>
             <span className="text-muted-foreground text-xs">{job.colour_label}</span>
+            {/* The reason, where there is one. "Already on a locked bed
+                BATCH-1000449" is the difference between a list that looks
+                broken and one that is explaining the floor. */}
+            {!job.available ? (
+              <span className="text-subtle-foreground text-xs">
+                {job.unavailable_reason}
+                {job.on_bed ? ` ${job.on_bed}` : ''}
+              </span>
+            ) : null}
             {units > 1 ? <span className="font-mono text-xs tabular-nums">×{units}</span> : null}
           </label>
         )
       })}
-      {bedKey && offered.length === chosen.length ? (
+      {/* Counts only what could actually still be added, so a list full of
+          greyed locked-bed rows does not read as "there is more to pick". */}
+      {bedKey && offered.filter(j => j.available && !chosen.includes(j.id)).length === 0 ? (
         <p className="text-muted-foreground p-3 text-center text-xs">
-          Nothing else waiting matches this bed.
+          Nothing else outstanding matches this bed.
         </p>
       ) : null}
     </div>
