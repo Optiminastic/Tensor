@@ -3,11 +3,16 @@
 import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
-import { type ColourMapEntry, ColourMapUpsertSchema } from '@/lib/validators/colour-map'
+import {
+  type ColourMapEntry,
+  ColourMapPatchSchema,
+  ColourMapUpsertSchema,
+} from '@/lib/validators/colour-map'
 import {
   ColourMapServiceError,
   deleteColourMapping,
   setColourMappingPrimary,
+  updateColourMapping,
   upsertColourMapping,
 } from '@/services/colour-map.service'
 
@@ -58,6 +63,37 @@ export async function makeColourPrimary(
   } catch (err) {
     const message =
       err instanceof ColourMapServiceError ? err.message : 'Could not change the primary colour.'
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Corrects a spool already recorded - moves it to another colour, fixes its
+ * value, or makes it the one that prints.
+ *
+ * Re-assigning is the common one: a spool named in haste, or a shop that
+ * decides the brown-ish one is its gold after all. The backend canonicalises
+ * the new name and works out whether it can stay primary, because only one
+ * spool per colour may be, and this side has no business knowing that rule.
+ */
+export async function editColourMapping(
+  brand: string,
+  id: string,
+  input: unknown,
+): Promise<ActionResult<ColourMapEntry>> {
+  const parsed = ColourMapPatchSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Nothing to change.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    const entry = await updateColourMapping(token, id, parsed.data)
+    revalidateColourMap(brand)
+    return { ok: true, data: entry }
+  } catch (err) {
+    const message =
+      err instanceof ColourMapServiceError ? err.message : 'Could not update that colour.'
     return { ok: false, error: message }
   }
 }

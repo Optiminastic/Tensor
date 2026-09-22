@@ -3,13 +3,13 @@
 import type { JSX } from 'react'
 
 import { ColourMapTable } from '@/components/production/colour-map-table'
-import { UnmappedColoursPanel } from '@/components/production/unmapped-colours-panel'
-import type { ColourMapEntry, UnmappedColour } from '@/lib/validators/colour-map'
+import { LoadedColoursPanel } from '@/components/production/loaded-colours-panel'
+import type { ColourMapEntry, LoadedColour } from '@/lib/validators/colour-map'
 
 interface ColourMapViewProps {
   brand: string
   entries: ColourMapEntry[]
-  unmapped: UnmappedColour[]
+  loaded: LoadedColour[]
 }
 
 /**
@@ -22,13 +22,15 @@ interface ColourMapViewProps {
  * each plate's filament declaration, which is the only colour signal BambuBuddy
  * reads, so it refused plates asking for a colour nobody owns.
  *
- * Unmapped spools sit above the table on purpose: they are the work, and the
- * table is the record of work already done.
+ * The loaded spools sit above the table on purpose: they are the work, and the
+ * table is the record of work already done. Both are shown because they answer
+ * different questions - what is in the machines right now, and what the shop
+ * has ever agreed a colour means.
  */
-export function ColourMapView({ brand, entries, unmapped }: ColourMapViewProps): JSX.Element {
+export function ColourMapView({ brand, entries, loaded }: ColourMapViewProps): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
-      <UnmappedColoursPanel brand={brand} unmapped={unmapped} />
+      <LoadedColoursPanel brand={brand} loaded={loaded} entries={entries} />
       <ColourMapTable brand={brand} entries={entries} />
     </div>
   )

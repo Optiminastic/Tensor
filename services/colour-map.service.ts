@@ -3,10 +3,11 @@ import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
   type ColourMapEntry,
+  type ColourMapPatch,
   type ColourMapUpsert,
-  type UnmappedColour,
+  type LoadedColour,
   ColourMapEntrySchema,
-  UnmappedColourSchema,
+  LoadedColourSchema,
 } from '@/lib/validators/colour-map'
 
 const log = createLogger('ColourMapService')
@@ -58,15 +59,16 @@ export async function listColourMap(token: string): Promise<ColourMapEntry[]> {
 }
 
 /**
- * Every spool loaded across the fleet that Tensor cannot name.
+ * Every spool loaded across the fleet, and what the shop calls each one.
  *
  * This is the list that makes the map fillable: eleven of the fourteen hexes in
  * these machines are unknown to Tensor and to BambuBuddy's own catalogue, so
- * without it an operator would be typing hex codes by hand.
+ * without it an operator would be typing hex codes by hand. It returns the
+ * named ones too, because renaming a spool is as ordinary as naming it.
  */
-export async function listUnmappedColours(token: string): Promise<UnmappedColour[]> {
-  return call('/filament-inventory/colour-map/unmapped', { headers: jsonHeaders(token) }, data =>
-    UnmappedColourSchema.array().parse(data),
+export async function listLoadedColours(token: string): Promise<LoadedColour[]> {
+  return call('/filament-inventory/colour-map/loaded', { headers: jsonHeaders(token) }, data =>
+    LoadedColourSchema.array().parse(data),
   )
 }
 
@@ -83,13 +85,21 @@ export async function upsertColourMapping(
 
 /** Makes one recorded hex the swatch this colour renders as. */
 export async function setColourMappingPrimary(token: string, id: string): Promise<ColourMapEntry> {
+  return updateColourMapping(token, id, { is_primary: true })
+}
+
+/**
+ * Corrects a recorded spool: which colour it belongs to, its value, or whether
+ * it is the one that prints.
+ */
+export async function updateColourMapping(
+  token: string,
+  id: string,
+  input: ColourMapPatch,
+): Promise<ColourMapEntry> {
   return call(
     `/filament-inventory/colour-map/${encodeURIComponent(id)}`,
-    {
-      method: 'PATCH',
-      headers: jsonHeaders(token),
-      body: JSON.stringify({ is_primary: true }),
-    },
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify(input) },
     data => ColourMapEntrySchema.parse(data),
   )
 }

@@ -4,13 +4,13 @@ import type { JSX } from 'react'
 import { InventoryTabs } from '@/components/production/inventory-tabs'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
-import type { ColourMapEntry, UnmappedColour } from '@/lib/validators/colour-map'
+import type { ColourMapEntry, LoadedColour } from '@/lib/validators/colour-map'
 import type { InventoryItem } from '@/lib/validators/inventory'
 import type { Filament } from '@/lib/validators/production'
 import {
   ColourMapServiceError,
   listColourMap,
-  listUnmappedColours,
+  listLoadedColours,
 } from '@/services/colour-map.service'
 import { InventoryServiceError, listInventoryItems } from '@/services/inventory.service'
 import { ProductionServiceError, listFilament } from '@/services/production.service'
@@ -28,7 +28,7 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
   let filaments: Filament[] = []
   let items: InventoryItem[] = []
   let colourMap: ColourMapEntry[] = []
-  let unmappedColours: UnmappedColour[] = []
+  let loadedColours: LoadedColour[] = []
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
@@ -54,9 +54,9 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
     // record, the other is the work left - and both are read separately again
     // so a colour-map outage cannot blank the shelf an operator came for.
     try {
-      ;[colourMap, unmappedColours] = await Promise.all([
+      ;[colourMap, loadedColours] = await Promise.all([
         listColourMap(token),
-        listUnmappedColours(token),
+        listLoadedColours(token),
       ])
     } catch (err) {
       if (!error) {
@@ -85,7 +85,7 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
             filaments={filaments}
             items={items}
             colourMap={colourMap}
-            unmappedColours={unmappedColours}
+            loadedColours={loadedColours}
           />
         </>
       )}
