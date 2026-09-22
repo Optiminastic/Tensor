@@ -464,6 +464,16 @@ export const BatchableJobSchema = ProductionJobSchema.extend({
     .string()
     .nullish()
     .transform(v => v ?? ''),
+  /**
+   * Its bed is approved. Taking a plank off one is allowed and is not free:
+   * that bed's plate comes out of BambuBuddy's queue and its filament is given
+   * back before it is rebuilt without this plank. Worth saying before the
+   * click.
+   */
+  bed_locked: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
 })
 export type BatchableJob = z.infer<typeof BatchableJobSchema>
 

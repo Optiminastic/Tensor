@@ -80,6 +80,11 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
   const bedKey = chosenJobs[0]?.compatibility_key ?? ''
   const placesUsed = chosenJobs.reduce((n, j) => n + (j.quantity || 1), 0)
   const available = jobs.filter(j => j.available).length
+  // How many approved beds this selection would pull apart, counted by bed
+  // rather than by plank: taking two planks off one bed rebuilds one bed.
+  const movingOffLocked = new Set(
+    chosenJobs.filter(j => j.bed_locked && j.on_bed).map(j => j.on_bed),
+  ).size
 
   function toggle(job: BatchableJob): void {
     setError('')
@@ -143,6 +148,9 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
             {chosen.length === 0
               ? 'Nothing chosen yet'
               : `${chosen.length} ${chosen.length === 1 ? 'product' : 'products'}, ${placesUsed} of ${unitsPerBed} places`}
+            {movingOffLocked > 0
+              ? ` — rebuilds ${movingOffLocked} locked ${movingOffLocked === 1 ? 'bed' : 'beds'}`
+              : ''}
           </span>
           <Button
             type="button"
@@ -232,6 +240,19 @@ function JobPicker({
               <span className="text-subtle-foreground text-xs">
                 {job.unavailable_reason}
                 {job.on_bed ? ` ${job.on_bed}` : ''}
+              </span>
+            ) : job.on_bed ? (
+              // Where it is coming FROM. A locked bed is warned about rather
+              // than refused: taking a plank off one pulls that bed's plate
+              // out of the printer queue and gives its filament back before
+              // rebuilding it, which is a fair thing to do and not a thing to
+              // do by accident.
+              <span
+                className={
+                  job.bed_locked ? 'text-warning text-xs' : 'text-subtle-foreground text-xs'
+                }
+              >
+                {job.bed_locked ? `moves off locked ${job.on_bed}` : `on ${job.on_bed}`}
               </span>
             ) : null}
             {units > 1 ? <span className="font-mono text-xs tabular-nums">×{units}</span> : null}
