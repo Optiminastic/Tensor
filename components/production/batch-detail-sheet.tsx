@@ -9,7 +9,7 @@ import { BatchDetailHeader } from '@/components/production/batch-detail-header'
 import { isBatchEditable, isBatchFull } from '@/components/production/batch-fullness'
 import { BatchJobsTable } from '@/components/production/batch-jobs-table'
 import { BatchPlatePreview } from '@/components/production/batch-plate-preview'
-import { BatchQueueDialog } from '@/components/production/batch-queue-dialog'
+import { BatchQueueButton } from '@/components/production/batch-queue-button'
 import type { BatchRecord } from '@/components/production/types'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -131,10 +131,9 @@ function BatchDetailSheetContent({ brand, data }: { brand: string; data: Loaded 
       />
       {/* The dialog decides which statuses it offers itself, so this site and
           the batch list cannot disagree. */}
-      <BatchQueueDialog
+      <BatchQueueButton
         brand={brand}
         batchId={batch.id}
-        batchNumber={batch.batchNumber}
         status={batch.status}
         alreadyQueued={batch.queueItemId !== null}
       />

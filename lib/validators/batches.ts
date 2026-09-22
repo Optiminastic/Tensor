@@ -312,12 +312,22 @@ export type BatchQueueOptions = z.infer<typeof BatchQueueOptionsSchema>
 
 /** Which machine to send the bed to. */
 export const BatchQueueInputSchema = z.object({
-  machine_id: z.string().min(1),
-  // Which spool prints each plate slot, in slot order. The operator picks these
-  // looking at the bed's swatches and the printer's trays side by side; Tensor
-  // deliberately does not infer them, because an AMS reports a colour as a bare
-  // hex and a guess here prints a plank in the wrong colour.
-  slot_trays: z.number().array(),
+  /**
+   * Which printer to use - and normally absent, because Tensor chooses.
+   *
+   * It picks the machine that frees up soonest among those whose AMS actually
+   * holds this bed's colours, which is a judgement it can now make: the colour
+   * map reconciles what a plate declares with what a printer reports, and the
+   * fleet sync records how long each one has left. Sending a machine overrides
+   * that, for somebody standing at a particular printer.
+   */
+  machine_id: z.string().min(1).optional(),
+  /**
+   * Which spool prints each plate slot, in slot order. Bound by Tensor when
+   * absent; meaningless without a machine, since an ams_mapping only means
+   * something against the printer it indexes.
+   */
+  slot_trays: z.number().array().optional(),
 })
 export type BatchQueueInput = z.infer<typeof BatchQueueInputSchema>
 

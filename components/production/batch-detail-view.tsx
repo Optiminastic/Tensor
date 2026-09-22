@@ -6,7 +6,7 @@ import { BatchDoneDialog } from '@/components/production/batch-done-dialog'
 import { isBatchEditable, isBatchFull } from '@/components/production/batch-fullness'
 import { BatchJobsTable } from '@/components/production/batch-jobs-table'
 import { BatchPlatePreview } from '@/components/production/batch-plate-preview'
-import { BatchQueueDialog } from '@/components/production/batch-queue-dialog'
+import { BatchQueueButton } from '@/components/production/batch-queue-button'
 import type { BatchRecord } from '@/components/production/types'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -57,10 +57,9 @@ export function BatchDetailView({
             too: sending it locks the bed first, which is what makes sending it
             safe. */}
         <div className="mt-4">
-          <BatchQueueDialog
+          <BatchQueueButton
             brand={brand}
             batchId={batch.id}
-            batchNumber={batch.batchNumber}
             status={batch.status}
             alreadyQueued={batch.queueItemId !== null}
           />
