@@ -35,6 +35,13 @@ interface BatchQueueButtonProps {
  * When no printer can take the bed it refuses and says why - which colour is
  * unconfirmed, or which spool nobody has loaded. That is the one case a person
  * still has to act on, and it is a different action from choosing a machine.
+ *
+ * It also reports which printer it chose AND why. Taking the dialog away took
+ * away the only place that answer was ever shown, and a choice nobody can see
+ * the reasoning for reads as an arbitrary one: two gold beds went to the same
+ * printer within twenty minutes and looked like a bug, when the truth was that
+ * it was the only machine on the floor with gold loaded that was allowed to
+ * print. The line says so, and names the printers that were not allowed.
  */
 export function BatchQueueButton({
   brand,
@@ -46,6 +53,7 @@ export function BatchQueueButton({
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const [chose, setChose] = useState('')
 
   const isDraft = status === 'pending_approval'
 
@@ -54,6 +62,7 @@ export function BatchQueueButton({
     e.stopPropagation()
     setPending(true)
     setError('')
+    setChose('')
 
     // No machine and no slot binding: their absence is what asks Tensor to
     // decide. Sending a machine here would override that choice.
@@ -68,6 +77,14 @@ export function BatchQueueButton({
       setError(res.data.note)
       return
     }
+    // Kept on screen through the refresh rather than flashed as a toast: this
+    // is the answer to "why that printer", and it is asked AFTER the press,
+    // usually once the row has already moved.
+    setChose(
+      res.data.choice_reason
+        ? `Sent to ${res.data.machine_name} - ${res.data.choice_reason}.`
+        : `Sent to ${res.data.machine_name}.`,
+    )
     router.refresh()
   }
 
@@ -123,6 +140,14 @@ export function BatchQueueButton({
       {error ? (
         <p className="text-danger max-w-xs text-right text-xs" role="status">
           {error}
+        </p>
+      ) : null}
+      {chose ? (
+        <p
+          className={`text-muted-foreground max-w-xs text-xs ${compact ? 'text-right' : ''}`}
+          role="status"
+        >
+          {chose}
         </p>
       ) : null}
     </div>

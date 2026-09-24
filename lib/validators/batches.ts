@@ -347,6 +347,10 @@ export const BatchQueueResultSchema = z.object({
   locked: z.boolean(),
   pinned: z.boolean(),
   note: z.string(),
+  // Why this printer and not another, in one line. Nullish because the backend
+  // omits it when the operator named the machine themselves - there is no
+  // choice to explain - and so an older backend still parses.
+  choice_reason: z.string().nullish(),
 })
 export type BatchQueueResult = z.infer<typeof BatchQueueResultSchema>
 
