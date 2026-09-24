@@ -12,7 +12,7 @@ interface ComingSoonProps {
  */
 export function ComingSoon({ title, description }: ComingSoonProps): JSX.Element {
   return (
-    <main className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-6 text-center">
+    <main className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-4 text-center sm:px-6">
       <span className="bg-surface-muted text-subtle-foreground flex size-12 items-center justify-center rounded-full">
         <Hammer className="size-6" aria-hidden />
       </span>

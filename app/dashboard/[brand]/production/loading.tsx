@@ -20,7 +20,10 @@ import { Card } from '@/components/ui/card'
  */
 export default function ProductionLoading(): JSX.Element {
   return (
-    <main aria-busy="true" className="flex w-full animate-pulse flex-col gap-8 px-6 py-10 md:px-8">
+    <main
+      aria-busy="true"
+      className="flex w-full animate-pulse flex-col gap-8 px-4 py-10 sm:px-6 md:px-8"
+    >
       <span className="sr-only" role="status">
         Loading
       </span>

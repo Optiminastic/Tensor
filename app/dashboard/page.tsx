@@ -54,7 +54,7 @@ export default async function DashboardPage(): Promise<JSX.Element> {
 /** Shown to a member who has no brands assigned yet: they wait for an admin. */
 function NoBrandAccess(): JSX.Element {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col items-center justify-center gap-4 px-4 py-12 text-center sm:px-6">
       <h1 className="text-display text-3xl">No brand access yet</h1>
       <p className="text-muted-foreground max-w-prose text-sm text-pretty">
         You have not been assigned to any brand. Ask an administrator to give you access, then
@@ -71,7 +71,7 @@ function NoBrandAccess(): JSX.Element {
  */
 function WorkspaceUnavailable(): JSX.Element {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col items-center justify-center gap-4 px-4 py-12 text-center sm:px-6">
       <h1 className="text-display text-3xl">Workspace unavailable</h1>
       <p className="text-muted-foreground max-w-prose text-sm text-pretty">
         We could not reach the service. It may be starting up - wait a moment, then try again.

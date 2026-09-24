@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import type { JSX } from 'react'
 
 import { type BrandOption } from './brand-switcher'
+import { MobileNav } from './mobile-nav'
 import { brandFromPathname } from './nav-config'
 import { NavPanel } from './nav-panel'
 import { NavRail } from './nav-rail'
@@ -20,8 +21,11 @@ interface SidebarProps {
 /**
  * The double sidebar: an icon rail of top-level areas plus a panel of the active
  * area's sub-items. Areas are scoped to the active brand (from the URL, or the
- * cookie fallback on workspace pages). Both columns are hidden below lg; a mobile
- * drawer is a follow-up.
+ * cookie fallback on workspace pages).
+ *
+ * Both columns are hidden below lg, where MobileNav takes over with a top bar
+ * and a drawer. All three read the same nav-config, so an area added there
+ * appears on every size without being listed twice.
  */
 export function Sidebar({
   email,
@@ -36,6 +40,14 @@ export function Sidebar({
 
   return (
     <>
+      <MobileNav
+        base={base}
+        brands={brands}
+        activeSlug={activeBrand}
+        email={email}
+        canManageBrands={canManageBrands}
+        permissions={permissions}
+      />
       <NavRail base={base} permissions={permissions} />
       <NavPanel
         base={base}

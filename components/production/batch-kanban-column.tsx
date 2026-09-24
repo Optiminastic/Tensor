@@ -45,7 +45,10 @@ export function BatchKanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        'border-border bg-surface-muted flex h-full w-1/4 flex-col gap-2 rounded-lg border p-2.5 transition-colors',
+        // A quarter each once there is room for four readable columns; below that
+        // a fixed 16rem and the board swipes sideways, because four columns
+        // sharing a phone's width is 90px each and no card is legible in that.
+        'border-border bg-surface-muted flex h-full w-64 shrink-0 flex-col gap-2 rounded-lg border p-2.5 transition-colors lg:w-1/4 lg:shrink',
         droppable && isOver && 'border-accent bg-accent-subtle',
       )}
     >

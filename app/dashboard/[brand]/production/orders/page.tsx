@@ -96,7 +96,7 @@ export default async function ProductionOrdersPage({
   }
 
   return (
-    <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <ProductionPageHeader title="Orders" description="Real orders imported from Shopify." />
         <OrdersSyncButton brand={brand} shopifyConnected={shopifyConnected} />

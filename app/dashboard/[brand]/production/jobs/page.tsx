@@ -39,7 +39,7 @@ export default async function ProductionJobsPage({
   }
 
   return (
-    <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       {/* Nothing on this page polls: it is a server component fetched once.
           Only active when NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS is set, for
           watching an automated run. */}

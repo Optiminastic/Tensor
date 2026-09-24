@@ -28,7 +28,7 @@ interface AuthSplitProps {
  */
 export function AuthSplit({ plate, children }: AuthSplitProps): JSX.Element {
   return (
-    <main className="min-h-dvh px-6 py-12">
+    <main className="min-h-dvh px-4 py-12 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-5xl items-center justify-center gap-10 xl:gap-16">
         <div className="flex w-full max-w-md shrink-0 flex-col gap-8">{children}</div>
         <AuthPlate {...plate} className="hidden aspect-square max-w-sm flex-1 lg:flex" />

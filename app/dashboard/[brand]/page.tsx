@@ -68,7 +68,7 @@ export default async function BrandOverviewPage({
   const completedThisWeek = trend[trend.length - 1]?.completed ?? 0
 
   return (
-    <main className="flex w-full flex-col gap-4 px-6 py-8 lg:px-10">
+    <main className="flex w-full flex-col gap-4 px-4 py-8 sm:px-6 lg:px-10">
       <header className="flex flex-col gap-1">
         <p className="text-subtle-foreground text-xs font-medium tracking-wide uppercase">
           {isAllBrands(brand) ? 'All brands' : brand.replace(/-/g, ' ')}

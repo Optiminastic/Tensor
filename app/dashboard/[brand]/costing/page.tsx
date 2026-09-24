@@ -31,7 +31,7 @@ export default async function CostingPage({
   if (view === 'rules') return <PricingRulesView />
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-display text-3xl">Cost reports</h1>
         <p className="text-muted-foreground text-sm">
@@ -60,7 +60,7 @@ async function PricingRulesView(): Promise<JSX.Element> {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-display text-3xl">Pricing rules</h1>
         <p className="text-muted-foreground text-sm">

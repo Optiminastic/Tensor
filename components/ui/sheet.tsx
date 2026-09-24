@@ -38,10 +38,22 @@ const SheetOverlay = forwardRef<
   )
 })
 
+/** Which edge the panel is anchored to. */
+export type SheetSide = 'left' | 'right'
+
+export interface SheetContentProps extends ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Content
+> {
+  /** Defaults to the right, which is what every record panel uses. The left is
+   * for navigation, where a drawer sliding in from the menu button is the
+   * convention people already expect. */
+  side?: SheetSide
+}
+
 export const SheetContent = forwardRef<
   ElementRef<typeof DialogPrimitive.Content>,
-  ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(function SheetContent({ className, children, ...props }, ref) {
+  SheetContentProps
+>(function SheetContent({ className, children, side = 'right', ...props }, ref) {
   return (
     <DialogPrimitive.Portal>
       <SheetOverlay />
@@ -50,7 +62,8 @@ export const SheetContent = forwardRef<
         className={cn(
           // h-dvh, not h-full: on mobile the retracting address bar is part of
           // 100vh, which would hide the bottom of the panel.
-          'border-border bg-surface fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-3xl flex-col border-l shadow-lg',
+          'border-border bg-surface fixed inset-y-0 z-50 flex h-dvh w-full flex-col shadow-lg',
+          side === 'right' ? 'right-0 max-w-3xl border-l' : 'left-0 max-w-xs border-r',
           className,
         )}
         {...props}

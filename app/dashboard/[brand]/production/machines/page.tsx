@@ -91,7 +91,7 @@ export default async function MachineManagementPage({
   }
 
   return (
-    <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       {/* The sync sits beside the header, matching the Orders page. Without it
           the fleet can only be populated by calling the API directly, which is
           why a fresh deployment showed an empty table with no way forward. */}

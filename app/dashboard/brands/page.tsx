@@ -54,7 +54,7 @@ export default async function BrandsPage(): Promise<JSX.Element> {
   const canManageBrands = can(await currentAuthz(), 'brand:manage')
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:px-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
           <h1 className="text-display text-4xl">Brands</h1>

@@ -20,7 +20,7 @@ export default async function DesignDetailPage({
   const { token, error } = await resolveBackendToken()
   if (!token) {
     return (
-      <main className="flex w-full flex-col gap-8 px-6 py-10 lg:px-10">
+      <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 lg:px-10">
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
           {error ?? 'Your session has expired. Sign in again.'}
         </p>
@@ -53,7 +53,7 @@ export default async function DesignDetailPage({
   const canWriteContent = can(authz, 'design:content')
 
   return (
-    <main className="flex w-full flex-col gap-8 px-6 py-10 lg:px-10">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 lg:px-10">
       <DesignDetailView
         brand={brand}
         initial={initial}

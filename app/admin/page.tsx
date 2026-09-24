@@ -31,7 +31,7 @@ export default async function AdminSetupPage(): Promise<JSX.Element> {
     // If the backend is unreachable we cannot know whether an admin exists.
     // Showing the form would be the unsafe guess, so refuse instead.
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-6 py-12">
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4 py-12 sm:px-6">
         <h1 className="text-display text-3xl">Tensor is not reachable</h1>
         <p className="text-muted-foreground text-sm">
           Tensor-Core is not responding, so setup cannot continue. Start the backend and reload.

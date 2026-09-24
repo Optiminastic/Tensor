@@ -40,7 +40,7 @@ export default async function OrderPage({ params }: OrderPageProps): Promise<JSX
   }
 
   return (
-    <main className="flex w-full flex-col gap-6 px-6 py-10 md:px-8">
+    <main className="flex w-full flex-col gap-6 px-4 py-10 sm:px-6 md:px-8">
       <div className="flex flex-col gap-3">
         <Link
           href={`/dashboard/${brand}/production/orders`}

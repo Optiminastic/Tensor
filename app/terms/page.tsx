@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Terms of Service - Tensor' }
  */
 export default function TermsPage(): JSX.Element {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-16">
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-16 sm:px-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-display text-4xl">Terms of Service</h1>
         <p className="text-muted-foreground text-sm">Last updated 12 August 2026</p>

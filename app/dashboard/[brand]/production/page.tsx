@@ -64,7 +64,7 @@ export default async function ProductionPage({
   }
 
   return (
-    <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <ProductionPageHeader
         title="Production"
         description="Print queue, machines, and inventory at a glance."

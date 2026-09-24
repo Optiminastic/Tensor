@@ -57,7 +57,7 @@ export default async function AcceptInvitePage(props: AcceptInvitePageProps): Pr
 
 function InviteProblem({ message }: { message: string }): JSX.Element {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-6 py-12">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4 py-12 sm:px-6">
       <h1 className="text-display text-3xl">Invitation not valid</h1>
       <p className="text-muted-foreground text-sm text-pretty">{message}</p>
       <p className="text-subtle-foreground text-sm">

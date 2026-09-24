@@ -58,8 +58,13 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
   // BatchKanbanColumn has to carry min-h-0 with its flex-1, or a flex child
   // refuses to shrink under its content and the overflow escapes back out to
   // the page.
+  //
+  // Below lg the mobile nav bar sits above this page, so a full h-dvh here
+  // would make the document 3.5rem taller than the screen - the one thing the
+  // overflow-hidden exists to prevent. Subtract the bar's height until the
+  // breakpoint where it goes away.
   return (
-    <main className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-6 py-6 md:px-8">
+    <main className="flex h-[calc(100dvh-3.5rem)] w-full flex-col gap-3 overflow-hidden px-4 py-6 sm:px-6 md:px-8 lg:h-dvh">
       <Link
         href={`/dashboard/${brand}/production/machines`}
         aria-label="Back to Machine Management"

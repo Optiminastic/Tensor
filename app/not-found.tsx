@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Page not found' }
  */
 export default function NotFound(): JSX.Element {
   return (
-    <main className="bg-background flex min-h-dvh flex-col px-6 py-8">
+    <main className="bg-background flex min-h-dvh flex-col px-4 py-8 sm:px-6">
       <header>
         <Link href="/" aria-label="Tensor home" className="inline-flex">
           <Logo />

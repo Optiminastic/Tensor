@@ -80,7 +80,7 @@ export default async function RegistryPage({ params }: RegistryPageProps): Promi
   }
 
   return (
-    <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
           {error}

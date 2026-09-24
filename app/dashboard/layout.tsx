@@ -48,7 +48,9 @@ export default async function DashboardLayout({
   const canManageBrands = can(authz, 'brand:manage')
 
   return (
-    <div className="flex min-h-dvh">
+    // Column on a phone so the mobile top bar stacks above the page; row from
+    // lg, where the rail and panel become real columns beside it.
+    <div className="flex min-h-dvh flex-col lg:flex-row">
       <Sidebar
         email={session.user.email}
         brands={brands}

@@ -50,7 +50,7 @@ export default async function BrandSettingsPage({
   const profile = brands.find(b => b.slug === brand)
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:px-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-display text-3xl">Brand settings</h1>
         <p className="text-muted-foreground text-sm">

@@ -77,7 +77,7 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
   )
 
   return (
-    <main className="flex w-full flex-col gap-8 px-6 py-10 md:px-8">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <ProductionPageHeader
         title="Packaging"
         description="Assembly, quality check, packaging and dispatch queues for printed jobs."

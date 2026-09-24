@@ -63,7 +63,7 @@ export default async function CreateBrandPage({
   const notice = statusNotice(status)
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col gap-10 px-6 py-10">
+    <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col gap-10 px-4 py-10 sm:px-6">
       <header className="flex items-center justify-between gap-4">
         <Logo />
         <span className="text-muted-foreground hidden text-sm sm:inline">{session.user.email}</span>

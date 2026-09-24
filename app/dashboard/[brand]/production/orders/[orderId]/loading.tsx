@@ -16,7 +16,10 @@ import { Card } from '@/components/ui/card'
  */
 export default function OrderLoading(): JSX.Element {
   return (
-    <main aria-busy="true" className="flex w-full animate-pulse flex-col gap-6 px-6 py-10 md:px-8">
+    <main
+      aria-busy="true"
+      className="flex w-full animate-pulse flex-col gap-6 px-4 py-10 sm:px-6 md:px-8"
+    >
       <span className="sr-only" role="status">
         Loading order
       </span>
