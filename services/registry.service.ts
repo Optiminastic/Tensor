@@ -6,15 +6,23 @@ import {
   BomLineSchema,
   type DesignTemplate,
   DesignTemplateSchema,
-  type OptionValueWriteInput,
-  type OptionWriteInput,
+  type FieldMap,
+  FieldMapSchema,
+  type FieldMapWriteInput,
+  type ImportProductInput,
+  type ImportProductResult,
+  ImportProductResultSchema,
+  type ObservedProperty,
+  ObservedPropertySchema,
+  type ProductDesignWriteInput,
   type ProductWriteInput,
   type RegistryProduct,
   type RegistryProductDetail,
   RegistryProductDetailSchema,
   RegistryProductSchema,
+  type TemplateParam,
+  TemplateParamSchema,
   type VariantDesignWriteInput,
-  type VariantWriteInput,
 } from '@/lib/validators/registry'
 
 const log = createLogger('RegistryService')
@@ -145,24 +153,13 @@ export async function uploadDesignTemplate(
 }
 
 /**
- * Registers a product, or corrects one already registered.
+ * Corrects a product already registered.
  *
- * Addressed by CODE on update rather than id, matching the read path: the code
+ * Addressed by CODE rather than id, matching the read path: the code
  * is what an order's SKU carries and what a person says out loud, so it is what
  * the URL carries. A code change is therefore a rename of the address itself,
  * which is why the caller gets the new product back rather than assuming.
  */
-export async function createProduct(
-  token: string,
-  input: ProductWriteInput,
-): Promise<RegistryProduct> {
-  return call(
-    '/registry/products',
-    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
-    data => RegistryProductSchema.partial({ option_count: true, variant_count: true }).parse(data),
-  ) as Promise<RegistryProduct>
-}
-
 export async function updateProduct(
   token: string,
   code: string,
@@ -191,94 +188,14 @@ export async function deleteProduct(token: string, code: string): Promise<void> 
 }
 
 /**
- * Authoring the registry: axes, their values, and the variants those make.
+ * The registry's authoring endpoints for options and hand-built variants still
+ * exist in Tensor-Core, and are deliberately not wrapped here.
  *
- * These are what stop a product change being a code change. Adding a colour
- * used to mean editing `generatedSKUSegments`, recompiling and deploying.
+ * A variant is a SKU, and Shopify is where SKUs are decided. Typing one into
+ * Tensor produces a second answer to a question that already had one - which
+ * is how DNP came to carry six variants named "2 hearts, With light" with no
+ * SKUs at all, matching no order that has ever arrived.
  */
-export async function createOption(
-  token: string,
-  code: string,
-  input: OptionWriteInput,
-): Promise<void> {
-  await call(
-    `/registry/products/${encodeURIComponent(code)}/options`,
-    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
-    () => undefined,
-  )
-}
-
-export async function updateOption(
-  token: string,
-  id: string,
-  input: OptionWriteInput,
-): Promise<void> {
-  await call(
-    `/registry/options/${encodeURIComponent(id)}`,
-    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify(input) },
-    () => undefined,
-  )
-}
-
-export async function deleteOption(token: string, id: string): Promise<void> {
-  await call(
-    `/registry/options/${encodeURIComponent(id)}`,
-    { method: 'DELETE', headers: jsonHeaders(token) },
-    () => undefined,
-  )
-}
-
-export async function createOptionValue(
-  token: string,
-  optionId: string,
-  input: OptionValueWriteInput,
-): Promise<void> {
-  await call(
-    `/registry/options/${encodeURIComponent(optionId)}/values`,
-    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
-    () => undefined,
-  )
-}
-
-export async function deleteOptionValue(token: string, id: string): Promise<void> {
-  await call(
-    `/registry/option-values/${encodeURIComponent(id)}`,
-    { method: 'DELETE', headers: jsonHeaders(token) },
-    () => undefined,
-  )
-}
-
-export async function createVariant(
-  token: string,
-  code: string,
-  input: VariantWriteInput,
-): Promise<void> {
-  await call(
-    `/registry/products/${encodeURIComponent(code)}/variants`,
-    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
-    () => undefined,
-  )
-}
-
-export async function updateVariant(
-  token: string,
-  id: string,
-  input: VariantWriteInput,
-): Promise<void> {
-  await call(
-    `/registry/variants/${encodeURIComponent(id)}`,
-    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify(input) },
-    () => undefined,
-  )
-}
-
-export async function deleteVariant(token: string, id: string): Promise<void> {
-  await call(
-    `/registry/variants/${encodeURIComponent(id)}`,
-    { method: 'DELETE', headers: jsonHeaders(token) },
-    () => undefined,
-  )
-}
 
 /** Names the file that prints one role of a variant. */
 export async function setVariantDesign(
@@ -290,5 +207,96 @@ export async function setVariantDesign(
     `/registry/variants/${encodeURIComponent(id)}/design`,
     { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify(input) },
     () => undefined,
+  )
+}
+
+/**
+ * The variables a template declares, read from the file a render would use.
+ *
+ * The right-hand side of the mapping editor. Resolved through the renderer
+ * rather than the upload table, so what the dropdown offers is what actually
+ * prints - the uploaded override where one exists, the embedded copy where
+ * none does.
+ */
+export async function listTemplateParams(token: string, key: string): Promise<TemplateParam[]> {
+  return call(
+    `/registry/templates/${encodeURIComponent(key)}/params`,
+    { headers: jsonHeaders(token) },
+    data => TemplateParamSchema.array().parse(data),
+  )
+}
+
+/** The personalisation fields customers have actually sent for this product. */
+export async function listObservedProperties(
+  token: string,
+  code: string,
+): Promise<ObservedProperty[]> {
+  return call(
+    `/registry/products/${encodeURIComponent(code)}/observed-properties`,
+    { headers: jsonHeaders(token) },
+    data => ObservedPropertySchema.array().parse(data),
+  )
+}
+
+export async function getProductFieldMaps(token: string, code: string): Promise<FieldMap[]> {
+  return call(
+    `/registry/products/${encodeURIComponent(code)}/field-maps`,
+    { headers: jsonHeaders(token) },
+    data => FieldMapSchema.array().parse(data),
+  )
+}
+
+/**
+ * Replaces a product's whole field mapping.
+ *
+ * The entire list in one request, the way a bill of materials is saved: a
+ * half-applied edit that left a product mapping a first name and not a second
+ * would hold every order it touched, and the failure would surface hours later
+ * on the issues board rather than in front of the person who caused it.
+ */
+export async function saveProductFieldMaps(
+  token: string,
+  code: string,
+  maps: FieldMapWriteInput[],
+): Promise<void> {
+  await call(
+    `/registry/products/${encodeURIComponent(code)}/field-maps`,
+    { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify({ maps }) },
+    () => undefined,
+  )
+}
+
+/** Points every variant of a product at one template. */
+export async function setProductDesign(
+  token: string,
+  code: string,
+  input: ProductDesignWriteInput,
+): Promise<void> {
+  await call(
+    `/registry/products/${encodeURIComponent(code)}/design`,
+    { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    () => undefined,
+  )
+}
+
+/**
+ * Creates or refreshes a registry product from the brand's Shopify catalogue.
+ *
+ * Under /brands rather than /registry because it needs the brand's Shopify
+ * connection, which is addressed by slug - and because the picker and the
+ * import must read the same list or they can disagree about what exists.
+ *
+ * Idempotent, and meant to be re-run: a product that gained a colour gets its
+ * new SKU by importing it again.
+ */
+export async function importShopifyProduct(
+  token: string,
+  brandSlug: string,
+  input: ImportProductInput,
+): Promise<ImportProductResult> {
+  return call(
+    `/brands/${encodeURIComponent(brandSlug)}/shopify-products/import`,
+    { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => ImportProductResultSchema.parse(data),
   )
 }

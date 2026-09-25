@@ -4,38 +4,34 @@ import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
 import {
-  OptionValueWriteSchema,
-  OptionWriteSchema,
+  ImportProductSchema,
   ProductWriteSchema,
   VariantDesignWriteSchema,
-  VariantWriteSchema,
+  type ImportProductResult,
   type RegistryProduct,
 } from '@/lib/validators/registry'
+import type { ShopifyProduct } from '@/lib/validators/shopify-products'
 import {
-  createOption,
-  createOptionValue,
-  createProduct,
-  createVariant,
-  deleteOption,
-  deleteOptionValue,
   deleteProduct,
-  deleteVariant,
+  importShopifyProduct,
   RegistryServiceError,
   setVariantDesign,
-  updateOption,
   updateProduct,
-  updateVariant,
 } from '@/services/registry.service'
+import {
+  listShopifyProducts,
+  ShopifyProductsServiceError,
+} from '@/services/shopify-products.service'
 
 import type { ActionResult } from './actions'
 
 /**
- * Writes to the product registry: add a product, correct one, remove one.
+ * Writes to the product registry: import a product, correct one, remove one.
  *
  * These are the actions that stop a product change being a code change. Adding
- * a colour or a heart count used to mean editing Go constants, recompiling and
- * deploying; the point of the registry is that the people who know the answers
- * can enter them.
+ * a colour used to mean editing Go constants, recompiling and deploying; the
+ * point of the registry is that the people who know the answers can enter them
+ * - and for a product's SKUs, the thing that knows the answers is Shopify.
  *
  * Every argument is re-validated here rather than trusted from the form. A
  * server action's arguments are client-controlled - the POST behind the form
@@ -50,24 +46,56 @@ function failure(error: unknown, fallback: string): ActionResult<never> {
   return { ok: false, error: error instanceof RegistryServiceError ? error.message : fallback }
 }
 
-export async function addProduct(
+/**
+ * The brand's live Shopify catalogue, for the import picker.
+ *
+ * An action rather than a page fetch, so opening the registry does not call
+ * Shopify. Most visits are to read what is already configured; the catalogue
+ * is only needed by somebody about to add something.
+ */
+export async function loadShopifyCatalogue(brand: string): Promise<ActionResult<ShopifyProduct[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    return { ok: true, data: await listShopifyProducts(token, brand) }
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof ShopifyProductsServiceError
+          ? err.message
+          : 'Could not read the products from Shopify.',
+    }
+  }
+}
+
+/**
+ * Registers a product from Shopify, with its real SKUs.
+ *
+ * Re-running it is how a product that gained a colour gets its new SKU. The
+ * result says how many variants were imported, how many Shopify carries with
+ * no SKU, and how many this import stopped matching - all three matter, and
+ * the middle one is a thing to go and fix in the shop.
+ */
+export async function importProduct(
   brand: string,
   input: unknown,
-): Promise<ActionResult<RegistryProduct>> {
-  const parsed = ProductWriteSchema.safeParse(input)
+): Promise<ActionResult<ImportProductResult>> {
+  const parsed = ImportProductSchema.safeParse(input)
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the product details.' }
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Choose a product to import.' }
   }
 
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
 
   try {
-    const product = await createProduct(token, parsed.data)
+    const result = await importShopifyProduct(token, brand, parsed.data)
     revalidateRegistry(brand)
-    return { ok: true, data: product }
+    return { ok: true, data: result }
   } catch (err) {
-    return failure(err, 'Could not create the product.')
+    return failure(err, 'Could not import that product.')
   }
 }
 
@@ -99,8 +127,8 @@ export async function editProduct(
 }
 
 /**
- * Removes a product, its options, its variants, their designs and their bills
- * of materials. Nothing else in the registry is destructive.
+ * Removes a product, its variants, their designs and their bills of materials.
+ * Nothing else in the registry is destructive.
  */
 export async function removeProduct(brand: string, code: string): Promise<ActionResult<null>> {
   const { token, error } = await resolveBackendToken()
@@ -116,104 +144,13 @@ export async function removeProduct(brand: string, code: string): Promise<Action
 }
 
 /**
- * Every authoring action below follows the same three steps: re-validate the
- * payload here (a server action's arguments are client-controlled, so the Zod
- * parse is the boundary, not the form that produced it), resolve a token, then
- * revalidate the registry page so the change is visible without a reload.
+ * Names the file that prints one role of ONE variant.
+ *
+ * The product-level `assignProductDesign` is what somebody normally uses: a
+ * template prints every colour. This stays for the case that one cannot serve
+ * - an uploaded 3MF, which is a single specific model and belongs to a single
+ * variant.
  */
-async function run(
-  brand: string,
-  work: (token: string) => Promise<void>,
-  fallback: string,
-): Promise<ActionResult<null>> {
-  const { token, error } = await resolveBackendToken()
-  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
-  try {
-    await work(token)
-    revalidateRegistry(brand)
-    return { ok: true, data: null }
-  } catch (err) {
-    return failure(err, fallback)
-  }
-}
-
-export async function addOption(
-  brand: string,
-  code: string,
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = OptionWriteSchema.safeParse(input)
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the option.' }
-  }
-  return run(brand, token => createOption(token, code, parsed.data), 'Could not add the option.')
-}
-
-export async function editOption(
-  brand: string,
-  id: string,
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = OptionWriteSchema.safeParse(input)
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the option.' }
-  }
-  return run(brand, token => updateOption(token, id, parsed.data), 'Could not update the option.')
-}
-
-export async function removeOption(brand: string, id: string): Promise<ActionResult<null>> {
-  return run(brand, token => deleteOption(token, id), 'Could not delete the option.')
-}
-
-export async function addOptionValue(
-  brand: string,
-  optionId: string,
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = OptionValueWriteSchema.safeParse(input)
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the value.' }
-  }
-  return run(
-    brand,
-    token => createOptionValue(token, optionId, parsed.data),
-    'Could not add the value.',
-  )
-}
-
-export async function removeOptionValue(brand: string, id: string): Promise<ActionResult<null>> {
-  return run(brand, token => deleteOptionValue(token, id), 'Could not delete the value.')
-}
-
-export async function addVariant(
-  brand: string,
-  code: string,
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = VariantWriteSchema.safeParse(input)
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the variant.' }
-  }
-  return run(brand, token => createVariant(token, code, parsed.data), 'Could not add the variant.')
-}
-
-export async function editVariant(
-  brand: string,
-  id: string,
-  input: unknown,
-): Promise<ActionResult<null>> {
-  const parsed = VariantWriteSchema.safeParse(input)
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the variant.' }
-  }
-  return run(brand, token => updateVariant(token, id, parsed.data), 'Could not update the variant.')
-}
-
-export async function removeVariant(brand: string, id: string): Promise<ActionResult<null>> {
-  return run(brand, token => deleteVariant(token, id), 'Could not delete the variant.')
-}
-
-/** Names the file that prints one role of a variant. */
 export async function assignVariantDesign(
   brand: string,
   id: string,
@@ -223,5 +160,15 @@ export async function assignVariantDesign(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the design.' }
   }
-  return run(brand, token => setVariantDesign(token, id, parsed.data), 'Could not set the design.')
+
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    await setVariantDesign(token, id, parsed.data)
+    revalidateRegistry(brand)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, 'Could not set the design.')
+  }
 }

@@ -187,3 +187,103 @@ export type RegistryVariant = z.infer<typeof RegistryVariantSchema>
 export type RegistryProduct = z.infer<typeof RegistryProductSchema>
 export type RegistryProductDetail = z.infer<typeof RegistryProductDetailSchema>
 export type BomLine = z.infer<typeof BomLineSchema>
+
+/**
+ * One variable an uploaded .scad declares.
+ *
+ * The right-hand side of the mapping editor. Chosen from a list rather than
+ * typed, because OpenSCAD accepts a `-D` naming a variable the script never
+ * reads: a mapping written to NAME_1 instead of NAME_L renders a plank with
+ * the name missing and exits 0, and nothing downstream can tell that from a
+ * customer who left the field blank.
+ */
+export const TemplateParamSchema = z.object({
+  name: z.string(),
+  /** The customizer group header it sits under, or "" - these files declare
+   *  about fifty variables and an ungrouped list of fifty is unchoosable. */
+  section: z.string(),
+  /** 'string' | 'number' | 'other' — 'other' is a vector, boolean or
+   *  expression the parser would not guess the shape of. */
+  type: z.string(),
+  default: z.string(),
+  /** The author's own trailing comment: the documentation these files have. */
+  note: z.string(),
+})
+
+/**
+ * A personalisation field customers have actually sent for this product.
+ *
+ * The left-hand side of the mapping editor, and the reason it is a dropdown:
+ * the storefront's "STEP 4-First Name-:" normalises to "step 4 first name",
+ * and a key typed one character wrong matches nothing in a way that looks
+ * exactly like an order with no properties.
+ */
+export const ObservedPropertySchema = z.object({
+  /** Normalised — what a mapping is matched by. */
+  key: z.string(),
+  /** The storefront's own wording, for recognising it. */
+  label: z.string(),
+  /** One real answer, which settles "name or number?" faster than any note. */
+  sample: z.string(),
+  /** How many recent orders carried it. One in two hundred is a retired
+   *  option rather than something to map. */
+  orders: z.number(),
+})
+
+export const FieldMapSchema = z.object({
+  property_key: z.string(),
+  scad_variable: z.string(),
+  value_type: z.enum(['string', 'number']),
+  position: z.number(),
+})
+
+/**
+ * One row of the mapping, as somebody edits it.
+ *
+ * `value_type` is not cosmetic: a string reaches OpenSCAD quoted and a number
+ * bare. An unquoted string is a syntax error that fails the render loudly; a
+ * quoted number is legal and silently means something else.
+ */
+export const FieldMapWriteSchema = z.object({
+  property_key: z.string().trim().min(1, 'Choose the order field.').max(120),
+  scad_variable: z.string().trim().min(1, 'Choose the variable it fills.').max(64),
+  value_type: z.enum(['string', 'number']),
+})
+
+/** The whole mapping, saved at once — see `saveProductFieldMaps`. */
+export const FieldMapsWriteSchema = z.object({
+  maps: FieldMapWriteSchema.array(),
+})
+
+/** Names the template a whole product prints from. */
+export const ProductDesignWriteSchema = z.object({
+  role: z.enum(DESIGN_ROLES),
+  template_key: z.string().trim().min(1, 'Name the template.').max(64),
+})
+
+export const ImportProductSchema = z.object({
+  shopify_product_id: z.string().trim().min(1, 'Choose a Shopify product.'),
+  /** Blank means "use the code derived from the SKUs", which is right almost
+   *  always — see the backend's productCodeFor. */
+  code: z.string().trim().max(32).optional(),
+  notes: z.string().trim().max(2000).nullish(),
+})
+
+export const ImportProductResultSchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  imported: z.number(),
+  /** Variants Shopify carries with no SKU. Reported rather than hidden: they
+   *  are colours no order can be matched to. */
+  skipped: z.number(),
+  /** Variants this import stopped matching, because Shopify dropped them. */
+  retired: z.number(),
+})
+
+export type TemplateParam = z.infer<typeof TemplateParamSchema>
+export type ObservedProperty = z.infer<typeof ObservedPropertySchema>
+export type FieldMap = z.infer<typeof FieldMapSchema>
+export type FieldMapWriteInput = z.infer<typeof FieldMapWriteSchema>
+export type ProductDesignWriteInput = z.infer<typeof ProductDesignWriteSchema>
+export type ImportProductInput = z.infer<typeof ImportProductSchema>
+export type ImportProductResult = z.infer<typeof ImportProductResultSchema>

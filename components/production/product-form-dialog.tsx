@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type JSX, type ReactNode } from 'react'
 
-import { addProduct, editProduct } from '@/app/dashboard/[brand]/production/registry-actions'
+import { editProduct } from '@/app/dashboard/[brand]/production/registry-actions'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -27,8 +27,7 @@ import {
 
 interface ProductFormDialogProps {
   brand: string
-  /** The product being edited. Omitted to register a new one. */
-  product?: RegistryProduct
+  product: RegistryProduct
   /** Rendered as the trigger. Omitted when the caller drives `open` itself. */
   trigger?: ReactNode
   open?: boolean
@@ -41,11 +40,13 @@ const KIND_HINT: Record<ProductKind, string> = {
 }
 
 /**
- * Registers a product, or corrects one already registered.
+ * Corrects a product already registered.
  *
- * One dialog for both, because the questions are identical and only the answers
- * start blank. Two would have meant two copies of the kind rule - the one field
- * here that changes how the pipeline behaves.
+ * Registering one is ProductImportDialog's job now: a product's code, name and
+ * SKUs are answers Shopify already holds, and typing them again produced a
+ * second answer that could disagree. What is left here is what Shopify does
+ * not know - whether Tensor renders this product, whether it is still sold,
+ * and whatever the next person needs told.
  *
  * `kind` is a fixed choice rather than free text because it is not a label: it
  * decides whether a job waits for Tensor to render a file or for a person to
@@ -53,8 +54,8 @@ const KIND_HINT: Record<ProductKind, string> = {
  * how a job sits in "profile_missing" forever with nobody able to say why.
  *
  * The code is upper-cased on save. It is the segment an order's SKU carries
- * ("T3DPS-DNP-2"), so one registered as "dnp" matches nothing and fails
- * silently - the worst way for master data to be wrong.
+ * ("DNPWL-BLU"), so one saved as "dnpwl" matches nothing and fails silently -
+ * the worst way for master data to be wrong.
  */
 export function ProductFormDialog({
   brand,
@@ -68,13 +69,11 @@ export function ProductFormDialog({
   const open = controlledOpen ?? uncontrolledOpen
   const setOpen = onOpenChange ?? setUncontrolledOpen
 
-  const [code, setCode] = useState(product?.code ?? '')
-  const [name, setName] = useState(product?.name ?? '')
-  const [kind, setKind] = useState<ProductKind>((product?.kind as ProductKind) ?? 'generated')
-  const [status, setStatus] = useState<ProductStatus>(
-    (product?.status as ProductStatus) ?? 'active',
-  )
-  const [notes, setNotes] = useState(product?.notes ?? '')
+  const [code, setCode] = useState(product.code)
+  const [name, setName] = useState(product.name)
+  const [kind, setKind] = useState<ProductKind>(product.kind as ProductKind)
+  const [status, setStatus] = useState<ProductStatus>(product.status as ProductStatus)
+  const [notes, setNotes] = useState(product.notes ?? '')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -83,11 +82,11 @@ export function ProductFormDialog({
   // straight back over somebody else's edit.
   useEffect(() => {
     if (!open) return
-    setCode(product?.code ?? '')
-    setName(product?.name ?? '')
-    setKind((product?.kind as ProductKind) ?? 'generated')
-    setStatus((product?.status as ProductStatus) ?? 'active')
-    setNotes(product?.notes ?? '')
+    setCode(product.code)
+    setName(product.name)
+    setKind(product.kind as ProductKind)
+    setStatus(product.status as ProductStatus)
+    setNotes(product.notes ?? '')
     setError(null)
   }, [open, product])
 
@@ -101,9 +100,7 @@ export function ProductFormDialog({
       status,
       notes: notes.trim() === '' ? null : notes.trim(),
     }
-    const res = product
-      ? await editProduct(brand, product.code, payload)
-      : await addProduct(brand, payload)
+    const res = await editProduct(brand, product.code, payload)
     setPending(false)
     if (!res.ok) {
       setError(res.error ?? 'Could not save the product.')
@@ -118,11 +115,10 @@ export function ProductFormDialog({
       {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{product ? 'Edit product' : 'Add product'}</DialogTitle>
+          <DialogTitle>Edit product</DialogTitle>
           <DialogDescription>
-            {product
-              ? 'Correct what this product is. Its options, variants and parts are unaffected.'
-              : 'A product family like DNP — the options and variants are added to it afterwards.'}
+            Correct what this product is. Its SKUs, design and parts are unaffected — re-import it
+            from Shopify to change those.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
@@ -188,7 +184,7 @@ export function ProductFormDialog({
               onClick={() => void save()}
               disabled={pending || code.trim() === '' || name.trim() === ''}
             >
-              {pending ? 'Saving…' : product ? 'Save changes' : 'Save product'}
+              {pending ? 'Saving…' : 'Save changes'}
             </Button>
           </div>
         </div>
