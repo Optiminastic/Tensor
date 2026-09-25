@@ -127,6 +127,28 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
             scanning the table - the one moment it exists for. */}
         <FailureNote reason={order.jobCreationError} label="Job creation failed" className="mt-1" />
       </TableCell>
+      {/* The SKU, beside the order number where the eye already is.
+          It is the only thing that says WHICH product a line is precisely
+          enough to act on: the storefront renames products freely and several
+          read almost alike - "Dual Name Plank", "PREMIUM DUAL NAME PLANK" and
+          "Dual Name Plank with Light" are three products, three templates and
+          three prices. DNP-BLU, PDNP-BLU and DNPWL-BLU are not.
+
+          A mixed order carries several, so the first is shown with a count of
+          the rest rather than a list that would widen the column past every
+          other row. The title attribute carries them all. */}
+      <TableCell className="py-2 font-mono text-xs whitespace-nowrap" title={order.skus.join(', ')}>
+        {order.skus.length === 0 ? (
+          <span className="text-subtle-foreground">&mdash;</span>
+        ) : (
+          <>
+            {order.skus[0]}
+            {order.skus.length > 1 ? (
+              <span className="text-subtle-foreground"> +{order.skus.length - 1}</span>
+            ) : null}
+          </>
+        )}
+      </TableCell>
       {/* The customer's own date where Shopify gave one, falling back to when
           Tensor imported it. They are weeks apart on a backfill, and it is the
           customer's that matters when someone is chasing a late order. */}

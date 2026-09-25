@@ -87,10 +87,11 @@ const UNFULFILLED_TAB = 'unfulfilled'
 // every figure. The presentation is Tensor's throughout - its pills, its
 // typography, its mono figures - only the columns are borrowed.
 //
-// Thirteen columns is wider than the viewport, which is why the Table
+// Fourteen columns is wider than the viewport, which is why the Table
 // primitive scrolls horizontally rather than wrapping.
 const COLUMNS = [
   'Order',
+  'SKU',
   'Date',
   'Customer',
   'Total',
@@ -120,9 +121,12 @@ function matchesSearch(order: OrderRecord, search: string): boolean {
   if (!search) return true
   // The names the customer typed on the plank, alongside their own. Someone
   // ringing up about "the Farsana one" has the plank's names, not the buyer's.
+  // The SKUs too, so "DNPWL" narrows to the planks ordered WITH the light and
+  // "PDNP" to the premium range - a distinction product names do not make
+  // reliably, because several of them read almost alike.
   const haystack = `${order.orderNumber} ${order.customer ?? ''} ${order.customerEmail ?? ''} ${(
     order.personalisationNames ?? []
-  ).join(' ')}`
+  ).join(' ')} ${order.skus.join(' ')}`
     .trim()
     .toLowerCase()
   return haystack.includes(search.trim().toLowerCase())

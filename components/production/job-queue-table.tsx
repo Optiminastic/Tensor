@@ -42,6 +42,7 @@ interface JobQueueTableProps {
 
 const COLUMNS = [
   'Job',
+  'SKU',
   'Description',
   'Qty',
   'Status',
@@ -73,9 +74,12 @@ function matchesSearch(job: ProductionJobQueueItem, search: string): boolean {
   // The customer's own two names are included, because that is what somebody
   // holding a plank actually has to search by - personalisationName is where
   // the importer joins them ("HABEEB & FARSANA"), so either half matches.
-  const haystack = `${job.jobNumber} ${job.description} ${job.personalisationName ?? ''}`
-    .trim()
-    .toLowerCase()
+  // The SKU too: it is the only term that separates products whose names read
+  // alike, so "DNPF" finds the photo frames and "SCWL" the lit combos.
+  const haystack =
+    `${job.jobNumber} ${job.description} ${job.personalisationName ?? ''} ${job.sku ?? ''}`
+      .trim()
+      .toLowerCase()
   return haystack.includes(search.trim().toLowerCase())
 }
 

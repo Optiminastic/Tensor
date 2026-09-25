@@ -56,6 +56,14 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
         {job.jobNumber}
         <FailureNote reason={job.batchingBlockedReason} className="mt-1 font-sans" />
       </TableCell>
+      {/* Beside the job number rather than buried in the description: the SKU
+          is what says WHICH product this is. Product names are renamed freely
+          and several read almost alike - "Dual Name Plank", "PREMIUM DUAL NAME
+          PLANK" and "Dual Name Plank with Light" are three products, three
+          templates and three prices. DNP-BLU, PDNP-BLU and DNPWL-BLU are not. */}
+      <TableCell className="font-mono text-sm whitespace-nowrap">
+        {job.sku ?? <span className="text-subtle-foreground">—</span>}
+      </TableCell>
       <TableCell>
         {job.description}
         {/* Which jobs are waiting on a person, and which on a render. A plank

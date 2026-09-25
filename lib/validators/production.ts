@@ -330,6 +330,11 @@ export const OrderSchema = z.object({
   // The names alone - the full line_items document is deliberately not on the
   // list response.
   personalisation_names: z.string().array().nullish(),
+  // The distinct SKUs the order's lines carry. Like the names above, these
+  // ride on the list response ALONE - the full line_items document is
+  // deliberately not shipped - so the table can show and search by SKU
+  // without every row carrying its jsonb.
+  skus: z.string().array().nullish(),
   item_count: z.number().nullish(),
   source_name: z.string().nullish(),
   // Decimal strings, not numbers: the backend keeps the store's own precision

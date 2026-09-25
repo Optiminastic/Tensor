@@ -44,6 +44,10 @@ export interface ProductionJobQueueItem {
   id: string
   jobNumber: string
   description: string
+  // The SKU the line was ordered under. Null on a job made before the
+  // catalogue carried one, and on anything the importer saw without it -
+  // which is why the column renders a dash rather than an empty cell.
+  sku: string | null
   qty: number
   status: QueueStatus
   personalisation: PersonalisationStatus
@@ -164,6 +168,9 @@ export interface OrderProduct {
 export interface OrderRecord {
   id: string
   orderNumber: string
+  // Every distinct SKU on the order, sorted. Usually one; an order of mixed
+  // products carries several, which is why this is a list rather than a field.
+  skus: string[]
   store: string
   customer: string | null
   customerEmail: string | null
