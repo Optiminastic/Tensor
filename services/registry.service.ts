@@ -14,6 +14,8 @@ import {
   ImportProductResultSchema,
   type ObservedProperty,
   ObservedPropertySchema,
+  type ProductPart,
+  ProductPartSchema,
   type ProductDesignWriteInput,
   type ProductWriteInput,
   type RegistryProduct,
@@ -238,9 +240,27 @@ export async function listObservedProperties(
   )
 }
 
-export async function getProductFieldMaps(token: string, code: string): Promise<FieldMap[]> {
+/**
+ * What this product prints, file by file.
+ *
+ * One entry for a product that prints one thing, three for a combo - a plank,
+ * a rose and a keychain, each with its own template and its own mapping.
+ */
+export async function listProductParts(token: string, code: string): Promise<ProductPart[]> {
   return call(
-    `/registry/products/${encodeURIComponent(code)}/field-maps`,
+    `/registry/products/${encodeURIComponent(code)}/parts`,
+    { headers: jsonHeaders(token) },
+    data => ProductPartSchema.array().parse(data),
+  )
+}
+
+export async function getProductFieldMaps(
+  token: string,
+  code: string,
+  role: string,
+): Promise<FieldMap[]> {
+  return call(
+    `/registry/products/${encodeURIComponent(code)}/field-maps?role=${encodeURIComponent(role)}`,
     { headers: jsonHeaders(token) },
     data => FieldMapSchema.array().parse(data),
   )
@@ -257,16 +277,17 @@ export async function getProductFieldMaps(token: string, code: string): Promise<
 export async function saveProductFieldMaps(
   token: string,
   code: string,
-  maps: FieldMapWriteInput[],
+  input: { role: string; maps: FieldMapWriteInput[] },
 ): Promise<void> {
   await call(
-    `/registry/products/${encodeURIComponent(code)}/field-maps`,
-    { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify({ maps }) },
+    `/registry/products/${encodeURIComponent(code)}/field-maps` +
+      `?role=${encodeURIComponent(input.role)}`,
+    { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify({ maps: input.maps }) },
     () => undefined,
   )
 }
 
-/** Points every variant of a product at one template. */
+/** Points every variant of a product at one template, for one design file. */
 export async function setProductDesign(
   token: string,
   code: string,

@@ -16,9 +16,13 @@ import type {
 interface FieldMapEditorProps {
   brand: string
   productCode: string
+  /** Which of the product's design files this mapping feeds. */
+  role: string
   properties: ObservedProperty[]
   params: TemplateParam[]
   maps: FieldMap[]
+  /** Called after a save, so the parts list can re-read what is configured. */
+  onSaved: () => void
 }
 
 const FIGURE = 'font-mono tabular-nums'
@@ -42,15 +46,18 @@ const FIGURE = 'font-mono tabular-nums'
 export function FieldMapEditor({
   brand,
   productCode,
+  role,
   properties,
   params,
   maps,
+  onSaved,
 }: FieldMapEditorProps): JSX.Element {
   const [rows, setRows] = useState<FieldMapWriteInput[]>(() =>
     maps.map(m => ({
       property_key: m.property_key,
       scad_variable: m.scad_variable,
       value_type: m.value_type,
+      optional: !m.required,
     })),
   )
   const [pending, setPending] = useState(false)
@@ -66,20 +73,21 @@ export function FieldMapEditor({
     setSaved(false)
     setRows(current => [
       ...current,
-      { property_key: '', scad_variable: '', value_type: 'string' as const },
+      { property_key: '', scad_variable: '', value_type: 'string' as const, optional: false },
     ])
   }
 
   async function save(): Promise<void> {
     setError(null)
     setPending(true)
-    const res = await saveFieldMaps(brand, productCode, { maps: rows })
+    const res = await saveFieldMaps(brand, productCode, { role, maps: rows })
     setPending(false)
     if (!res.ok) {
       setError(res.error ?? 'Could not save the mapped fields.')
       return
     }
     setSaved(true)
+    onSaved()
   }
 
   const incomplete = rows.some(r => r.property_key === '' || r.scad_variable === '')
@@ -139,6 +147,21 @@ export function FieldMapEditor({
                 >
                   <option value="string">Text</option>
                   <option value="number">Number</option>
+                </Select>
+              </label>
+
+              {/* Required holds the job when an order does not answer. Right
+                  for a plank, where a blank name is scrap; wrong for a rose
+                  the customer chose not to name — two of the seven combos on
+                  record carry no rose name at all. */}
+              <label className="flex w-32 flex-col gap-1">
+                <span className="text-muted-foreground text-xs">If not answered</span>
+                <Select
+                  value={row.optional === true ? 'optional' : 'required'}
+                  onChange={e => edit(index, { optional: e.target.value === 'optional' })}
+                >
+                  <option value="required">Hold the job</option>
+                  <option value="optional">Leave it out</option>
                 </Select>
               </label>
 

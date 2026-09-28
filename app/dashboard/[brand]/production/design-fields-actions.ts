@@ -8,11 +8,13 @@ import {
   ProductDesignWriteSchema,
   type FieldMap,
   type ObservedProperty,
+  type ProductPart,
   type TemplateParam,
 } from '@/lib/validators/registry'
 import {
   getProductFieldMaps,
   listObservedProperties,
+  listProductParts,
   listTemplateParams,
   RegistryServiceError,
   saveProductFieldMaps,
@@ -33,7 +35,9 @@ import type { ActionResult } from './actions'
  * nobody opened.
  */
 export interface DesignFields {
-  /** The template this product's variants print from, or '' when none. */
+  /** Which design file these belong to. */
+  role: string
+  /** The template this part's variants print from, or '' when none. */
   template_key: string
   /** The variables that template declares. Empty when there is no template. */
   params: TemplateParam[]
@@ -62,7 +66,7 @@ function failure(error: unknown, fallback: string): ActionResult<never> {
 export async function loadDesignFields(
   brand: string,
   code: string,
-  templateKey: string,
+  part: { role: string; template_key: string },
 ): Promise<ActionResult<DesignFields>> {
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
@@ -70,19 +74,42 @@ export async function loadDesignFields(
   try {
     const [properties, maps] = await Promise.all([
       listObservedProperties(token, code),
-      getProductFieldMaps(token, code),
+      getProductFieldMaps(token, code, part.role),
     ])
     let params: TemplateParam[] = []
-    if (templateKey !== '') {
+    if (part.template_key !== '') {
       try {
-        params = await listTemplateParams(token, templateKey)
+        params = await listTemplateParams(token, part.template_key)
       } catch {
         params = []
       }
     }
-    return { ok: true, data: { template_key: templateKey, params, properties, maps } }
+    return {
+      ok: true,
+      data: { role: part.role, template_key: part.template_key, params, properties, maps },
+    }
   } catch (err) {
     return failure(err, 'Could not load the design fields.')
+  }
+}
+
+/**
+ * What this product prints, file by file.
+ *
+ * Loaded before the panel's contents, because it decides how many panels there
+ * are. A product that prints one thing has one; a combo has three.
+ */
+export async function loadProductParts(
+  brand: string,
+  code: string,
+): Promise<ActionResult<ProductPart[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    return { ok: true, data: await listProductParts(token, code) }
+  } catch (err) {
+    return failure(err, 'Could not read what this product prints.')
   }
 }
 
@@ -107,7 +134,7 @@ export async function saveFieldMaps(
   if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
 
   try {
-    await saveProductFieldMaps(token, code, parsed.data.maps)
+    await saveProductFieldMaps(token, code, parsed.data)
     revalidatePath(`/dashboard/${brand}/production/registry`)
     return { ok: true, data: null }
   } catch (err) {

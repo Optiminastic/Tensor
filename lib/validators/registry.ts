@@ -234,6 +234,11 @@ export const FieldMapSchema = z.object({
   property_key: z.string(),
   scad_variable: z.string(),
   value_type: z.enum(['string', 'number']),
+  /** Which design file this row feeds. 'body' for a product printing one. */
+  role: z.string(),
+  /** Whether an order that does not answer it holds the job. False means the
+   *  variable is simply not passed and the template's default stands. */
+  required: z.boolean(),
   position: z.number(),
 })
 
@@ -248,17 +253,59 @@ export const FieldMapWriteSchema = z.object({
   property_key: z.string().trim().min(1, 'Choose the order field.').max(120),
   scad_variable: z.string().trim().min(1, 'Choose the variable it fills.').max(64),
   value_type: z.enum(['string', 'number']),
+  /**
+   * Absent means required, so the rule a product was configured under does not
+   * change because a newer client stopped sending the flag.
+   *
+   * Optional matters: of the Soulmate Combos on record, two carry no rose name
+   * at all. Under a required-everything rule those orders are held for a box
+   * the customer chose to leave blank.
+   */
+  optional: z.boolean().optional(),
 })
 
-/** The whole mapping, saved at once — see `saveProductFieldMaps`. */
+/**
+ * One design file's whole mapping, saved at once — see `saveProductFieldMaps`.
+ *
+ * Scoped to a role on the way out as well as in: the backend clears and
+ * rewrites what it is given, so a save that did not say which file it was
+ * would delete the other files' mappings on the way past.
+ */
 export const FieldMapsWriteSchema = z.object({
+  role: z.string().trim().min(1).max(24),
   maps: FieldMapWriteSchema.array(),
 })
 
-/** Names the template a whole product prints from. */
+/**
+ * Names the template one of a product's design files prints from.
+ *
+ * `role` is free text rather than the old body/base pair: a product may print
+ * several things and they are called what they are - a plank, a rose, a
+ * keychain. The database never restricted it; only the frontend did.
+ */
 export const ProductDesignWriteSchema = z.object({
-  role: z.enum(DESIGN_ROLES),
+  role: z
+    .string()
+    .trim()
+    .min(1, 'Name this design file.')
+    .max(24, 'Keep the name to 24 characters.'),
   template_key: z.string().trim().min(1, 'Name the template.').max(64),
+})
+
+/**
+ * One of the things a product prints.
+ *
+ * Derived on the backend from the designs assigned to it, so a part exists
+ * because a file was assigned to it and there is no second list to keep in
+ * step.
+ */
+export const ProductPartSchema = z.object({
+  role: z.string(),
+  template_key: z.string(),
+  fields: z.number(),
+  required: z.number(),
+  /** It has a file and at least one mapped field, so it can actually render. */
+  ready: z.boolean(),
 })
 
 export const ImportProductSchema = z.object({
@@ -283,6 +330,7 @@ export const ImportProductResultSchema = z.object({
 export type TemplateParam = z.infer<typeof TemplateParamSchema>
 export type ObservedProperty = z.infer<typeof ObservedPropertySchema>
 export type FieldMap = z.infer<typeof FieldMapSchema>
+export type ProductPart = z.infer<typeof ProductPartSchema>
 export type FieldMapWriteInput = z.infer<typeof FieldMapWriteSchema>
 export type ProductDesignWriteInput = z.infer<typeof ProductDesignWriteSchema>
 export type ImportProductInput = z.infer<typeof ImportProductSchema>
