@@ -239,6 +239,9 @@ export const FieldMapSchema = z.object({
   /** Whether an order that does not answer it holds the job. False means the
    *  variable is simply not passed and the template's default stands. */
   required: z.boolean(),
+  /** A value that does not come from the order. Set on a row that says
+   *  "always 200" rather than "whatever the customer typed". */
+  fixed_value: z.string().nullish(),
   position: z.number(),
 })
 
@@ -249,20 +252,35 @@ export const FieldMapSchema = z.object({
  * bare. An unquoted string is a syntax error that fails the render loudly; a
  * quoted number is legal and silently means something else.
  */
-export const FieldMapWriteSchema = z.object({
-  property_key: z.string().trim().min(1, 'Choose the order field.').max(120),
-  scad_variable: z.string().trim().min(1, 'Choose the variable it fills.').max(64),
-  value_type: z.enum(['string', 'number']),
-  /**
-   * Absent means required, so the rule a product was configured under does not
-   * change because a newer client stopped sending the flag.
-   *
-   * Optional matters: of the Soulmate Combos on record, two carry no rose name
-   * at all. Under a required-everything rule those orders are held for a box
-   * the customer chose to leave blank.
-   */
-  optional: z.boolean().optional(),
-})
+export const FieldMapWriteSchema = z
+  .object({
+    property_key: z.string().trim().max(120),
+    scad_variable: z.string().trim().min(1, 'Choose the variable it fills.').max(64),
+    /**
+     * A value that does not come from the order.
+     *
+     * The plank templates default OUT_X to 0 — "natural size, whatever the name
+     * needs" — so without 200 here a combo's plank renders 377mm wide: the
+     * wrong product, successfully.
+     */
+    fixed_value: z.string().trim().max(120).optional(),
+    value_type: z.enum(['string', 'number']),
+    /**
+     * Absent means required, so the rule a product was configured under does not
+     * change because a newer client stopped sending the flag.
+     *
+     * Optional matters: of the Soulmate Combos on record, two carry no rose name
+     * at all. Under a required-everything rule those orders are held for a box
+     * the customer chose to leave blank.
+     */
+    optional: z.boolean().optional(),
+  })
+  // One source or the other, matching the CHECK on the table. A row naming
+  // neither leaves its variable unset, which OpenSCAD accepts in silence.
+  .refine(r => (r.property_key ?? '') !== '' || (r.fixed_value ?? '') !== '', {
+    message: 'Every row needs an order field or a fixed value.',
+    path: ['property_key'],
+  })
 
 /**
  * One design file's whole mapping, saved at once — see `saveProductFieldMaps`.

@@ -5,6 +5,7 @@ import { useState, type JSX } from 'react'
 
 import { saveFieldMaps } from '@/app/dashboard/[brand]/production/design-fields-actions'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import type {
   FieldMap,
@@ -26,6 +27,14 @@ interface FieldMapEditorProps {
 }
 
 const FIGURE = 'font-mono tabular-nums'
+
+/** The dropdown entry that switches a row to a fixed value. Not a property. */
+const FIXED_SENTINEL = '__fixed__'
+
+/** A row carries a value rather than reading one from the order. */
+function isFixed(row: FieldMapWriteInput): boolean {
+  return (row.fixed_value ?? '') !== ''
+}
 
 /**
  * Which order field feeds which OpenSCAD variable.
@@ -58,6 +67,7 @@ export function FieldMapEditor({
       scad_variable: m.scad_variable,
       value_type: m.value_type,
       optional: !m.required,
+      fixed_value: m.fixed_value ?? '',
     })),
   )
   const [pending, setPending] = useState(false)
@@ -73,14 +83,23 @@ export function FieldMapEditor({
     setSaved(false)
     setRows(current => [
       ...current,
-      { property_key: '', scad_variable: '', value_type: 'string' as const, optional: false },
+      {
+        property_key: '',
+        scad_variable: '',
+        value_type: 'string' as const,
+        optional: false,
+        fixed_value: '',
+      },
     ])
   }
 
   async function save(): Promise<void> {
     setError(null)
     setPending(true)
-    const res = await saveFieldMaps(brand, productCode, { role, maps: rows })
+    const res = await saveFieldMaps(brand, productCode, {
+      role,
+      maps: rows.map(r => ({ ...r, fixed_value: (r.fixed_value ?? '').trim() })),
+    })
     setPending(false)
     if (!res.ok) {
       setError(res.error ?? 'Could not save the mapped fields.')
@@ -90,7 +109,9 @@ export function FieldMapEditor({
     onSaved()
   }
 
-  const incomplete = rows.some(r => r.property_key === '' || r.scad_variable === '')
+  const incomplete = rows.some(
+    r => r.scad_variable === '' || (r.property_key === '' && (r.fixed_value ?? '').trim() === ''),
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -104,22 +125,46 @@ export function FieldMapEditor({
           {rows.map((row, index) => (
             <li key={index} className="flex flex-wrap items-end gap-2">
               <label className="flex min-w-48 flex-1 flex-col gap-1">
-                <span className="text-muted-foreground text-xs">Order field</span>
-                <Select
-                  value={row.property_key}
-                  onChange={e => edit(index, { property_key: e.target.value })}
-                >
-                  <option value="">Choose…</option>
-                  {/* The saved key is offered even when no recent order carried
+                <span className="text-muted-foreground text-xs">
+                  {isFixed(row) ? 'Always' : 'Order field'}
+                </span>
+                {/* Not every variable a template needs is the customer's. A
+                    plank needs OUT_X=200 to reach the finished product size;
+                    without it the template renders at its natural size, which
+                    for one real order was 377mm. */}
+                {isFixed(row) ? (
+                  <Input
+                    value={row.fixed_value ?? ''}
+                    onChange={e => edit(index, { fixed_value: e.target.value })}
+                    placeholder="e.g. 200"
+                  />
+                ) : (
+                  <Select
+                    value={row.property_key}
+                    onChange={e =>
+                      edit(index, {
+                        property_key: e.target.value,
+                        // FIXED_SENTINEL is the dropdown's own entry, never a
+                        // property key - switching mode must not store it.
+                        ...(e.target.value === FIXED_SENTINEL
+                          ? { property_key: '', fixed_value: ' ' }
+                          : {}),
+                      })
+                    }
+                  >
+                    <option value="">Choose…</option>
+                    <option value={FIXED_SENTINEL}>A fixed value…</option>
+                    {/* The saved key is offered even when no recent order carried
                       it. A mapping written before a quiet week would otherwise
                       vanish from its own editor and be silently dropped on the
                       next save. */}
-                  {optionKeys(properties, row.property_key).map(key => (
-                    <option key={key} value={key}>
-                      {labelFor(properties, key)}
-                    </option>
-                  ))}
-                </Select>
+                    {optionKeys(properties, row.property_key).map(key => (
+                      <option key={key} value={key}>
+                        {labelFor(properties, key)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
               </label>
 
               <label className="flex min-w-40 flex-1 flex-col gap-1">
@@ -156,11 +201,17 @@ export function FieldMapEditor({
                   record carry no rose name at all. */}
               <label className="flex w-32 flex-col gap-1">
                 <span className="text-muted-foreground text-xs">If not answered</span>
+                {/* A fixed value is always there, so there is nothing to
+                    decide - disabled rather than hidden, so the columns stay
+                    aligned down the list. */}
                 <Select
-                  value={row.optional === true ? 'optional' : 'required'}
+                  value={
+                    isFixed(row) ? 'required' : row.optional === true ? 'optional' : 'required'
+                  }
+                  disabled={isFixed(row)}
                   onChange={e => edit(index, { optional: e.target.value === 'optional' })}
                 >
-                  <option value="required">Hold the job</option>
+                  <option value="required">{isFixed(row) ? 'always set' : 'Hold the job'}</option>
                   <option value="optional">Leave it out</option>
                 </Select>
               </label>
