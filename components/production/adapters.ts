@@ -63,6 +63,10 @@ export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
     jobNumber: job.job_number,
     description: job.description,
     sku: job.sku ?? null,
+    // 'body' is what every job printing one thing carries, and naming it on
+    // screen would label almost every row with a word that distinguishes
+    // nothing. Only a part that is one OF several is worth saying.
+    partRole: job.part_role && job.part_role !== 'body' ? job.part_role : null,
     qty: job.quantity,
     status: toQueueStatus(job),
     personalisation: toPersonalisation(job.personalisation_status),

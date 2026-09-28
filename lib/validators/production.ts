@@ -70,6 +70,11 @@ export const ProductionJobSchema = z.object({
   // second copy of that rule, and the two would drift.
   is_generated: z.boolean().nullish(),
   variant_title: z.string().nullish(),
+  // Which of its product's design files this job prints - 'body' for almost
+  // every job. A combo's three jobs share a SKU, a customer and a colour, so
+  // without this they read as three identical rows. Nullish so an older
+  // backend that does not send it still renders the queue.
+  part_role: z.string().nullish(),
   // Every custom attribute for this line, verbatim and in the order the
   // customer answered. This is where the two names and the heart count live:
   // personalisation_name joins them into "A & B" and loses the split.

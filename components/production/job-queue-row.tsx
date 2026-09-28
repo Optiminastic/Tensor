@@ -63,6 +63,14 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
           templates and three prices. DNP-BLU, PDNP-BLU and DNPWL-BLU are not. */}
       <TableCell className="font-mono text-sm whitespace-nowrap">
         {job.sku ?? <span className="text-subtle-foreground">—</span>}
+        {/* A combo arrives as several jobs sharing this SKU - a plank, a rose
+            and a keychain - so the SKU alone no longer says what is on the
+            bed. Shown only when there IS more than one. */}
+        {job.partRole ? (
+          <span className="text-subtle-foreground mt-0.5 block font-sans text-xs">
+            {job.partRole}
+          </span>
+        ) : null}
       </TableCell>
       <TableCell>
         {job.description}

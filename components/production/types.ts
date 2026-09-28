@@ -48,6 +48,14 @@ export interface ProductionJobQueueItem {
   // catalogue carried one, and on anything the importer saw without it -
   // which is why the column renders a dash rather than an empty cell.
   sku: string | null
+  /**
+   * Which of its product's design files this job prints, when that is not the
+   * only one. Null for almost every job.
+   *
+   * A combo's three jobs share a SKU, a customer and a colour, so without this
+   * the operator holding one of them cannot tell which it is.
+   */
+  partRole: string | null
   qty: number
   status: QueueStatus
   personalisation: PersonalisationStatus
