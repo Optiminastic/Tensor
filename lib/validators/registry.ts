@@ -306,6 +306,14 @@ export const ProductPartSchema = z.object({
   required: z.number(),
   /** It has a file and at least one mapped field, so it can actually render. */
   ready: z.boolean(),
+  /**
+   * The files this product's SKUs disagree about for this part, when they do.
+   *
+   * DNP's six variants each print from one of three plank templates. The page
+   * used to flatten that to "nothing prints this product yet", so the obvious
+   * next click — choosing a file — silently overwrote all six.
+   */
+  conflicting: z.string().array().nullish(),
 })
 
 export const ImportProductSchema = z.object({

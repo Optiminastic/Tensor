@@ -139,6 +139,7 @@ function TemplateSection({
   const [choice, setChoice] = useState(fields.template_key)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const conflicting = part.conflicting ?? []
 
   async function link(key: string): Promise<void> {
     setError(null)
@@ -161,11 +162,23 @@ function TemplateSection({
       <div className="flex flex-col gap-0.5">
         <h3 className="text-sm font-medium">Design file</h3>
         <p className="text-muted-foreground text-xs">
-          {fields.template_key === ''
-            ? `Nothing prints the ${part.role} yet.`
-            : `Every variant's ${part.role} prints from ${fields.template_key}.`}
+          {conflicting.length > 0
+            ? `This product's SKUs do not agree: their ${part.role} prints from ${conflicting.length} different files.`
+            : fields.template_key === ''
+              ? `Nothing prints the ${part.role} yet.`
+              : `Every variant's ${part.role} prints from ${fields.template_key}.`}
         </p>
       </div>
+
+      {/* Said before the control that would overwrite it, because that is the
+          obvious next click and it takes all of them at once. */}
+      {conflicting.length > 0 ? (
+        <p className="bg-warning-subtle text-warning rounded-md px-3 py-2 text-xs">
+          <span className="font-medium">{conflicting.join(', ')}</span> — choosing one below points
+          every SKU at it. The files they print from now are kept and can be read back, but nothing
+          here will tell you which SKU had which.
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex min-w-56 flex-1 flex-col gap-1">
