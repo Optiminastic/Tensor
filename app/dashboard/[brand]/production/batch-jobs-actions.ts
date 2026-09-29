@@ -16,12 +16,11 @@ import {
   BatchQueueInputSchema,
   BatchReprintInputSchema,
 } from '@/lib/validators/batches'
+import { type BatchableJobs, CustomBatchInputSchema } from '@/lib/validators/custom-batch'
 import type { Machine } from '@/lib/validators/machines'
 import {
-  type BatchableJobs,
   type FailJobResult,
   type ProductionJob,
-  CustomBatchInputSchema,
   FailJobInputSchema,
 } from '@/lib/validators/production'
 import {
@@ -182,17 +181,20 @@ export async function queueBatchToMachineAction(
  * The backend refuses a bed that is printing or has printed, and says which.
  */
 /**
- * Every product waiting to go on a bed, for building one by hand.
+ * The jobs matching a search, for building a bed by hand.
  *
- * Read on demand rather than with the page: the pool changes as beds are
- * planned, and a list fetched when the Batches page loaded would offer products
- * another bed has since claimed.
+ * Read on demand and per keystroke rather than once with the page: the pool is
+ * every job the shop has, it changes as beds are planned, and a list fetched at
+ * page load would offer jobs another bed has since claimed.
  */
-export async function loadBatchableJobs(): Promise<ActionResult<BatchableJobs>> {
+export async function loadBatchableJobs(
+  query: string,
+  bedKey: string,
+): Promise<ActionResult<BatchableJobs>> {
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error }
   try {
-    const jobs = await listBatchableJobs(token)
+    const jobs = await listBatchableJobs(token, { q: query, key: bedKey })
     return { ok: true, data: jobs }
   } catch (err) {
     const message =

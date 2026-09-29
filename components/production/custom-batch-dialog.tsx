@@ -2,7 +2,7 @@
 
 import { Layers, Loader2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 
 import {
   createCustomBatchAction,
@@ -18,11 +18,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import type { BatchableJob } from '@/lib/validators/production'
+import type { BatchableJob } from '@/lib/validators/custom-batch'
 
 interface CustomBatchDialogProps {
   brand: string
 }
+
+/** Long enough that typing a job number is one request, short enough to feel live. */
+const TYPING_PAUSE_MS = 250
 
 /**
  * Building a bed by hand, from named jobs.
@@ -30,91 +33,100 @@ interface CustomBatchDialogProps {
  * The planner decides what shares a plate, and for the ordinary run of planks
  * it decides well. It cannot decide everything: a customer rings up wanting
  * their two planks together, a blue spool is nearly out and should be finished
- * off, a reprint ought to ride along with the order it belongs to. None of
- * those is a rule worth teaching the planner, and all of them are obvious to
- * the person looking at the job.
+ * off, a plank that printed badly ought to ride along with the order it belongs
+ * to. None of those is a rule worth teaching the planner, and all of them are
+ * obvious to the person holding the job number.
  *
- * So the bed is assembled job by job, searched for by the number the floor
- * already uses. This listed unfulfilled ORDERS once, on the reasoning that
- * nobody thinks in job numbers — but an order row cannot say "that one plank of
- * the three", and the case this dialog is opened for is almost always a
- * particular plank rather than a particular customer.
+ * So the bed is assembled job by job, searched for by the number the rest of
+ * the floor already uses. Every job is reachable, not only the ones on an
+ * outstanding order — a shipped order missing a plank and a reprint are exactly
+ * the cases somebody comes here with a number for.
  *
  * The first pick decides the bed. A plate is sliced once against one filament
  * load, so everything after it must share that colour, material and nozzle
- * setup, and the search stops suggesting what cannot join.
+ * setup, and the suggestions narrow to what can join.
  */
 export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Element {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [jobs, setJobs] = useState<BatchableJob[]>([])
+  const [total, setTotal] = useState(0)
+  const [more, setMore] = useState(false)
   const [unitsPerBed, setUnitsPerBed] = useState(5)
   const [minUnits, setMinUnits] = useState(1)
-  const [chosen, setChosen] = useState<string[]>([])
+  // The chosen JOBS, not their ids. The pool behind them is re-read on every
+  // keystroke and a job that no longer matches the search would otherwise drop
+  // out of the bed while somebody was still building it.
+  const [chosen, setChosen] = useState<BatchableJob[]>([])
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
 
-  // Read when the dialog opens, never with the page: the pool changes as beds
-  // are planned, and a list fetched at page load would offer jobs another bed
-  // has since claimed.
-  useEffect(() => {
-    if (!open) return
-    let cancelled = false
-    setLoading(true)
-    setError('')
-    setChosen([])
-    setQuery('')
-
-    void loadBatchableJobs().then(res => {
-      if (cancelled) return
-      setLoading(false)
-      if (!res.ok || !res.data) {
-        setError(res.error ?? 'Could not read the jobs waiting.')
-        return
-      }
-      setJobs(res.data.jobs)
-      setUnitsPerBed(res.data.units_per_bed)
-      setMinUnits(res.data.min_units_per_bed)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [open])
-
-  // In the order they were picked, so the bed reads as it was built and the
-  // first row is visibly the one that set the colour.
-  const chosenJobs = useMemo(
-    () =>
-      chosen
-        .map(id => jobs.find(job => job.job_id === id))
-        .filter((job): job is BatchableJob => job !== undefined),
-    [chosen, jobs],
-  )
-  const placesUsed = chosenJobs.reduce((n, job) => n + job.units, 0)
+  const placesUsed = chosen.reduce((n, job) => n + job.units, 0)
   const bed: BedSoFar = {
-    key: chosenJobs[0]?.compatibility_key ?? '',
-    colour: chosenJobs[0]?.colour_label ?? '',
+    key: chosen[0]?.compatibility_key ?? '',
+    colour: chosen[0]?.colour_label ?? '',
     placesUsed,
     unitsPerBed,
   }
 
+  // A fresh dialog every time. The pool changes as beds are planned, and a bed
+  // half-built in a previous opening is not something to come back to.
+  useEffect(() => {
+    if (!open) return
+    setChosen([])
+    setQuery('')
+    setError('')
+  }, [open])
+
+  // Searched in the backend, so this runs on the term and on the bed's colour.
+  // The pause is what makes typing a job number one request rather than ten.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    setLoading(true)
+
+    const handle = setTimeout(
+      () => {
+        void loadBatchableJobs(query.trim(), bed.key).then(res => {
+          if (cancelled) return
+          setLoading(false)
+          if (!res.ok || !res.data) {
+            setError(res.error ?? 'Could not read the jobs waiting.')
+            return
+          }
+          setJobs(res.data.jobs)
+          setTotal(res.data.total)
+          setMore(res.data.more)
+          setUnitsPerBed(res.data.units_per_bed)
+          setMinUnits(res.data.min_units_per_bed)
+        })
+      },
+      query.trim() === '' ? 0 : TYPING_PAUSE_MS,
+    )
+
+    return () => {
+      cancelled = true
+      clearTimeout(handle)
+    }
+  }, [open, query, bed.key])
+
   function pick(job: BatchableJob): void {
     setError('')
     setQuery('')
-    setChosen(prev => (prev.includes(job.job_id) ? prev : [...prev, job.job_id]))
+    setChosen(prev => (prev.some(j => j.job_id === job.job_id) ? prev : [...prev, job]))
   }
 
   function drop(jobID: string): void {
     setError('')
-    setChosen(prev => prev.filter(id => id !== jobID))
+    setChosen(prev => prev.filter(job => job.job_id !== jobID))
   }
 
   async function create(): Promise<void> {
     setPending(true)
     setError('')
-    const res = await createCustomBatchAction(brand, { job_ids: chosen })
+    const res = await createCustomBatchAction(brand, { job_ids: chosen.map(job => job.job_id) })
     setPending(false)
     if (!res.ok) {
       setError(res.error ?? 'Could not create the batch.')
@@ -138,25 +150,22 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
           <DialogDescription>
             {bed.key
               ? `A ${bed.colour || 'single'} bed — ${placesUsed} of ${unitsPerBed} places used. Only jobs that can share this plate are suggested.`
-              : `Search a job and add it. A plate holds ${unitsPerBed} and prints one colour, so the first job decides what else can go on it.`}
+              : `Search any job by its number. A plate holds ${unitsPerBed} and prints one colour, so the first job decides what else can go on it.`}
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <p className="text-muted-foreground text-sm">Reading the jobs waiting…</p>
-        ) : (
-          <>
-            <ChosenJobs jobs={chosenJobs} onDrop={drop} />
-            <BatchableJobSearch
-              jobs={jobs}
-              chosen={chosen}
-              bed={bed}
-              query={query}
-              onQueryChange={setQuery}
-              onPick={pick}
-            />
-          </>
-        )}
+        <ChosenJobs jobs={chosen} onDrop={drop} />
+        <BatchableJobSearch
+          jobs={jobs}
+          total={total}
+          more={more}
+          chosen={chosen.map(job => job.job_id)}
+          bed={bed}
+          query={query}
+          loading={loading}
+          onQueryChange={setQuery}
+          onPick={pick}
+        />
 
         {error ? (
           <p role="alert" className="text-danger text-sm">
@@ -166,7 +175,7 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground text-xs">
-            {summarise({ chosenJobs, placesUsed, unitsPerBed, minUnits })}
+            {summarise({ chosen, placesUsed, unitsPerBed, minUnits })}
           </span>
           <Button
             type="button"
@@ -230,7 +239,7 @@ function ChosenJobs({ jobs, onDrop }: ChosenJobsProps): JSX.Element | null {
 }
 
 interface SummaryInput {
-  chosenJobs: BatchableJob[]
+  chosen: BatchableJob[]
   placesUsed: number
   unitsPerBed: number
   minUnits: number
@@ -243,22 +252,22 @@ interface SummaryInput {
  * for company before it locks — but saying so here is the difference between
  * that and a bed somebody thinks is on its way to a printer.
  */
-function summarise({ chosenJobs, placesUsed, unitsPerBed, minUnits }: SummaryInput): string {
-  if (chosenJobs.length === 0) return 'Nothing chosen yet'
+function summarise({ chosen, placesUsed, unitsPerBed, minUnits }: SummaryInput): string {
+  if (chosen.length === 0) return 'Nothing chosen yet'
 
   const parts = [
-    `${chosenJobs.length} ${chosenJobs.length === 1 ? 'job' : 'jobs'}, ${placesUsed} of ${unitsPerBed} places`,
+    `${chosen.length} ${chosen.length === 1 ? 'job' : 'jobs'}, ${placesUsed} of ${unitsPerBed} places`,
   ]
   if (placesUsed < minUnits) {
     parts.push(`under ${minUnits}, so it waits for company before it prints`)
   }
   // Counted by bed rather than by plank: two jobs off one bed rebuild one bed.
   const rebuilt = new Set(
-    chosenJobs.filter(job => job.bed_locked && job.on_bed !== '').map(job => job.on_bed),
+    chosen.filter(job => job.bed_locked && job.on_bed !== '').map(job => job.on_bed),
   ).size
   if (rebuilt > 0) parts.push(`rebuilds ${rebuilt} locked ${rebuilt === 1 ? 'bed' : 'beds'}`)
 
-  const reprinting = chosenJobs.filter(job => job.reprint).reduce((n, job) => n + job.units, 0)
+  const reprinting = chosen.filter(job => job.reprint).reduce((n, job) => n + job.units, 0)
   if (reprinting > 0) {
     parts.push(
       `${reprinting} already printed, ${reprinting === 1 ? 'a second one' : 'second copies'} will be made`,

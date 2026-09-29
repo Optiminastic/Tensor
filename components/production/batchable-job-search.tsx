@@ -1,10 +1,10 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 import type { JSX } from 'react'
 
 import { Input } from '@/components/ui/input'
-import type { BatchableJob } from '@/lib/validators/production'
+import type { BatchableJob } from '@/lib/validators/custom-batch'
 
 /**
  * The bed as it stands, which is what decides whether a job may still join it.
@@ -21,44 +21,46 @@ export interface BedSoFar {
 
 interface BatchableJobSearchProps {
   jobs: BatchableJob[]
+  /** How many matched in the backend, which can exceed what was returned. */
+  total: number
+  /** The search hit the backend's ceiling, so `total` is a floor. */
+  more: boolean
   chosen: string[]
   bed: BedSoFar
   query: string
+  loading: boolean
   onQueryChange: (query: string) => void
   onPick: (job: BatchableJob) => void
 }
-
-/** Enough to show there is a pool without turning the dialog into a list. */
-const BROWSE_LIMIT = 8
-const SEARCH_LIMIT = 25
 
 /**
  * Finding the plank you mean, by the number the floor calls it.
  *
  * Typed, not browsed. Somebody opens this because a named job has to go on a
- * plate now — a customer rang, a reprint belongs with its order, a spool is
- * nearly out — and the job number is what the queue, the issues board and the
- * plate itself all call that plank.
+ * plate — a customer rang, a plank printed badly, a spool is nearly out — and
+ * the job number is what the queue, the issues board and the plate itself all
+ * call that plank. The matching happens in the backend, over every job the shop
+ * has, so a job from a shipped order is as reachable as one waiting.
  *
  * The first pick decides the bed. A plate is sliced once against one filament
  * load, so everything after it must share that colour, material and nozzle
- * setup. While browsing, jobs that cannot join are simply not suggested. While
+ * setup. While browsing, jobs that cannot join are not suggested at all. While
  * SEARCHING they are shown, greyed, with the reason: a search for JOB-1000008
  * that returns nothing cannot tell "wrong colour" from "no such job", and the
  * person typing it has asked a direct question about that plank.
  */
 export function BatchableJobSearch({
   jobs,
+  total,
+  more,
   chosen,
   bed,
   query,
+  loading,
   onQueryChange,
   onPick,
 }: BatchableJobSearchProps): JSX.Element {
-  const searching = query.trim() !== ''
-  const matched = jobs.filter(job => !chosen.includes(job.job_id) && matches(job, query))
-  const offered = searching ? matched : matched.filter(job => blockedFor(job, bed) === null)
-  const shown = offered.slice(0, searching ? SEARCH_LIMIT : BROWSE_LIMIT)
+  const offered = jobs.filter(job => !chosen.includes(job.job_id))
 
   return (
     <div className="flex flex-col gap-2">
@@ -67,35 +69,43 @@ export function BatchableJobSearch({
         <Input
           value={query}
           onChange={e => onQueryChange(e.target.value)}
-          placeholder="Search a job number, order or product"
+          placeholder="Search any job number, order or product"
           aria-label="Search jobs to add to this bed"
           className="pl-8"
         />
+        {loading ? (
+          <Loader2 className="text-muted-foreground absolute right-2.5 size-3.5 animate-spin" />
+        ) : null}
       </label>
 
-      {shown.length === 0 ? (
+      {offered.length === 0 ? (
         <p className="text-muted-foreground border-border rounded-md border p-4 text-center text-sm">
-          {searching
-            ? `No job matches “${query.trim()}”.`
-            : bed.key
-              ? 'No other job outstanding can share this bed.'
-              : 'Nothing is outstanding. Every unfulfilled order has been printed.'}
+          {emptyNote(query, bed, loading)}
         </p>
       ) : (
         <ul className="border-border max-h-72 overflow-y-auto rounded-md border">
-          {shown.map(job => (
+          {offered.map(job => (
             <JobRow key={job.job_id} job={job} blocked={blockedFor(job, bed)} onPick={onPick} />
           ))}
         </ul>
       )}
 
-      {offered.length > shown.length ? (
+      {total > jobs.length ? (
         <p className="text-subtle-foreground text-xs">
-          Showing {shown.length} of {offered.length}. Type a job or order number to narrow it.
+          Showing {jobs.length} of {total}
+          {more ? '+' : ''}. Type a job or order number to narrow it.
         </p>
       ) : null}
     </div>
   )
+}
+
+/** What to say when the search comes back with nothing. */
+function emptyNote(query: string, bed: BedSoFar, loading: boolean): string {
+  if (loading) return 'Searching…'
+  if (query.trim() !== '') return `No job matches “${query.trim()}”.`
+  if (bed.key !== '') return 'No other job can share this bed. Search one by number to see why.'
+  return 'No job is waiting. Search one by number to put it on a bed anyway.'
 }
 
 interface JobRowProps {
@@ -165,19 +175,4 @@ function blockedFor(job: BatchableJob, bed: BedSoFar): string | null {
     return `no room — ${bed.placesUsed} of ${bed.unitsPerBed} places used`
   }
   return null
-}
-
-/**
- * Whether a typed query names this job.
- *
- * The job number first, because that is what this box is for, but the order
- * number and product too: somebody holding a customer's order number should not
- * have to translate it into job numbers before they can search.
- */
-function matches(job: BatchableJob, query: string): boolean {
-  const needle = query.trim().toLowerCase()
-  if (needle === '') return true
-  return [job.job_number, job.order_number, job.product, job.colour_label].some(field =>
-    field.toLowerCase().includes(needle),
-  )
 }

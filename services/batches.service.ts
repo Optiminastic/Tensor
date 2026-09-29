@@ -30,10 +30,9 @@ import {
 import {
   type BatchableJobs,
   type CustomBatchInput,
-  type ProductionJob,
   BatchableJobsSchema,
-  ProductionJobSchema,
-} from '@/lib/validators/production'
+} from '@/lib/validators/custom-batch'
+import { type ProductionJob, ProductionJobSchema } from '@/lib/validators/production'
 
 const log = createLogger('BatchService')
 const TIMEOUT_MS = 15_000
@@ -347,16 +346,35 @@ export async function fetchBatchPreview(token: string, id: string): Promise<Resp
   return response
 }
 
+/** What the custom-batch dialog is asking for: a term, and the bed so far. */
+export interface BatchableJobSearch {
+  q: string
+  key: string
+}
+
 /**
- * Every plank on an unfulfilled order, for the hand-built bed's search.
+ * The jobs matching a search, for the hand-built bed's picker.
  *
  * Includes the ones that cannot be bedded right now, each carrying its reason:
  * somebody who types a job number has asked about that plank, and a search that
  * finds nothing cannot tell "not eligible" from "not a job".
  */
-export async function listBatchableJobs(token: string): Promise<BatchableJobs> {
-  return call('/batches/batchable-jobs', { headers: jsonHeaders(token) }, data =>
-    BatchableJobsSchema.parse(data),
+export async function listBatchableJobs(
+  token: string,
+  search: BatchableJobSearch,
+): Promise<BatchableJobs> {
+  const params = new URLSearchParams()
+  if (search.q !== '') params.set('q', search.q)
+  // The bed's colour narrows the BROWSE list only. A search is a question about
+  // a named plank and is answered whatever the answer is, so the dialog can say
+  // "wrong colour" rather than "no such job".
+  if (search.q === '' && search.key !== '') params.set('key', search.key)
+  const query = params.toString()
+
+  return call(
+    `/batches/batchable-jobs${query === '' ? '' : `?${query}`}`,
+    { headers: jsonHeaders(token) },
+    data => BatchableJobsSchema.parse(data),
   )
 }
 
