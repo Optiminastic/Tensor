@@ -465,18 +465,25 @@ export type FilamentSyncResult = z.infer<typeof FilamentSyncResultSchema>
  * gold one and those cannot share a plate. Two rows for that order is honest
  * and rare.
  */
-export const BatchableOrderSchema = z.object({
-  order_number: z.string(),
-  job_ids: z
+/**
+ * One plank waiting, as the custom-batch search offers it.
+ *
+ * Jobs, not orders. The dialog used to list orders on the reasoning that a
+ * person building a bed thinks in customers; the shop asked for job numbers,
+ * because a named plank is what actually has to go on a plate, and an order row
+ * cannot say "that one of the three".
+ */
+export const BatchableJobSchema = z.object({
+  job_id: z.string(),
+  job_number: z.string(),
+  order_number: z
     .string()
-    .array()
     .nullish()
-    .transform(v => v ?? []),
-  products: z
+    .transform(v => v ?? ''),
+  product: z
     .string()
-    .array()
     .nullish()
-    .transform(v => v ?? []),
+    .transform(v => v ?? ''),
   units: z.number(),
   /**
    * Opaque, from the backend: two rows may share a bed exactly when theirs
@@ -514,16 +521,25 @@ export const BatchableOrderSchema = z.object({
     .nullish()
     .transform(v => v ?? ''),
 })
-export type BatchableOrder = z.infer<typeof BatchableOrderSchema>
+export type BatchableJob = z.infer<typeof BatchableJobSchema>
 
-export const BatchableOrdersSchema = z.object({
-  orders: BatchableOrderSchema.array()
+export const BatchableJobsSchema = z.object({
+  jobs: BatchableJobSchema.array()
     .nullish()
     .transform(v => v ?? []),
   /** How many products one plate holds, so the dialog counts places. */
   units_per_bed: z.number(),
+  /**
+   * How few a bed may hold and still be worth a machine-hour. A smaller bed can
+   * still be built — it simply waits for company before it locks — so this is
+   * shown as a note, never as a refusal.
+   */
+  min_units_per_bed: z
+    .number()
+    .nullish()
+    .transform(v => v ?? 1),
 })
-export type BatchableOrders = z.infer<typeof BatchableOrdersSchema>
+export type BatchableJobs = z.infer<typeof BatchableJobsSchema>
 
 export const CustomBatchInputSchema = z.object({
   job_ids: z.string().array().min(1, 'Choose at least one product for this bed.'),

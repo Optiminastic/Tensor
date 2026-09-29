@@ -18,7 +18,7 @@ import {
 } from '@/lib/validators/batches'
 import type { Machine } from '@/lib/validators/machines'
 import {
-  type BatchableOrders,
+  type BatchableJobs,
   type FailJobResult,
   type ProductionJob,
   CustomBatchInputSchema,
@@ -188,7 +188,7 @@ export async function queueBatchToMachineAction(
  * planned, and a list fetched when the Batches page loaded would offer products
  * another bed has since claimed.
  */
-export async function loadBatchableJobs(): Promise<ActionResult<BatchableOrders>> {
+export async function loadBatchableJobs(): Promise<ActionResult<BatchableJobs>> {
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error }
   try {
@@ -196,7 +196,7 @@ export async function loadBatchableJobs(): Promise<ActionResult<BatchableOrders>
     return { ok: true, data: jobs }
   } catch (err) {
     const message =
-      err instanceof BatchServiceError ? err.message : 'Could not read the orders waiting.'
+      err instanceof BatchServiceError ? err.message : 'Could not read the jobs waiting.'
     return { ok: false, error: message }
   }
 }

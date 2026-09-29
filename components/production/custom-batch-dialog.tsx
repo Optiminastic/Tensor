@@ -1,6 +1,6 @@
 'use client'
 
-import { Layers, Loader2 } from 'lucide-react'
+import { Layers, Loader2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type JSX } from 'react'
 
@@ -8,6 +8,7 @@ import {
   createCustomBatchAction,
   loadBatchableJobs,
 } from '@/app/dashboard/[brand]/production/batch-jobs-actions'
+import { BatchableJobSearch, type BedSoFar } from '@/components/production/batchable-job-search'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -17,43 +18,46 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import type { BatchableOrder } from '@/lib/validators/production'
+import type { BatchableJob } from '@/lib/validators/production'
 
 interface CustomBatchDialogProps {
   brand: string
 }
 
 /**
- * Building a bed by hand, from the orders waiting.
+ * Building a bed by hand, from named jobs.
  *
  * The planner decides what shares a plate, and for the ordinary run of planks
  * it decides well. It cannot decide everything: a customer rings up wanting
  * their two planks together, a blue spool is nearly out and should be finished
  * off, a reprint ought to ride along with the order it belongs to. None of
  * those is a rule worth teaching the planner, and all of them are obvious to
- * the person looking at the orders.
+ * the person looking at the job.
  *
- * So the list is ORDERS. The job is what goes on the plate and is what gets
- * sent, but nobody building a bed thinks in job numbers — they think "these
- * four customers are waiting", and a list of JOB-1000008 makes them translate.
+ * So the bed is assembled job by job, searched for by the number the floor
+ * already uses. This listed unfulfilled ORDERS once, on the reasoning that
+ * nobody thinks in job numbers — but an order row cannot say "that one plank of
+ * the three", and the case this dialog is opened for is almost always a
+ * particular plank rather than a particular customer.
  *
  * The first pick decides the bed. A plate is sliced once against one filament
  * load, so everything after it must share that colour, material and nozzle
- * setup — and rather than letting somebody choose a second colour and then
- * refusing them, the orders that cannot join stop being offered.
+ * setup, and the search stops suggesting what cannot join.
  */
 export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Element {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [orders, setOrders] = useState<BatchableOrder[]>([])
-  const [unitsPerBed, setUnitsPerBed] = useState(4)
+  const [jobs, setJobs] = useState<BatchableJob[]>([])
+  const [unitsPerBed, setUnitsPerBed] = useState(5)
+  const [minUnits, setMinUnits] = useState(1)
   const [chosen, setChosen] = useState<string[]>([])
+  const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
 
   // Read when the dialog opens, never with the page: the pool changes as beds
-  // are planned, and a list fetched at page load would offer orders another bed
+  // are planned, and a list fetched at page load would offer jobs another bed
   // has since claimed.
   useEffect(() => {
     if (!open) return
@@ -61,48 +65,56 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
     setLoading(true)
     setError('')
     setChosen([])
+    setQuery('')
 
     void loadBatchableJobs().then(res => {
       if (cancelled) return
       setLoading(false)
       if (!res.ok || !res.data) {
-        setError(res.error ?? 'Could not read the orders waiting.')
+        setError(res.error ?? 'Could not read the jobs waiting.')
         return
       }
-      setOrders(res.data.orders)
+      setJobs(res.data.jobs)
       setUnitsPerBed(res.data.units_per_bed)
+      setMinUnits(res.data.min_units_per_bed)
     })
     return () => {
       cancelled = true
     }
   }, [open])
 
-  const chosenOrders = useMemo(
-    () => orders.filter(o => chosen.includes(rowKey(o))),
-    [orders, chosen],
+  // In the order they were picked, so the bed reads as it was built and the
+  // first row is visibly the one that set the colour.
+  const chosenJobs = useMemo(
+    () =>
+      chosen
+        .map(id => jobs.find(job => job.job_id === id))
+        .filter((job): job is BatchableJob => job !== undefined),
+    [chosen, jobs],
   )
-  const bedKey = chosenOrders[0]?.compatibility_key ?? ''
-  const placesUsed = chosenOrders.reduce((n, o) => n + o.units, 0)
-  const available = orders.filter(o => o.available).length
-  // Counted by bed rather than by plank: two orders off one bed rebuild one bed.
-  const movingOffLocked = new Set(
-    chosenOrders.filter(o => o.bed_locked && o.on_bed).map(o => o.on_bed),
-  ).size
-  const reprinting = chosenOrders.filter(o => o.reprint).reduce((n, o) => n + o.units, 0)
+  const placesUsed = chosenJobs.reduce((n, job) => n + job.units, 0)
+  const bed: BedSoFar = {
+    key: chosenJobs[0]?.compatibility_key ?? '',
+    colour: chosenJobs[0]?.colour_label ?? '',
+    placesUsed,
+    unitsPerBed,
+  }
 
-  function toggle(order: BatchableOrder): void {
+  function pick(job: BatchableJob): void {
     setError('')
-    const key = rowKey(order)
-    setChosen(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]))
+    setQuery('')
+    setChosen(prev => (prev.includes(job.job_id) ? prev : [...prev, job.job_id]))
+  }
+
+  function drop(jobID: string): void {
+    setError('')
+    setChosen(prev => prev.filter(id => id !== jobID))
   }
 
   async function create(): Promise<void> {
     setPending(true)
     setError('')
-    // The orders are what was chosen; the jobs underneath are what prints, and
-    // they are the jobs that already exist rather than copies of them.
-    const jobIds = chosenOrders.flatMap(o => o.job_ids)
-    const res = await createCustomBatchAction(brand, { job_ids: jobIds })
+    const res = await createCustomBatchAction(brand, { job_ids: chosen })
     setPending(false)
     if (!res.ok) {
       setError(res.error ?? 'Could not create the batch.')
@@ -124,23 +136,26 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
         <DialogHeader>
           <DialogTitle>Build a bed by hand</DialogTitle>
           <DialogDescription>
-            {bedKey
-              ? `A ${chosenOrders[0]?.colour_label || 'single'} bed — ${placesUsed} of ${unitsPerBed} places used. Only orders that can share this plate are shown.`
-              : `Every unfulfilled order whose model is ready. ${available} of ${orders.length} can go on a bed; the rest say why not. A plate holds ${unitsPerBed} and prints one colour, so the first pick decides what else can go on.`}
+            {bed.key
+              ? `A ${bed.colour || 'single'} bed — ${placesUsed} of ${unitsPerBed} places used. Only jobs that can share this plate are suggested.`
+              : `Search a job and add it. A plate holds ${unitsPerBed} and prints one colour, so the first job decides what else can go on it.`}
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <p className="text-muted-foreground text-sm">Reading the orders…</p>
+          <p className="text-muted-foreground text-sm">Reading the jobs waiting…</p>
         ) : (
-          <OrderPicker
-            orders={orders}
-            chosen={chosen}
-            bedKey={bedKey}
-            placesUsed={placesUsed}
-            unitsPerBed={unitsPerBed}
-            onToggle={toggle}
-          />
+          <>
+            <ChosenJobs jobs={chosenJobs} onDrop={drop} />
+            <BatchableJobSearch
+              jobs={jobs}
+              chosen={chosen}
+              bed={bed}
+              query={query}
+              onQueryChange={setQuery}
+              onPick={pick}
+            />
+          </>
         )}
 
         {error ? (
@@ -151,15 +166,7 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground text-xs">
-            {chosen.length === 0
-              ? 'Nothing chosen yet'
-              : `${chosen.length} ${chosen.length === 1 ? 'order' : 'orders'}, ${placesUsed} of ${unitsPerBed} places`}
-            {movingOffLocked > 0
-              ? ` — rebuilds ${movingOffLocked} locked ${movingOffLocked === 1 ? 'bed' : 'beds'}`
-              : ''}
-            {reprinting > 0
-              ? ` — ${reprinting} already printed, ${reprinting === 1 ? 'a second one' : 'second copies'} will be made`
-              : ''}
+            {summarise({ chosenJobs, placesUsed, unitsPerBed, minUnits })}
           </span>
           <Button
             type="button"
@@ -175,128 +182,87 @@ export function CustomBatchDialog({ brand }: CustomBatchDialogProps): JSX.Elemen
   )
 }
 
-interface OrderPickerProps {
-  orders: BatchableOrder[]
-  chosen: string[]
-  bedKey: string
-  placesUsed: number
-  unitsPerBed: number
-  onToggle: (order: BatchableOrder) => void
+interface ChosenJobsProps {
+  jobs: BatchableJob[]
+  onDrop: (jobID: string) => void
 }
 
-function OrderPicker({
-  orders,
-  chosen,
-  bedKey,
-  placesUsed,
-  unitsPerBed,
-  onToggle,
-}: OrderPickerProps): JSX.Element {
-  // Two different kinds of "cannot pick this", shown two different ways.
-  //
-  // Colour: once the bed has one, everything that cannot share it is HIDDEN. A
-  // greyed row would invite working out why, and the answer — this bed is blue
-  // now — is already in the header.
-  //
-  // Availability: those stay VISIBLE, greyed, with the reason. Somebody opens
-  // this having just counted their unfulfilled orders, and quietly showing a
-  // fifth of them answers that with a shrug.
-  const offered = bedKey
-    ? orders.filter(o => o.compatibility_key === bedKey || !o.available)
-    : orders
-
-  if (orders.length === 0) {
-    return (
-      <p className="text-muted-foreground py-6 text-center text-sm">
-        Nothing is outstanding. Every unfulfilled order has been printed.
-      </p>
-    )
-  }
-
+/**
+ * The bed as it stands.
+ *
+ * Above the search rather than below it, because once two or three jobs are on
+ * it this is the thing being worked on and the search is the tool. The first
+ * row is marked: it is the one that fixed the colour, and dropping it frees the
+ * bed to become another.
+ */
+function ChosenJobs({ jobs, onDrop }: ChosenJobsProps): JSX.Element | null {
+  if (jobs.length === 0) return null
   return (
-    <div className="border-border max-h-80 overflow-y-auto rounded-md border">
-      {offered.map(order => {
-        const key = rowKey(order)
-        const picked = chosen.includes(key)
-        // Full means full: a bed with three of four places cannot take an order
-        // of two, and offering it only to refuse on create wastes the click.
-        const wouldOverflow = !picked && placesUsed + order.units > unitsPerBed
-        const blocked = !order.available || wouldOverflow
-        return (
-          <label
-            key={key}
-            className={`border-border flex items-center gap-3 border-b p-2 text-sm last:border-b-0 ${
-              blocked ? 'opacity-50' : 'hover:bg-surface-muted cursor-pointer'
-            }`}
+    <ul className="border-border bg-surface-muted flex flex-col rounded-md border">
+      {jobs.map((job, index) => (
+        <li
+          key={job.job_id}
+          className="border-border flex items-center gap-3 border-b p-2 text-sm last:border-b-0"
+        >
+          <span className="font-mono text-xs tabular-nums">{job.job_number}</span>
+          <span className="min-w-0 flex-1 truncate">{job.product || 'Untitled product'}</span>
+          <span className="text-muted-foreground text-xs">#{job.order_number}</span>
+          <span className="text-muted-foreground text-xs">
+            {job.colour_label}
+            {index === 0 ? ' · sets the bed' : ''}
+          </span>
+          {job.units > 1 ? (
+            <span className="font-mono text-xs tabular-nums">×{job.units}</span>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={`Remove ${job.job_number} from this bed`}
+            onClick={() => onDrop(job.job_id)}
           >
-            <input
-              type="checkbox"
-              checked={picked}
-              disabled={blocked}
-              onChange={() => onToggle(order)}
-              aria-label={`Add order ${order.order_number} to this bed`}
-            />
-            <span className="font-mono text-xs tabular-nums">{order.order_number}</span>
-            <span className="min-w-0 flex-1 truncate">{describe(order)}</span>
-            <span className="text-muted-foreground text-xs">{order.colour_label}</span>
-            {order.units > 1 ? (
-              <span className="font-mono text-xs tabular-nums">×{order.units}</span>
-            ) : null}
-            {!order.available ? (
-              <span className="text-subtle-foreground text-xs">
-                {order.unavailable_reason}
-                {order.on_bed ? ` ${order.on_bed}` : ''}
-              </span>
-            ) : order.reprint ? (
-              // Already printed. Where it actually is matters more than that it
-              // can be picked: "waiting for QC" is usually the real answer to
-              // why the order is still open, and a second plank is a deliberate
-              // choice rather than the obvious one.
-              <span className="text-warning text-xs">
-                {order.finished_stage} — picking it reprints
-              </span>
-            ) : order.on_bed ? (
-              <span
-                className={
-                  order.bed_locked ? 'text-warning text-xs' : 'text-subtle-foreground text-xs'
-                }
-              >
-                {order.bed_locked ? `moves off locked ${order.on_bed}` : `on ${order.on_bed}`}
-              </span>
-            ) : null}
-          </label>
-        )
-      })}
-      {/* Counts only what could still be added, so a list full of greyed rows
-          does not read as "there is more to pick". */}
-      {bedKey && offered.filter(o => o.available && !chosen.includes(rowKey(o))).length === 0 ? (
-        <p className="text-muted-foreground p-3 text-center text-xs">
-          No other order outstanding matches this bed.
-        </p>
-      ) : null}
-    </div>
+            <X className="size-3.5" aria-hidden />
+          </Button>
+        </li>
+      ))}
+    </ul>
   )
 }
 
-/**
- * A row's identity: the order AND its colour.
- *
- * One order appears twice when it holds two colours, because those cannot share
- * a plate — so the order number alone would collapse two distinct rows into one
- * and tick both when either was chosen.
- */
-function rowKey(order: BatchableOrder): string {
-  return `${order.order_number}:${order.compatibility_key}`
+interface SummaryInput {
+  chosenJobs: BatchableJob[]
+  placesUsed: number
+  unitsPerBed: number
+  minUnits: number
 }
 
 /**
- * What the order is for, in one line.
+ * The line under the bed: what it holds and what choosing it costs.
  *
- * Several planks of the same product read as one name rather than the name
- * three times; a genuinely mixed order names each.
+ * A bed under the floor is not refused — it can be built and will simply wait
+ * for company before it locks — but saying so here is the difference between
+ * that and a bed somebody thinks is on its way to a printer.
  */
-function describe(order: BatchableOrder): string {
-  const named = order.products.filter(Boolean)
-  if (named.length === 0) return 'Untitled product'
-  return [...new Set(named)].join(', ')
+function summarise({ chosenJobs, placesUsed, unitsPerBed, minUnits }: SummaryInput): string {
+  if (chosenJobs.length === 0) return 'Nothing chosen yet'
+
+  const parts = [
+    `${chosenJobs.length} ${chosenJobs.length === 1 ? 'job' : 'jobs'}, ${placesUsed} of ${unitsPerBed} places`,
+  ]
+  if (placesUsed < minUnits) {
+    parts.push(`under ${minUnits}, so it waits for company before it prints`)
+  }
+  // Counted by bed rather than by plank: two jobs off one bed rebuild one bed.
+  const rebuilt = new Set(
+    chosenJobs.filter(job => job.bed_locked && job.on_bed !== '').map(job => job.on_bed),
+  ).size
+  if (rebuilt > 0) parts.push(`rebuilds ${rebuilt} locked ${rebuilt === 1 ? 'bed' : 'beds'}`)
+
+  const reprinting = chosenJobs.filter(job => job.reprint).reduce((n, job) => n + job.units, 0)
+  if (reprinting > 0) {
+    parts.push(
+      `${reprinting} already printed, ${reprinting === 1 ? 'a second one' : 'second copies'} will be made`,
+    )
+  }
+  return parts.join(' — ')
 }

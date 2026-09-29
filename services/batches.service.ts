@@ -28,10 +28,10 @@ import {
   PrintBatchResultSchema,
 } from '@/lib/validators/batches'
 import {
-  type BatchableOrders,
+  type BatchableJobs,
   type CustomBatchInput,
   type ProductionJob,
-  BatchableOrdersSchema,
+  BatchableJobsSchema,
   ProductionJobSchema,
 } from '@/lib/validators/production'
 
@@ -348,14 +348,15 @@ export async function fetchBatchPreview(token: string, id: string): Promise<Resp
 }
 
 /**
- * Every product eligible to be put on a bed by hand.
+ * Every plank on an unfulfilled order, for the hand-built bed's search.
  *
- * The same pool the planner draws from, so a job it would refuse — held,
- * flagged, personalisation unresolved — is not offered here either.
+ * Includes the ones that cannot be bedded right now, each carrying its reason:
+ * somebody who types a job number has asked about that plank, and a search that
+ * finds nothing cannot tell "not eligible" from "not a job".
  */
-export async function listBatchableJobs(token: string): Promise<BatchableOrders> {
+export async function listBatchableJobs(token: string): Promise<BatchableJobs> {
   return call('/batches/batchable-jobs', { headers: jsonHeaders(token) }, data =>
-    BatchableOrdersSchema.parse(data),
+    BatchableJobsSchema.parse(data),
   )
 }
 
