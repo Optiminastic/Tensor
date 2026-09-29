@@ -288,6 +288,11 @@ export interface BatchRecord {
   // pick up. Both null on a healthy batch.
   sliceError: string | null
   printError: string | null
+  /**
+   * True when Tensor queues locked beds on its own. The Queue button is then
+   * shown only for a bed the dispatcher could not send - see printError.
+   */
+  autoQueue: boolean
   packingStrategy: string | null
   jobsCount: number | null
   /**

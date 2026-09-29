@@ -32,6 +32,13 @@ export const BatchSchema = z.object({
   // Distinct from plate_slice_error: that one means there is no print file,
   // this one means there is a file nothing will pick up.
   print_error: z.string().nullish(),
+  /**
+   * Whether Tensor sends a locked bed to a printer by itself. From the backend
+   * because it is a server flag the browser cannot see; absent on an older API,
+   * where treating it as off keeps the Queue button visible rather than hiding
+   * the only way to send a bed.
+   */
+  auto_queue: z.boolean().nullish(),
   // BambuBuddy's queue item, present once the plate was accepted.
   queue_item_id: z.number().nullish(),
   created_at: z.string(),

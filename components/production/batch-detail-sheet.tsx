@@ -135,6 +135,8 @@ function BatchDetailSheetContent({ brand, data }: { brand: string; data: Loaded 
         brand={brand}
         batchId={batch.id}
         status={batch.status}
+        autoQueue={batch.autoQueue}
+        printError={batch.printError}
         alreadyQueued={batch.queueItemId !== null}
       />
     </>

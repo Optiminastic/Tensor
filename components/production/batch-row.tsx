@@ -114,6 +114,8 @@ export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
             brand={brand}
             batchId={batch.id}
             status={batch.status}
+            autoQueue={batch.autoQueue}
+            printError={batch.printError}
             alreadyQueued={batch.queueItemId !== null}
             compact
           />

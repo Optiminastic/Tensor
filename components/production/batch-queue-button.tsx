@@ -14,6 +14,13 @@ interface BatchQueueButtonProps {
   status: BatchStatus
   /** True once the bed is in BambuBuddy's queue - it must not be sent twice. */
   alreadyQueued: boolean
+  /** True when Tensor sends locked beds to printers on its own. */
+  autoQueue: boolean
+  /**
+   * Why the dispatcher could not send this bed, or null when nothing is wrong.
+   * The one thing that brings the button back on an automatic floor.
+   */
+  printError: string | null
   /** Tighter rendering for a dense table row. */
   compact?: boolean
 }
@@ -48,6 +55,8 @@ export function BatchQueueButton({
   batchId,
   status,
   alreadyQueued,
+  autoQueue,
+  printError,
   compact = false,
 }: BatchQueueButtonProps): JSX.Element | null {
   const router = useRouter()
@@ -92,6 +101,7 @@ export function BatchQueueButton({
   // disabled control for a bed that is already printing says more than hiding
   // it: the row still shows why there is no button.
   if (status === 'completed') return null
+
   if (alreadyQueued || status === 'in_progress') {
     return (
       <div onClick={stopRowClick}>
@@ -106,6 +116,23 @@ export function BatchQueueButton({
           {status === 'in_progress' ? 'Printing' : 'Queued'}
         </Button>
       </div>
+    )
+  }
+
+  // On an automatic floor the button is not work, it is noise - and worse, it
+  // invites a second send of a bed already on its way. So a locked bed the
+  // dispatcher is handling shows a line saying so, and the control comes back
+  // only when the dispatcher has recorded a reason it could not send.
+  //
+  // A DRAFT keeps its button either way. Automatic locking happens only when a
+  // bed is full or carries a priority job, so a half-empty one waits for
+  // company indefinitely by design - and "lock it anyway" is a person's call,
+  // the one this button has always been for.
+  if (autoQueue && printError === null && !isDraft && !pending && error === '' && chose === '') {
+    return (
+      <span className={`text-muted-foreground text-xs ${compact ? 'text-right' : ''}`}>
+        Queues itself
+      </span>
     )
   }
 

@@ -277,6 +277,7 @@ export function toBatchRecord(batch: Batch): BatchRecord {
     queueItemId: batch.queue_item_id ?? null,
     sliceError: batch.plate_slice_error ?? null,
     printError: batch.print_error ?? null,
+    autoQueue: batch.auto_queue ?? false,
     packingStrategy: batch.packing_strategy ?? null,
     jobsCount: batch.jobs_count ?? null,
     orderNumbers: batch.order_numbers ?? [],
