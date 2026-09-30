@@ -2,6 +2,9 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
+  type SKUPipelines,
+  type SKUPipelineWriteInput,
+  SKUPipelinesSchema,
   type BomLine,
   BomLineSchema,
   type DesignTemplate,
@@ -319,5 +322,36 @@ export async function importShopifyProduct(
     `/brands/${encodeURIComponent(brandSlug)}/shopify-products/import`,
     { method: 'POST', headers: jsonHeaders(token), body: JSON.stringify(input) },
     data => ImportProductResultSchema.parse(data),
+  )
+}
+
+/**
+ * Every SKU with the slicer pipeline it prints with, plus the pipelines on
+ * offer.
+ *
+ * One read for the whole table: sixty-odd SKUs, and the page shows all of them.
+ */
+export async function listSKUPipelines(token: string): Promise<SKUPipelines> {
+  return call('/registry/sku-pipelines', { headers: jsonHeaders(token) }, data =>
+    SKUPipelinesSchema.parse(data),
+  )
+}
+
+/**
+ * Saves a SET of mappings at once.
+ *
+ * A set rather than a row, because mapping twenty SKUs to one pipeline is the
+ * job this page exists for and twenty requests could each fail on their own.
+ * Returns the whole table back, so the page renders what was actually stored
+ * rather than what it hoped it stored.
+ */
+export async function saveSKUPipelines(
+  token: string,
+  input: SKUPipelineWriteInput,
+): Promise<SKUPipelines> {
+  return call(
+    '/registry/sku-pipelines',
+    { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify(input) },
+    data => SKUPipelinesSchema.parse(data),
   )
 }

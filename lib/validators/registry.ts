@@ -361,3 +361,78 @@ export type FieldMapWriteInput = z.infer<typeof FieldMapWriteSchema>
 export type ProductDesignWriteInput = z.infer<typeof ProductDesignWriteSchema>
 export type ImportProductInput = z.infer<typeof ImportProductSchema>
 export type ImportProductResult = z.infer<typeof ImportProductResultSchema>
+
+/**
+ * One SKU and the slicer pipeline it prints with, per machine class.
+ *
+ * Keyed on the SKU string rather than a variant id, because the registry's
+ * variants do not hold the SKUs that actually print — the live DNP variants
+ * carry none at all — so the backend lists every SKU it can see: the
+ * registry's, the ones on jobs, and the ones already mapped.
+ */
+export const SKUPipelineChoiceSchema = z.object({
+  pipeline_id: z.number(),
+  pipeline_name: z.string(),
+  /** The mapped pipeline is gone from BambuBuddy; this bed would refuse to slice. */
+  missing: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
+})
+export type SKUPipelineChoice = z.infer<typeof SKUPipelineChoiceSchema>
+
+export const SKUPipelineRowSchema = z.object({
+  sku: z.string(),
+  product_code: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  product_name: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  /** Keyed by machine family: {"H2C": {...}}. Absent means the class default. */
+  pipelines: z
+    .record(z.string(), SKUPipelineChoiceSchema)
+    .nullish()
+    .transform(v => v ?? {}),
+})
+export type SKUPipelineRow = z.infer<typeof SKUPipelineRowSchema>
+
+export const PipelineOptionSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  /** The class this pipeline targets. A P2S one must not be offered for H2C. */
+  machine_family: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+})
+export type PipelineOption = z.infer<typeof PipelineOptionSchema>
+
+export const SKUPipelinesSchema = z.object({
+  skus: SKUPipelineRowSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  pipelines: PipelineOptionSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  families: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+})
+export type SKUPipelines = z.infer<typeof SKUPipelinesSchema>
+
+export const SKUPipelineWriteSchema = z.object({
+  sku: z.string().min(1).max(128),
+  machine_family: z.string().min(1).max(16),
+  /** Zero clears the mapping, returning the SKU to the class default. */
+  pipeline_id: z.number().int().min(0),
+})
+
+export const SKUPipelineWriteInputSchema = z.object({
+  mappings: SKUPipelineWriteSchema.array(),
+})
+export type SKUPipelineWriteInput = z.infer<typeof SKUPipelineWriteInputSchema>

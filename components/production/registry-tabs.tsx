@@ -6,6 +6,7 @@ import { ComponentRegistryTable } from '@/components/production/component-regist
 import { DesignRegistryTable } from '@/components/production/design-registry-table'
 import { DesignTemplatesProvider } from '@/components/production/design-templates-context'
 import { ProductRegistryPanel } from '@/components/production/product-registry-panel'
+import { SKUPipelinePanel } from '@/components/production/sku-pipeline-panel'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import { useQueryTab } from '@/hooks/use-query-tab'
 import type { InventoryItem } from '@/lib/validators/inventory'
@@ -21,6 +22,7 @@ interface RegistryTabsProps {
 const COMPONENTS_TAB = 'components'
 const PRODUCTS_TAB = 'products'
 const DESIGNS_TAB = 'designs'
+const SLICING_TAB = 'slicing'
 
 /**
  * The registry, split by what kind of thing is being described.
@@ -38,8 +40,9 @@ const DESIGNS_TAB = 'designs'
  * do not own it.
  *
  * Products is the default: it is what somebody opens this page to look at, and
- * the other two exist to serve it - a bill of materials points at Components,
- * and a variant prints from a Design.
+ * the others exist to serve it - a bill of materials points at Components, a
+ * variant prints from a Design, and Slicing says which settings each SKU is
+ * printed with.
  */
 export function RegistryTabs({
   brand,
@@ -53,6 +56,9 @@ export function RegistryTabs({
     { value: PRODUCTS_TAB, label: 'Products', count: products.length },
     { value: COMPONENTS_TAB, label: 'Components', count: components.length },
     { value: DESIGNS_TAB, label: 'Designs', count: templates.length },
+    // No count: the number worth knowing is how many SKUs are still on the
+    // class default, and that is not known until the tab has loaded.
+    { value: SLICING_TAB, label: 'Slicing' },
   ]
 
   return (
@@ -70,6 +76,11 @@ export function RegistryTabs({
       ) : null}
 
       {tab === DESIGNS_TAB ? <DesignRegistryTable brand={brand} templates={templates} /> : null}
+
+      {/* Its own tab, not a control inside each product: the job is usually
+          "these twenty SKUs all print with DNP-H2C", which a per-product panel
+          would turn into twenty visits. */}
+      {tab === SLICING_TAB ? <SKUPipelinePanel brand={brand} /> : null}
     </div>
   )
 }
