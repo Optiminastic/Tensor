@@ -162,17 +162,19 @@ export async function listPrintQueue(token: string): Promise<QueueItem[]> {
 }
 
 /**
- * BambuBuddy's print history - what actually came off the beds.
+ * BambuBuddy's print history for the last week - what came off the beds.
  *
  * Read through for the same reason the queue is: BambuBuddy is the only system
  * that watched the print, so it is the only one that knows how long it really
  * took and why it stopped. Tensor's own batch rows say what was SENT.
  *
- * Bounded because this list never stops growing - every plate ever run stays in
- * it - and a board shows a page, not an archive.
+ * No limit sent, deliberately. The backend bounds this by DATE - one week,
+ * pushed into BambuBuddy's own date_from so the older rows are never
+ * serialised - and a count on top of that would cut the week short without
+ * saying so. It did exactly that: 100 rows is about two days of this shop.
  */
-export async function listPrintHistory(token: string, limit = 100): Promise<Archive[]> {
-  return call(`/printing/history?limit=${limit}`, { headers: jsonHeaders(token) }, data =>
+export async function listPrintHistory(token: string): Promise<Archive[]> {
+  return call('/printing/history', { headers: jsonHeaders(token) }, data =>
     ArchiveSchema.array().parse(data),
   )
 }
