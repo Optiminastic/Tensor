@@ -4,11 +4,7 @@ import {
   Factory,
   LayoutDashboard,
   type LucideIcon,
-  Plug,
   Settings,
-  ShoppingBag,
-  Sparkles,
-  TrendingUp,
   Users,
 } from 'lucide-react'
 
@@ -111,52 +107,6 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       { label: 'Registry', href: '/production/registry', permission: 'config:read' },
     ],
   },
-  {
-    label: 'Commerce',
-    icon: ShoppingBag,
-    segment: 'commerce',
-    permission: 'shopify:publish',
-    items: [
-      { label: 'Shopify Products', href: '/commerce/products' },
-      { label: 'Collections', href: '/commerce/collections' },
-    ],
-  },
-  {
-    label: 'Analytics',
-    icon: TrendingUp,
-    segment: 'analytics',
-    permission: 'pricing:read',
-    items: [
-      { label: 'Profitability', href: '/analytics' },
-      { label: 'Machine Utilization', href: '/analytics?view=utilization' },
-      { label: 'Design Performance', href: '/analytics?view=performance' },
-    ],
-  },
-  {
-    label: 'AI Center',
-    icon: Sparkles,
-    segment: 'ai-center',
-    permission: 'design:read',
-    items: [
-      { label: 'Recommendations', href: '/ai-center' },
-      { label: 'Design Optimizer', href: '/ai-center?view=optimizer' },
-      { label: 'Cost Savings', href: '/ai-center?view=savings' },
-    ],
-  },
-  {
-    label: 'Integrations',
-    icon: Plug,
-    segment: 'integrations',
-    permission: 'integration:manage',
-    description: 'Shopify, Google Ads and Meta Ads for this brand.',
-  },
-  {
-    label: 'Settings',
-    icon: Settings,
-    segment: 'settings',
-    permission: 'brand:manage',
-    description: "This brand's identity, pricing ladder, CP thresholds and danger zone.",
-  },
 ]
 
 export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
@@ -171,7 +121,7 @@ export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
     label: 'Settings',
     icon: Settings,
     href: '/dashboard/settings',
-    description: 'Workspace and account settings.',
+    description: 'Workspace, brand and integrations.',
   },
 ]
 
