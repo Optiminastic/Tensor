@@ -25,3 +25,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Local-only tooling - never goes to main.
+# Admin scripts for this machine only (reset-password.mjs talks straight to the
+# auth database). Untracked is not the same as safe: `git add -A` sweeps an
+# untracked directory in without asking.
+/scripts/
