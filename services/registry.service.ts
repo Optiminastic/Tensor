@@ -37,9 +37,10 @@ const TIMEOUT_MS = 15_000
  * Typed client for the product registry: products, their option axes, the
  * variants those make, and each variant's bill of materials.
  *
- * Guarded by config:read / config:manage on the backend - a registry is
- * configuration in the sense that permission already names, "cost assumptions,
- * materials and machines".
+ * Guarded by registry:read / config:manage on the backend - reading the
+ * catalogue was split away from reading cost configuration so an Operator can
+ * have the page without the costs. Prices in these responses are withheld by
+ * the backend from a caller without config:read.
  */
 export class RegistryServiceError extends Error {}
 
