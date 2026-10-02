@@ -53,18 +53,22 @@ export const BulkOrderSchema = z.object({
 export const BulkOrderListSchema = z.array(BulkOrderSchema)
 
 /**
- * A product that may go on a line.
+ * A product that may go on a line: every Shopify variant carrying a SKU.
  *
- * unit_price is nullable on purpose: the SKU exists in the registry but Shopify
- * has no price for it. The form shows that rather than hiding the option,
+ * unit_price is nullable on purpose: Shopify has the SKU but no price on it. The form shows that rather than hiding the option,
  * because an operator needs to see the gap before sending a quotation. The
  * backend refuses such a line by name, so this is a warning, not a second
  * enforcement.
  */
 export const SellableSkuSchema = z.object({
-  variant_id: z.string(),
+  // The registry variant this SKU maps to, when there is one. Null for the many
+  // Shopify SKUs the registry has never needed - a bulk order may quote
+  // anything the shop sells, not only what Tensor produces.
+  variant_id: z.string().nullable(),
   sku: z.string(),
   product_name: z.string(),
+  // The product this variant belongs to, used to group the dropdown.
+  group: z.string(),
   product_code: z.string(),
   unit_price: z.number().nullable(),
 })

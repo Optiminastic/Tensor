@@ -80,6 +80,20 @@ export function BulkOrderForm({
       : [newLine()],
   )
 
+  // Grouped by product so the list reads as 124 products rather than 507 loose
+  // SKUs. Built once: rebuilding it per row would redo the grouping for every
+  // line on every keystroke.
+  const grouped = useMemo(() => {
+    const groups = new Map<string, SellableSku[]>()
+    for (const s of skus) {
+      const key = s.group || s.product_name
+      const existing = groups.get(key)
+      if (existing) existing.push(s)
+      else groups.set(key, [s])
+    }
+    return [...groups.entries()]
+  }, [skus])
+
   const priceBySku = useMemo(() => {
     const map = new Map<string, number | null>()
     for (const s of skus) map.set(s.sku, s.unit_price)
@@ -217,11 +231,15 @@ export function BulkOrderForm({
                   onChange={e => setLine(line.key, { sku: e.target.value })}
                 >
                   <option value="">Choose a product…</option>
-                  {skus.map(s => (
-                    <option key={s.variant_id} value={s.sku}>
-                      {s.sku} — {s.product_name}
-                      {s.unit_price === null ? ' (no price)' : ` (${inr(s.unit_price)})`}
-                    </option>
+                  {grouped.map(([group, options]) => (
+                    <optgroup key={group} label={group}>
+                      {options.map(s => (
+                        <option key={s.sku} value={s.sku}>
+                          {s.sku} — {s.product_name}
+                          {s.unit_price === null ? ' (no price)' : ` (${inr(s.unit_price)})`}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </Select>
               </Field>
