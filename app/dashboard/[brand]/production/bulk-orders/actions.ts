@@ -8,6 +8,7 @@ import {
   BulkOrderServiceError,
   createBulkOrder,
   deleteBulkOrder,
+  getBulkOrder,
   updateBulkOrder,
 } from '@/services/bulk-orders.service'
 
@@ -80,6 +81,46 @@ export async function updateBulkOrderAction(
     const order = await updateBulkOrder({ token, brand, id, input: parsed.data })
     revalidate(brand, order.id)
     return { ok: true, data: { id: order.id } }
+  } catch (err) {
+    return { ok: false, error: describe(err) }
+  }
+}
+
+/**
+ * Reject a quotation.
+ *
+ * A status change, nothing more - the lines and the document stay exactly as
+ * they are. It is reversible from the edit form, which is why it needs no
+ * confirmation step: a mis-click costs a click, not a quotation.
+ *
+ * It reuses the update endpoint rather than adding a verb of its own, so the
+ * one place that writes a bulk order stays the one place.
+ */
+export async function rejectBulkOrderAction(brand: string, id: string): Promise<ActionResult> {
+  if (!id.trim()) return { ok: false, error: 'A bulk order is required.' }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    const current = await getBulkOrder(token, brand, id)
+    await updateBulkOrder({
+      token,
+      brand,
+      id,
+      input: {
+        customer_name: current.customer_name,
+        customer_email: current.customer_email ?? '',
+        customer_phone: current.customer_phone ?? '',
+        notes: current.notes ?? '',
+        order_date: current.order_date,
+        valid_until: current.valid_until ?? '',
+        status: 'cancelled',
+        discount_percent: current.discount_percent,
+        lines: current.lines.map(l => ({ sku: l.sku, quantity: l.quantity })),
+      },
+    })
+    revalidate(brand, id)
+    return { ok: true }
   } catch (err) {
     return { ok: false, error: describe(err) }
   }

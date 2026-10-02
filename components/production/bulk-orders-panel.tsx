@@ -1,18 +1,28 @@
 'use client'
 
-import { Plus } from 'lucide-react'
+import { Check, FileText, MoreHorizontal, Pencil, Plus, X } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState, useTransition, type JSX } from 'react'
 
 import {
   createBulkOrderAction,
+  rejectBulkOrderAction,
   updateBulkOrderAction,
 } from '@/app/dashboard/[brand]/production/bulk-orders/actions'
+import { BulkOrderApproveDialog } from '@/components/production/bulk-order-approve-dialog'
 import { BulkOrderForm } from '@/components/production/bulk-order-form'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -61,13 +71,36 @@ export function BulkOrdersPanel({
 }: BulkOrdersPanelProps): JSX.Element {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<BulkOrder | null>(null)
+  const [approving, setApproving] = useState<BulkOrder | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // The approve dialog posts straight to a route handler rather than through a
+  // server action, so nothing revalidates on its own - this is what refreshes
+  // the list once jobs exist.
+  const router = useRouter()
 
   function openCreate(): void {
     setEditing(null)
     setError(null)
     setOpen(true)
+  }
+
+  function openApprove(order: BulkOrder): void {
+    setApproving(order)
+    setError(null)
+  }
+
+  /**
+   * Reject is a status change and nothing else - no file, no confirmation step.
+   * It is reversible from the edit form, so a mis-click costs one more click
+   * rather than a lost quotation.
+   */
+  function reject(order: BulkOrder): void {
+    setError(null)
+    startTransition(async () => {
+      const result = await rejectBulkOrderAction(brand, order.id)
+      if (!result.ok) setError(result.error ?? 'Could not reject that quotation.')
+    })
   }
 
   function openEdit(order: BulkOrder): void {
@@ -154,17 +187,30 @@ export function BulkOrdersPanel({
                       {inr(order.total, 2)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(order)}>
-                          Edit
-                        </Button>
-                        <Link
-                          href={`/dashboard/${brand}/production/bulk-orders/${order.id}`}
-                          className={buttonVariants({ variant: 'secondary', size: 'sm' })}
-                        >
-                          Quotation
-                        </Link>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" aria-label="Actions">
+                            <MoreHorizontal className="size-4" aria-hidden />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => openApprove(order)}>
+                            <Check className="size-4" aria-hidden /> Approve
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => reject(order)}>
+                            <X className="size-4" aria-hidden /> Reject
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => openEdit(order)}>
+                            <Pencil className="size-4" aria-hidden /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/${brand}/production/bulk-orders/${order.id}`}>
+                              <FileText className="size-4" aria-hidden /> Quotation
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -173,6 +219,13 @@ export function BulkOrdersPanel({
           )}
         </CardContent>
       </Card>
+
+      <BulkOrderApproveDialog
+        brand={brand}
+        order={approving}
+        onClose={() => setApproving(null)}
+        onApproved={() => router.refresh()}
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl">
