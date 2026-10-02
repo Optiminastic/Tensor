@@ -3,14 +3,12 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
-import { type BrandChoice } from '@/components/admin/brand-multi-select'
 import { InviteManager } from '@/components/admin/invite-manager'
 import { MembersList, type MemberView } from '@/components/admin/members-list'
 import { getSessionSafe, getTokenSafe, getUserDirectory } from '@/lib/auth'
 import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import type { Invite, Member } from '@/lib/validators/admin'
 import { listInvites, listMembers } from '@/services/admin.service'
-import { listBrands } from '@/services/brands.service'
 
 export const metadata: Metadata = { title: 'People' }
 
@@ -31,7 +29,6 @@ export default async function UsersPage(): Promise<JSX.Element> {
   const canManageUsers = can(authz, 'user:manage')
 
   let invites: Invite[] = []
-  let brands: BrandChoice[] = []
   let members: MemberView[] = []
   let loadError: string | null = null
 
@@ -45,15 +42,11 @@ export default async function UsersPage(): Promise<JSX.Element> {
   if (token?.token) {
     const accessToken = token.token
     // Invites are admin-only; a Project Lead skips that call (it would 403).
-    const [brandResult, memberResult, inviteResult] = await Promise.allSettled([
-      listBrands(accessToken),
+    const [memberResult, inviteResult] = await Promise.allSettled([
       listMembers(accessToken),
       canManageUsers ? listInvites(accessToken) : Promise.resolve<Invite[]>([]),
     ])
 
-    if (brandResult.status === 'fulfilled') {
-      brands = brandResult.value.map(brand => ({ slug: brand.slug, name: brand.name }))
-    }
     if (memberResult.status === 'fulfilled') {
       members = await withEmails(memberResult.value)
     }
@@ -66,7 +59,6 @@ export default async function UsersPage(): Promise<JSX.Element> {
     // route does not exist", which is the difference between waiting and
     // filing a bug.
     const failures = [
-      ['Brands', brandResult],
       ['Team members', memberResult],
       ['Invitations', inviteResult],
     ] as const
@@ -82,16 +74,13 @@ export default async function UsersPage(): Promise<JSX.Element> {
         <h1 className="text-display text-4xl">People</h1>
         <p className="text-muted-foreground max-w-prose text-sm text-pretty">
           {canManageUsers
-            ? 'Invite someone by email and they set their own password. Links work once and expire after 72 hours. Assign the brands each member may work in.'
-            : 'View the team and remove junior members. Inviting people and assigning brands is done by an admin.'}
+            ? 'Invite someone by email and they set their own password. Links work once and expire after 72 hours. Every role can access every store.'
+            : 'View the team and remove junior members. Inviting people is done by an admin.'}
         </p>
       </div>
-      {canManageUsers ? (
-        <InviteManager initialInvites={invites} brands={brands} loadError={loadError} />
-      ) : null}
+      {canManageUsers ? <InviteManager initialInvites={invites} loadError={loadError} /> : null}
       <MembersList
         members={members}
-        brands={brands}
         currentUserId={session.user.id}
         actorIsAdmin={canManageUsers}
       />
@@ -115,7 +104,6 @@ async function withEmails(rows: Member[]): Promise<MemberView[]> {
       email: identity?.email ?? null,
       name: identity?.name ?? null,
       roles: row.roles,
-      brandSlugs: row.brand_slugs,
     }
   })
 }

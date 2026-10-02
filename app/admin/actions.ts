@@ -6,12 +6,7 @@ import { auth } from '@/lib/auth'
 import { buildInviteEmail } from '@/lib/emails/invite-email'
 import { createLogger } from '@/lib/logger'
 import { type SendResult, sendMail } from '@/lib/mailer'
-import {
-  type Invite,
-  type InviteCreated,
-  InviteCreateSchema,
-  SetMemberBrandsSchema,
-} from '@/lib/validators/admin'
+import { type Invite, type InviteCreated, InviteCreateSchema } from '@/lib/validators/admin'
 import { SetPasswordSchema } from '@/lib/validators/auth'
 import {
   AdminServiceError,
@@ -22,7 +17,6 @@ import {
   createInvite,
   removeMember,
   revokeInvite,
-  setMemberBrands,
 } from '@/services/admin.service'
 
 const log = createLogger('AdminActions')
@@ -195,32 +189,7 @@ export async function inviteUser(input: unknown): Promise<ActionResult<InviteRes
 }
 
 /**
- * Replace a member's brand access.
- *
- * Like inviteUser, it forwards the admin's access token and lets Tensor-Core
- * enforce `user:manage` - the frontend does not decide authorization. The
- * user id is a path argument the backend trusts only after that check.
- */
-export async function setMemberBrandsAction(userId: string, input: unknown): Promise<ActionResult> {
-  const parsed = SetMemberBrandsSchema.safeParse(input)
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the selection and retry.' }
-  }
-  if (!userId.trim()) return { ok: false, error: 'A member is required.' }
-
-  const token = await auth.api.getToken({ headers: await headers() })
-  if (!token?.token) return { ok: false, error: 'Could not mint an access token. Sign in again.' }
-
-  try {
-    await setMemberBrands(token.token, userId, parsed.data.brand_slugs)
-    return { ok: true }
-  } catch (error) {
-    return { ok: false, error: describe(error) }
-  }
-}
-
-/**
- * Remove a team member - delete their roles and brand access. The backend refuses
+ * Remove a team member - delete their roles. The backend refuses
  * to remove the caller or the last admin. Authorization (`user:manage`) is
  * enforced by Tensor-Core against the forwarded token.
  */

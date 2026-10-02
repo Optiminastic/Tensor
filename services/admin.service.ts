@@ -149,7 +149,7 @@ export async function revokeInvite(accessToken: string, inviteId: string): Promi
   )
 }
 
-/** Every team member with a role, plus the brands each is assigned. */
+/** Every team member with a role. */
 export async function listMembers(accessToken: string): Promise<Member[]> {
   return request('/admin/users', { headers: bearer(accessToken) }, data =>
     MemberSchema.array().parse(data),
@@ -161,23 +161,6 @@ export async function removeMember(accessToken: string, userId: string): Promise
   await request(
     `/admin/users/${encodeURIComponent(userId)}`,
     { method: 'DELETE', headers: bearer(accessToken) },
-    () => undefined,
-  )
-}
-
-/** Replace a member's brand access with the given set of slugs. */
-export async function setMemberBrands(
-  accessToken: string,
-  userId: string,
-  brandSlugs: string[],
-): Promise<void> {
-  await request(
-    `/admin/users/${encodeURIComponent(userId)}/brands`,
-    {
-      method: 'PUT',
-      headers: bearer(accessToken),
-      body: JSON.stringify({ brand_slugs: brandSlugs }),
-    },
     () => undefined,
   )
 }

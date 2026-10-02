@@ -11,13 +11,13 @@ export const BootstrapStatusSchema = z.object({
 export const BrandSlugSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'invalid brand slug')
 
 /**
- * What an admin submits to invite someone. Notably: no password field. The
- * assigned brands are granted to the member when they accept the invite.
+ * What an admin submits to invite someone. Notably: no password field, and no
+ * brands — every role reaches every store, so there is nothing per-member to
+ * assign (Tensor-Core migration 0087).
  */
 export const InviteCreateSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   role: RoleSchema,
-  brand_slugs: z.array(BrandSlugSchema).default([]),
 })
 
 /**
@@ -57,12 +57,6 @@ export const InviteValidatedSchema = z.object({
 export const MemberSchema = z.object({
   user_id: z.string(),
   roles: z.array(RoleSchema),
-  brand_slugs: z.array(BrandSlugSchema),
-})
-
-/** What an admin submits to replace a member's brand access. */
-export const SetMemberBrandsSchema = z.object({
-  brand_slugs: z.array(BrandSlugSchema).default([]),
 })
 
 export type InviteCreateInput = z.infer<typeof InviteCreateSchema>
@@ -70,4 +64,3 @@ export type InviteCreated = z.infer<typeof InviteCreatedSchema>
 export type Invite = z.infer<typeof InviteSchema>
 export type InviteValidated = z.infer<typeof InviteValidatedSchema>
 export type Member = z.infer<typeof MemberSchema>
-export type SetMemberBrandsInput = z.infer<typeof SetMemberBrandsSchema>
