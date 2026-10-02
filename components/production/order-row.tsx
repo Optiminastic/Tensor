@@ -175,9 +175,11 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
       {/* Truncated rather than wrapped: the delivery method is the longest
           free-text column ("FREE DISPATCH - BEST DEAL"), and letting it wrap
           set the height of every row in the table. */}
-      {/* A paid priority upgrade is a promise to the customer AND the reason
-          this order is batched ahead of the ones placed before it, so it reads
-          as a badge rather than as one more line of grey free text. */}
+      {/* A paid priority upgrade is a promise to the customer, so it reads as a
+          badge rather than as one more line of grey free text.
+          It is no longer a scheduling claim: batching is first come, first
+          served, and this order is grouped, locked and sent in its turn like
+          any other. The badge is for whoever packs the parcel. */}
       <TableCell className="max-w-44 py-2 text-xs whitespace-nowrap">
         {isPriorityShipping(order.shippingTitle) ? (
           <TonePill label="Priority" tone="danger" />

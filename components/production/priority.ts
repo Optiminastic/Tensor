@@ -2,10 +2,13 @@
  * Whether an order paid for priority dispatch.
  *
  * Mirrors OrderIsPriority in the backend (internal/httpapi/order_priority.go),
- * which is what actually decides batching order. This copy exists because the
- * order DTO already carries the shipping option verbatim, so the badge needs no
- * extra field on the wire - but it means the two must agree, and the substring
- * is the contract between them.
+ * which stamps the rank on the job. It no longer decides batching order -
+ * grouping, locking and dispatch are all first come, first served - so this is
+ * a record of what the customer bought, not a claim about when it prints.
+ *
+ * This copy exists because the order DTO already carries the shipping option
+ * verbatim, so the badge needs no extra field on the wire - but it means the
+ * two must agree, and the substring is the contract between them.
  *
  * A substring rather than an equality check against "PRIORITY DISPATCH ⚡️":
  * the store has reworded this option once already, and an emoji is a poor thing
