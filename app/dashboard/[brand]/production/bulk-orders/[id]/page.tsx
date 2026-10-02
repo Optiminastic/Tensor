@@ -30,7 +30,7 @@ interface QuotationPageProps {
  */
 export default async function QuotationPage({ params }: QuotationPageProps): Promise<JSX.Element> {
   const { brand, id } = await params
-  await requirePermission('pricing:read', `/dashboard/${brand}`)
+  await requirePermission('bulk_order:read', `/dashboard/${brand}`)
 
   const { token, error } = await resolveBackendToken()
   if (!token) {

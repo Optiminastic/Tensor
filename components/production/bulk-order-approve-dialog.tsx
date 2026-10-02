@@ -36,6 +36,7 @@ export function BulkOrderApproveDialog({
   onApproved,
 }: BulkOrderApproveDialogProps): JSX.Element {
   const [file, setFile] = useState<File | null>(null)
+  const [jobCode, setJobCode] = useState('')
   const [problems, setProblems] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -43,6 +44,7 @@ export function BulkOrderApproveDialog({
 
   function reset(): void {
     setFile(null)
+    setJobCode('')
     setProblems([])
     setError(null)
     setResult(null)
@@ -57,6 +59,7 @@ export function BulkOrderApproveDialog({
     try {
       const body = new FormData()
       body.append('file', file)
+      body.append('job_code', jobCode.trim().toUpperCase())
       const response = await fetch(
         `/api/bulk-orders/${encodeURIComponent(brand)}/${encodeURIComponent(order.id)}/approve`,
         { method: 'POST', body },
@@ -68,12 +71,16 @@ export function BulkOrderApproveDialog({
         setError(payload.detail ?? 'The spreadsheet was not accepted.')
         return
       }
-      const payload = data as { jobs_created?: number; skipped_skus?: string[] }
-      const skipped = payload.skipped_skus ?? []
+      const payload = data as {
+        jobs_created?: number
+        job_code?: string
+        default_shape_sheets?: string[]
+      }
+      const defaulted = payload.default_shape_sheets ?? []
       setResult(
-        `${payload.jobs_created ?? 0} production job(s) created.` +
-          (skipped.length > 0
-            ? ` Skipped ${skipped.join(', ')} — not in the registry, so no sheet was expected.`
+        `${payload.jobs_created ?? 0} production job(s) created, numbered ${payload.job_code ?? jobCode}-1 onwards.` +
+          (defaulted.length > 0
+            ? ` ${defaulted.join(', ')} used the default column shape — add field maps in the Registry to tailor them.`
             : ''),
       )
       onApproved()
@@ -125,6 +132,22 @@ export function BulkOrderApproveDialog({
               </Button>
             </a>
           </div>
+
+          <Field
+            label="Order code"
+            htmlFor="bo-code"
+            hint="Letters and digits, 2-12. Optiminastic Media Pvt Ltd → OMPT, and this order's jobs become OMPT-1, OMPT-2. Each bulk order needs its own."
+            required
+          >
+            <Input
+              id="bo-code"
+              value={jobCode}
+              onChange={e => setJobCode(e.target.value.toUpperCase())}
+              placeholder="OMPT"
+              maxLength={12}
+              className="font-mono uppercase"
+            />
+          </Field>
 
           <Field label="Spreadsheet" htmlFor="bo-file" hint=".xlsx, up to 10 MB">
             <Input

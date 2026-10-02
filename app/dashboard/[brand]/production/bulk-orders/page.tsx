@@ -23,9 +23,11 @@ interface BulkOrdersPageProps {
  * Bulk orders: a business asks for a hundred planks, the shop answers with a
  * quotation.
  *
- * Guarded on pricing:read, which is also what puts it in the nav. That keeps an
- * Operator out - they run Production but never see costs - while leaving it
- * inside the Production area where the work actually happens.
+ * ADMIN ONLY, on bulk_order:read - the same key that puts it in the nav. It was
+ * pricing:read first, which a Project Lead and a Performance Marketer also
+ * hold, so the page was visible to three roles rather than one. Bulk orders
+ * carry negotiated prices and can put a hundred jobs on the floor from one
+ * upload.
  *
  * The SKU list and its prices are fetched here rather than in the dialog so the
  * form opens already populated: the price list is a Shopify round trip, and
@@ -35,7 +37,7 @@ export default async function BulkOrdersPage({
   params,
 }: BulkOrdersPageProps): Promise<JSX.Element> {
   const { brand } = await params
-  await requirePermission('pricing:read', `/dashboard/${brand}`)
+  await requirePermission('bulk_order:read', `/dashboard/${brand}`)
 
   let orders: BulkOrder[] = []
   let skus: SellableSku[] = []
