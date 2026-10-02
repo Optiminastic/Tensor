@@ -101,6 +101,11 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // qc:submit / packaging:submit).
       { label: 'Packaging', href: '/production/packaging' },
       { label: 'Inventory', href: '/production/inventory', permission: 'filament:read' },
+      // Directly below Inventory, where the shop asked for it. Gated on
+      // pricing:read rather than a production permission: a quotation puts
+      // rupee figures on screen, so an Operator - who runs every other page in
+      // this area and never sees costs - does not get this one.
+      { label: 'Bulk Orders', href: '/production/bulk-orders', permission: 'pricing:read' },
       // Below Inventory on purpose: the Registry is what Inventory is ABOUT.
       // Inventory says how many LED strips are on the shelf; the Registry says
       // which products need them, and what one costs.
