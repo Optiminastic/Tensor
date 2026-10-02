@@ -5,6 +5,9 @@ import { z } from 'zod'
  * frontend's contract with it, and the schema below fails loudly if the
  * backend ever returns something outside it.
  */
+// The six roles Tensor-Core defines (auth.AllRoles). MARKETING_HEAD was a
+// seventh here and in no backend list, so it parsed on the way in and was
+// rejected on the way out.
 export const RoleSchema = z.enum([
   'ADMIN',
   'DESIGNER',
@@ -12,7 +15,6 @@ export const RoleSchema = z.enum([
   'PERFORMANCE_MARKETER',
   'OPERATOR',
   'PACKAGING_QC',
-  'MARKETING_HEAD',
 ])
 
 export type Role = z.infer<typeof RoleSchema>

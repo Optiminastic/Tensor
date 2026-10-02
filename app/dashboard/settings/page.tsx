@@ -13,6 +13,7 @@ import { SettingsTabs, type SettingsTab } from '@/components/settings/settings-t
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSessionSafe, getTokenSafe } from '@/lib/auth'
+import { requirePermission } from '@/lib/authz'
 import { env } from '@/lib/env'
 import type { BrandProfile } from '@/lib/validators/brands'
 import type { Connection } from '@/lib/validators/connections'
@@ -89,6 +90,13 @@ export default async function SettingsPage({
   const requestHeaders = await headers()
   const session = await getSessionSafe(requestHeaders)
   if (!session) redirect('/login?callbackUrl=/dashboard/settings')
+
+  // Deleting brands, editing a brand's pricing ladder and connecting its store
+  // are all brand:manage acts, and this page had no permission check at all -
+  // any signed-in role could open it. Tensor-Core refused the writes, so this
+  // closes a UI hole rather than a security one, but a Designer being shown a
+  // "Delete brand" button is its own kind of wrong.
+  await requirePermission('brand:manage', '/dashboard')
 
   const {
     tab,

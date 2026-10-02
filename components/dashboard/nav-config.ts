@@ -104,7 +104,12 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // Below Inventory on purpose: the Registry is what Inventory is ABOUT.
       // Inventory says how many LED strips are on the shelf; the Registry says
       // which products need them, and what one costs.
-      { label: 'Registry', href: '/production/registry', permission: 'config:read' },
+      // registry:read, not config:read. The Registry is a Production page and
+      // an Operator needs it - which parts a SKU takes is what assembling one
+      // requires - while config:read also opens cost assumptions, which that
+      // role never sees. The backend splits the same way, and withholds
+      // parts_cost/line_cost from anyone without config:read.
+      { label: 'Registry', href: '/production/registry', permission: 'registry:read' },
     ],
   },
 ]
@@ -121,6 +126,14 @@ export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
     label: 'Settings',
     icon: Settings,
     href: '/dashboard/settings',
+    // brand:manage, because that is what this page does: it deletes brands,
+    // edits a brand's ladder and CP thresholds, and connects its store. It was
+    // ungated, so every role saw a Settings area offering to delete a brand -
+    // the backend refused the delete, but only after somebody pressed it.
+    //
+    // Not brand:read: every role holds that now (it is how they list the brands
+    // they may work in), so it would gate nothing.
+    permission: 'brand:manage',
     description: 'Workspace, brand and integrations.',
   },
 ]

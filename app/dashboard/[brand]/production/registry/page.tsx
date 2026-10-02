@@ -35,14 +35,25 @@ interface RegistryPageProps {
  * a recompile and a deploy. Everything here is meant to be edited by the people
  * who actually know the answers.
  *
- * Guarded on config:read rather than a permission of its own - the registry is
- * configuration in the sense that permission already names, "cost assumptions,
- * materials and machines". The Components tab's own writes still go through the
- * inventory endpoints and their filament:manage guard.
+ * Guarded on registry:read, which used to be config:read.
+ *
+ * It was split off when the shop put an Operator on every Production page: the
+ * registry is one, and an Operator needs it - which parts a SKU takes is what
+ * assembling one requires - while config:read also opens cost assumptions,
+ * which that role has never been allowed to see. Reading the catalogue and
+ * reading the costing are different acts, so they are different permissions.
+ *
+ * Writing it is still config:manage. The Components tab's own writes go through
+ * the inventory endpoints and their filament:manage guard.
+ *
+ * The money on this page (parts_cost, line_cost, unit_price) is withheld by
+ * Tensor-Core from a caller without config:read, so a role that can open the
+ * page still cannot read prices off it - and not merely because the UI hides
+ * them.
  */
 export default async function RegistryPage({ params }: RegistryPageProps): Promise<JSX.Element> {
   const { brand } = await params
-  await requirePermission('config:read', `/dashboard/${brand}`)
+  await requirePermission('registry:read', `/dashboard/${brand}`)
 
   let components: InventoryItem[] = []
   let products: RegistryProductDetail[] = []

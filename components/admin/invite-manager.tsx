@@ -16,13 +16,18 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { InviteCreateSchema, type Invite, type InviteCreateInput } from '@/lib/validators/admin'
 
+// Exactly the six roles Tensor-Core will accept (auth.AllRoles, and the
+// `oneof` on its create-invite route). MARKETING_HEAD used to be listed here
+// and is not one of them - choosing it produced a 400 that read as "Something
+// went wrong", with nothing saying the role did not exist. PACKAGING_QC was
+// missing instead, so that role could not be invited at all.
 const ROLES = [
-  { value: 'DESIGNER', label: 'Designer — uploads and revises designs' },
+  { value: 'DESIGNER', label: 'Designer — designs and costing' },
   { value: 'PROJECT_LEAD', label: 'Project Lead — approves designs and prices' },
-  { value: 'OPERATOR', label: 'Operator — runs production, cannot see costs' },
+  { value: 'OPERATOR', label: 'Operator — all of production, cannot see costs' },
+  { value: 'PACKAGING_QC', label: 'Packaging & QC — runs those stations' },
   { value: 'PERFORMANCE_MARKETER', label: 'Performance Marketer — reads pricing' },
-  { value: 'MARKETING_HEAD', label: 'Marketing Head — writes product copy' },
-  { value: 'ADMIN', label: 'Admin — full access, including people and costs' },
+  { value: 'ADMIN', label: 'Admin — full access, and can make other admins' },
 ] as const
 
 interface InviteManagerProps {

@@ -35,21 +35,45 @@ export default async function UsersPage(): Promise<JSX.Element> {
   let members: MemberView[] = []
   let loadError: string | null = null
 
-  try {
-    const token = await getTokenSafe(requestHeaders)
-    if (token?.token) {
-      // Invites are admin-only; a Project Lead skips that call (it would 403).
-      const [brandRows, memberRows, inviteRows] = await Promise.all([
-        listBrands(token.token),
-        listMembers(token.token),
-        canManageUsers ? listInvites(token.token) : Promise.resolve<Invite[]>([]),
-      ])
-      brands = brandRows.map(brand => ({ slug: brand.slug, name: brand.name }))
-      members = await withEmails(memberRows)
-      invites = inviteRows
+  // allSettled, not all. These three are independent - brands, the roster and
+  // the invite list - and Promise.all made them one failure: a 404 on any of
+  // them left every variable at its empty default, so a missing /admin/users
+  // route rendered as "No brands exist yet" on a workspace that had a brand,
+  // with the real cause named nowhere. Each one now fails on its own and the
+  // rest of the page still renders.
+  const token = await getTokenSafe(requestHeaders)
+  if (token?.token) {
+    const accessToken = token.token
+    // Invites are admin-only; a Project Lead skips that call (it would 403).
+    const [brandResult, memberResult, inviteResult] = await Promise.allSettled([
+      listBrands(accessToken),
+      listMembers(accessToken),
+      canManageUsers ? listInvites(accessToken) : Promise.resolve<Invite[]>([]),
+    ])
+
+    if (brandResult.status === 'fulfilled') {
+      brands = brandResult.value.map(brand => ({ slug: brand.slug, name: brand.name }))
     }
-  } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Could not load the team.'
+    if (memberResult.status === 'fulfilled') {
+      members = await withEmails(memberResult.value)
+    }
+    if (inviteResult.status === 'fulfilled') {
+      invites = inviteResult.value
+    }
+
+    // One line naming what actually failed, rather than a generic apology. The
+    // old message could not distinguish "the backend is down" from "that one
+    // route does not exist", which is the difference between waiting and
+    // filing a bug.
+    const failures = [
+      ['Brands', brandResult],
+      ['Team members', memberResult],
+      ['Invitations', inviteResult],
+    ] as const
+    const broken = failures
+      .filter(([, result]) => result.status === 'rejected')
+      .map(([label, result]) => `${label}: ${reasonOf(result)}`)
+    if (broken.length > 0) loadError = broken.join(' · ')
   }
 
   return (
@@ -73,6 +97,12 @@ export default async function UsersPage(): Promise<JSX.Element> {
       />
     </main>
   )
+}
+
+/** The message from a settled promise that rejected. */
+function reasonOf(result: PromiseSettledResult<unknown>): string {
+  if (result.status !== 'rejected') return ''
+  return result.reason instanceof Error ? result.reason.message : 'could not be loaded'
 }
 
 /** Join Better Auth identities onto the backend's member rows for display. */
