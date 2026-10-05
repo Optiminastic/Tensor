@@ -94,11 +94,6 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       { label: 'Production Jobs', href: '/production/jobs' },
       { label: 'Batch Management', href: '/production/batches', permission: 'batch:read' },
       { label: 'Machine Management', href: '/production/machines', permission: 'machine:read' },
-      // Under Machine Management because it is about printers, not beds, and
-      // behind batch:manage because sending one is managing it. The page you
-      // open when a bed will not go and the one-line reason is not enough:
-      // it is the only place the per-machine refusals are visible.
-      { label: 'Manual Queue', href: '/production/manual-queue', permission: 'batch:manage' },
       // Assembly, finishing, QC and packaging are tabs on one page now, so no
       // single station permission fits - it inherits the section's
       // production:read, which every station role holds. Each tab's actions
