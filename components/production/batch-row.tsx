@@ -10,7 +10,6 @@ import { BatchColourDots } from '@/components/production/batch-colour-dots'
 import { BatchDoneDialog } from '@/components/production/batch-done-dialog'
 import { batchFailure } from '@/components/production/batch-label'
 import { BatchOrderTags } from '@/components/production/batch-order-tags'
-import { BatchQueueButton } from '@/components/production/batch-queue-button'
 import { BatchReprintDialog } from '@/components/production/batch-reprint-dialog'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
 import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
@@ -106,19 +105,18 @@ export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
           open the batch - the whole row is a link. */}
       <TableCell className="py-2 text-right">
         <div className="flex items-center justify-end gap-2">
-          {/* Queueing belongs in the list for the same reason finishing does:
-              the operator is looking at every bed at once and deciding which
-              one goes next. Requiring them to open each bed to send it is what
-              kept beds sitting locked and unsent. */}
-          <BatchQueueButton
-            brand={brand}
-            batchId={batch.id}
-            status={batch.status}
-            autoQueue={batch.autoQueue}
-            printError={batch.printError}
-            alreadyQueued={batch.queueItemId !== null}
-            compact
-          />
+          {/* No Queue button. Sending a bed is the dispatcher's job now: it
+              locks a Draft once the bed holds three units and a printer that
+              can take its colours is free, then picks the machine and queues
+              it. A button beside it offered a second, racing send path for the
+              same bed, and on a floor where every lock already triggers a
+              dispatch pass it was pressed mostly out of doubt that the
+              automatic one had run.
+
+              What the button carried that a person still needs is kept: the
+              refusal ("Not sent", with the colour to confirm or the spool to
+              load) is on the batch number as a FailureNote, and locking a
+              half-empty Draft early is in the actions menu. */}
           <BatchDoneDialog
             brand={brand}
             batchId={batch.id}
