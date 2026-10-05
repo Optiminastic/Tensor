@@ -35,4 +35,3 @@ next-env.d.ts
 # picker - Tensor chooses the printer - and that is right for the floor and
 # wrong for testing, where the point is to put one bed on one named printer.
 # Self-contained so nothing tracked imports it: main compiles without it.
-/app/dashboard/\[brand\]/production/manual-queue/
