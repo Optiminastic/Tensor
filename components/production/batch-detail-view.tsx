@@ -6,7 +6,6 @@ import { BatchDoneDialog } from '@/components/production/batch-done-dialog'
 import { isBatchEditable, isBatchFull } from '@/components/production/batch-fullness'
 import { BatchJobsTable } from '@/components/production/batch-jobs-table'
 import { BatchPlatePreview } from '@/components/production/batch-plate-preview'
-import { BatchQueueButton } from '@/components/production/batch-queue-button'
 import type { BatchRecord } from '@/components/production/types'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -52,23 +51,11 @@ export function BatchDetailView({
           plateBboxYMm={batch.plateBboxYMm}
           plateBboxZMm={batch.plateBboxZMm}
         />
-        {/* Which statuses can be queued is the dialog's own decision, so the
-            two render sites and the row cannot drift apart. A Draft is offered
-            too: sending it locks the bed first, which is what makes sending it
-            safe. */}
-        <div className="mt-4">
-          <BatchQueueButton
-            brand={brand}
-            batchId={batch.id}
-            status={batch.status}
-            autoQueue={batch.autoQueue}
-            printError={batch.printError}
-            alreadyQueued={batch.queueItemId !== null}
-          />
-        </div>
-        {/* Finishing the bed. Beside Print rather than in the header: both are
-            things you do to this plate, and the operator marking it done has
-            just watched it come off the machine. */}
+        {/* No Queue button here either - see batch-row.tsx. The bed is sent by
+            the dispatcher; Lock is on the page header for a Draft and in the
+            row's actions menu. */}
+        {/* Finishing the bed. The operator marking it done has just watched it
+            come off the machine. */}
         <div className="mt-4 flex justify-end">
           <BatchDoneDialog
             brand={brand}

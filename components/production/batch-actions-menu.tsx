@@ -1,9 +1,10 @@
 'use client'
 
-import { MoreHorizontal, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
+import { Lock, MoreHorizontal, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, type JSX, type MouseEvent } from 'react'
 
+import { approveBatchAction } from '@/app/dashboard/[brand]/production/actions'
 import {
   deleteBatchAction,
   rebuildBatch,
@@ -21,14 +22,20 @@ import {
 /**
  * The actions a bed can take, behind one control on its row.
  *
- * Rebuild, Reprint and Delete are rare next to Queue and Done - you press them
- * when something has gone wrong - so putting all five on the row would widen it
- * and give equal weight to the ones you reach for once a week. The two everyday
- * decisions stay as buttons; these three fold away.
+ * Rebuild, Reprint and Delete are rare next to Done - you press them when
+ * something has gone wrong - so putting them all on the row would widen it and
+ * give equal weight to the ones you reach for once a week. The everyday
+ * decision stays as a button; these fold away.
  *
  * Each is offered only where it means something, and the disabled reason says
  * why rather than leaving a dead item:
  *
+ *   - Lock closes a Draft early. Tensor locks a bed on its own once it holds
+ *     three units and a printer that can take it is free; this is how a person
+ *     says "stop waiting for company, print what is on it". It does NOT send
+ *     the bed - locking is the whole act, and the dispatcher picks the machine
+ *     and queues it exactly as it does for a bed it locked itself. That is the
+ *     point: there is one send path on the floor, not two.
  *   - Rebuild checks every model against its order. It is worth pressing on any
  *     bed, including a printed one, because a completed bed's models are what a
  *     reprint is built from.
@@ -55,17 +62,51 @@ export function BatchActionsMenu({
   onReprint,
 }: BatchActionsMenuProps): JSX.Element {
   const router = useRouter()
-  const [pending, setPending] = useState<'rebuild' | 'delete' | null>(null)
+  const [pending, setPending] = useState<'lock' | 'rebuild' | 'delete' | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [confirmingLock, setConfirmingLock] = useState(false)
 
+  const draft = status === 'pending_approval'
   const printed = status === 'completed'
   const printing = status === 'in_progress'
 
   // The row itself opens the batch; nothing in this menu should.
   function stopRowClick(event: MouseEvent): void {
     event.stopPropagation()
+  }
+
+  /**
+   * Locks a Draft, and stops there.
+   *
+   * No machine_id: its absence is what asks the backend to keep whichever
+   * printer the scheduler already picked for the Draft. Passing one here would
+   * override a decision made with the whole fleet in view.
+   *
+   * Two presses, like Delete, because locking reserves the bed's filament and
+   * pressing again does not give it back.
+   */
+  async function lock(): Promise<void> {
+    if (!confirmingLock) {
+      setConfirmingLock(true)
+      return
+    }
+    setPending('lock')
+    setMessage(null)
+    setFailed(false)
+    const res = await approveBatchAction(brand, batchId, {})
+    setPending(null)
+    setConfirmingLock(false)
+    if (!res.ok || !res.data) {
+      setFailed(true)
+      setMessage(res.error ?? 'Could not lock this batch.')
+      return
+    }
+    // Said out loud, because the press has no other visible effect for a few
+    // seconds: the bed moves to Locked and the dispatcher takes it from there.
+    setMessage('Locked. The dispatcher will pick a printer and queue it.')
+    router.refresh()
   }
 
   async function rebuild(): Promise<void> {
@@ -109,7 +150,10 @@ export function BatchActionsMenu({
     <div onClick={stopRowClick} className="flex flex-col items-end gap-1">
       <DropdownMenu
         onOpenChange={open => {
-          if (!open) setConfirmingDelete(false)
+          if (!open) {
+            setConfirmingDelete(false)
+            setConfirmingLock(false)
+          }
         }}
       >
         <DropdownMenuTrigger asChild>
@@ -124,6 +168,30 @@ export function BatchActionsMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          {/* First, because it is the only item here an operator reaches for as
+              part of normal work rather than to fix something. */}
+          <DropdownMenuItem
+            disabled={!draft}
+            // Held open on the first press so the second one lands on the same
+            // menu rather than reopening it.
+            onSelect={event => {
+              if (!confirmingLock) event.preventDefault()
+              void lock()
+            }}
+            title={
+              draft
+                ? 'Locks this bed now and lets the dispatcher send it'
+                : 'This bed is already locked.'
+            }
+          >
+            <Lock className="size-3.5" aria-hidden />
+            {pending === 'lock'
+              ? 'Locking…'
+              : confirmingLock
+                ? 'Press again to lock'
+                : 'Lock batch'}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => void rebuild()}>
             <RefreshCw className="size-3.5" aria-hidden />
             {pending === 'rebuild' ? 'Checking…' : 'Rebuild batch'}
