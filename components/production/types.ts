@@ -253,6 +253,22 @@ export interface PersonalisationFields {
 
 export type BatchStatus = 'pending_approval' | 'open' | 'in_progress' | 'completed'
 
+/**
+ * The finer-grained journey a bed takes, which `status` cannot express.
+ *
+ * Deliberately NOT part of BatchStatus: those four are the Kanban board's
+ * columns and cards are dragged between them, so a stage nobody can drag a card
+ * into has no business being one of them.
+ */
+export type BatchStage =
+  | 'draft'
+  | 'waiting'
+  | 'blocked'
+  | 'slicing'
+  | 'queued'
+  | 'printing'
+  | 'done'
+
 export interface BatchRecord {
   id: string
   /**
@@ -283,6 +299,15 @@ export interface BatchRecord {
   plateSlicedAt: string | null
   /** BambuBuddy's queue item, set once the bed has been sent. */
   queueItemId: number | null
+  /**
+   * Where the bed is between locking and coming off the printer. Derived by the
+   * backend from the dispatcher's marker columns, so it can never claim
+   * something the dispatcher would not act on.
+   *
+   * Null on an older API, where the status pill stands alone.
+   */
+  stage: BatchStage | null
+  stageLabel: string | null
   // Why this batch is stuck, at the two points it can be. sliceError means
   // there is no print file; printError means there is one that nothing will
   // pick up. Both null on a healthy batch.

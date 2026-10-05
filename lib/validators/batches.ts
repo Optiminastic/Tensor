@@ -41,6 +41,19 @@ export const BatchSchema = z.object({
   auto_queue: z.boolean().nullish(),
   // BambuBuddy's queue item, present once the plate was accepted.
   queue_item_id: z.number().nullish(),
+  /**
+   * Where the bed is between locking and coming off the printer, derived by
+   * the backend from the dispatcher's own marker columns.
+   *
+   * `status` says 'open' for a bed uploading, a bed slicing, a bed sitting in
+   * a printer's queue and a bed waiting on a spool nobody has loaded - four
+   * situations an operator needs to tell apart, and one word on the board.
+   *
+   * Nullish because an older API does not send it; the UI falls back to the
+   * status pill alone rather than rendering an empty line.
+   */
+  stage: z.string().nullish(),
+  stage_label: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
   jobs_count: z.number().nullish(),

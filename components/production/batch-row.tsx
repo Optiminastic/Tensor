@@ -12,12 +12,23 @@ import { batchFailure } from '@/components/production/batch-label'
 import { BatchOrderTags } from '@/components/production/batch-order-tags'
 import { BatchReprintDialog } from '@/components/production/batch-reprint-dialog'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
-import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
+import { BATCH_STAGE_CONFIG, BATCH_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { BatchRecord } from '@/components/production/types'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { countdown } from '@/lib/format'
 import { cn } from '@/lib/utils'
+
+/** The stage line's colour, matched to the pill tones it sits under. A tint of
+ *  the same hue rather than a second pill: one pill per row is the hierarchy,
+ *  and two would compete for the same glance. */
+const STAGE_TEXT: Record<string, string> = {
+  muted: 'text-muted-foreground',
+  warning: 'text-warning',
+  accent: 'text-accent',
+  success: 'text-success',
+  danger: 'text-danger',
+}
 
 interface BatchRowProps {
   brand: string
@@ -30,6 +41,7 @@ export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
     { id: string; jobNumber: string; productName: string | null }[] | null
   >(null)
   const status = BATCH_STATUS_CONFIG[batch.status]
+  const stage = batch.stage ? BATCH_STAGE_CONFIG[batch.stage] : null
   const failure = batchFailure(batch)
   const href = `/dashboard/${brand}/production/batches/${batch.id}`
 
@@ -72,6 +84,14 @@ export function BatchRow({ brand, batch }: BatchRowProps): JSX.Element {
             </span>
           ) : null}
         </div>
+        {/* Under the pill, not beside it: LOCKED is the same word for a bed
+            uploading, a bed slicing, a bed in a printer's queue and a bed
+            waiting on a spool, and which of those it is was the question
+            nobody could answer from this table. Omitted where it would only
+            repeat the pill - see BATCH_STAGE_CONFIG's quiet flag. */}
+        {stage && !stage.quiet ? (
+          <span className={cn('mt-1 block text-xs', STAGE_TEXT[stage.tone])}>{stage.label}</span>
+        ) : null}
       </TableCell>
       {/* The bed's filament colours. Placed before Jobs so the eye meets the
           colour first: under colour batching a bed IS a colour, and that is what

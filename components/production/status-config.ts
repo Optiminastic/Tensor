@@ -1,6 +1,7 @@
 import type { PillTone } from '@/components/production/tone-pill'
 import type {
   AssemblyStatus,
+  BatchStage,
   BatchStatus,
   JobStatus,
   MachineStatus,
@@ -78,6 +79,39 @@ export const BATCH_STATUS_CONFIG: Record<BatchStatus, { label: string; tone: Pil
   open: { label: 'Locked', tone: 'accent' },
   in_progress: { label: 'Printing', tone: 'accent' },
   completed: { label: 'Completed', tone: 'success' },
+}
+
+/**
+ * The stage a locked bed is at, which the four statuses cannot express.
+ *
+ * Shown BESIDE the status pill, not instead of it: status is what the Kanban
+ * columns are and what people drag cards between, while the stage is read-only
+ * detail. Replacing the pill would have left the board and the table naming the
+ * same bed differently.
+ *
+ * Only the stages that say something the pill does not are worth rendering -
+ * "Draft" beside DRAFT and "Done" beside COMPLETED is noise - so those two are
+ * marked quiet and the row omits them.
+ */
+export const BATCH_STAGE_CONFIG: Record<
+  BatchStage,
+  { label: string; tone: PillTone; quiet?: boolean }
+> = {
+  // Says exactly what the DRAFT pill says.
+  draft: { label: 'Collecting planks', tone: 'muted', quiet: true },
+  // Nothing is wrong: its turn has not come, or no printer is free yet.
+  waiting: { label: 'Waiting for a printer', tone: 'muted' },
+  // Held up, and resting before the next attempt. Not dead - the bed is still
+  // retried - so warning rather than danger. The reason itself is the
+  // FailureNote beside the batch number.
+  blocked: { label: 'Held up', tone: 'warning' },
+  // The long one. Minutes, and the board used to say nothing at all through it.
+  slicing: { label: 'Slicing…', tone: 'accent' },
+  // Tensor is finished with it; BambuBuddy decides when it starts.
+  queued: { label: 'Queued on the printer', tone: 'accent' },
+  // Says what the PRINTING pill says.
+  printing: { label: 'Printing…', tone: 'accent', quiet: true },
+  done: { label: 'Done', tone: 'success', quiet: true },
 }
 
 export const FLEET_MACHINE_STATUS_CONFIG: Record<

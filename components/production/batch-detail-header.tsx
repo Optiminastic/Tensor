@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 
-import { BATCH_STATUS_CONFIG } from '@/components/production/status-config'
+import { BATCH_STAGE_CONFIG, BATCH_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { BatchRecord } from '@/components/production/types'
 import type { Machine } from '@/lib/validators/machines'
@@ -14,6 +14,7 @@ interface BatchDetailHeaderProps {
 // alongside the batch title.
 export function BatchDetailHeader({ batch, machines }: BatchDetailHeaderProps): JSX.Element {
   const status = BATCH_STATUS_CONFIG[batch.status]
+  const stage = batch.stage ? BATCH_STAGE_CONFIG[batch.stage] : null
   const assignedMachine = machines.find(m => m.id === batch.machineId)
 
   return (
@@ -22,7 +23,11 @@ export function BatchDetailHeader({ batch, machines }: BatchDetailHeaderProps): 
         <span className="text-foreground text-base font-semibold">{batch.batchNumber}</span>
         <TonePill label={status.label} tone={status.tone} />
       </div>
+      {/* The stage leads the line that used to carry only the machine. Opening
+          a bed to find out what it is doing is the commonest reason to open
+          one, and LOCKED alone never answered it. */}
       <p className="text-muted-foreground text-xs">
+        {stage && !stage.quiet ? `${stage.label} · ` : ''}
         {assignedMachine ? `Scheduled on ${assignedMachine.name}` : 'No machine scheduled yet'}
       </p>
     </div>

@@ -13,6 +13,7 @@ import type {
 
 import type {
   AssemblyStatus,
+  BatchStage,
   BatchRecord,
   BatchStatus,
   JobStatus,
@@ -259,6 +260,23 @@ function toBatchStatus(status: string): BatchStatus {
   return 'pending_approval'
 }
 
+const BATCH_STAGES: readonly BatchStage[] = [
+  'draft',
+  'waiting',
+  'blocked',
+  'slicing',
+  'queued',
+  'printing',
+  'done',
+]
+
+/** Null rather than a guess: an unrecognised stage means this build is older
+ *  than the backend, and showing the status pill alone is honest where
+ *  inventing a stage would not be. */
+function toBatchStage(stage: string | null | undefined): BatchStage | null {
+  return BATCH_STAGES.find(s => s === stage) ?? null
+}
+
 export function toBatchRecord(batch: Batch): BatchRecord {
   return {
     id: batch.id,
@@ -275,6 +293,8 @@ export function toBatchRecord(batch: Batch): BatchRecord {
     bedUtilizationPercent: batch.bed_utilization_percent ?? null,
     plateSlicedAt: batch.plate_sliced_at ?? null,
     queueItemId: batch.queue_item_id ?? null,
+    stage: toBatchStage(batch.stage),
+    stageLabel: batch.stage_label ?? null,
     sliceError: batch.plate_slice_error ?? null,
     printError: batch.print_error ?? null,
     autoQueue: batch.auto_queue ?? false,
