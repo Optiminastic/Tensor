@@ -8,6 +8,7 @@ import {
   loadDesignFields,
   type DesignFields,
 } from '@/app/dashboard/[brand]/production/design-fields-actions'
+import { ColourPartsPanel } from '@/components/production/colour-parts-panel'
 import { useDesignTemplates } from '@/components/production/design-templates-context'
 import { FieldMapEditor } from '@/components/production/field-map-editor'
 import { TemplateUploadButton } from '@/components/production/template-upload-button'
@@ -105,6 +106,13 @@ export function DesignPartEditor({
           maps={fields.maps}
           onSaved={onChanged}
         />
+      </div>
+
+      {/* Colour is the other half of a design file, and the half that had no
+          configuration at all: the renderer painted PART="base" white and
+          PART="text" the customer's colour, full stop. */}
+      <div className="border-border/70 border-t pt-4">
+        <ColourPartsPanel brand={brand} productCode={product.code} role={part.role} />
       </div>
 
       <Readiness fields={fields} />

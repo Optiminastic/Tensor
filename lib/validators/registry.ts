@@ -436,3 +436,27 @@ export const SKUPipelineWriteInputSchema = z.object({
   mappings: SKUPipelineWriteSchema.array(),
 })
 export type SKUPipelineWriteInput = z.infer<typeof SKUPipelineWriteInputSchema>
+
+/**
+ * One coloured piece of a product's design file.
+ *
+ * `part_name` is BOTH the `-D PART=` value the renderer asks the .scad for and
+ * the object name in the reference 3MF it was read from. They have to agree for
+ * the piece to render at all, so they are one value rather than a mapping
+ * between two that can drift.
+ *
+ * An empty `colour_hex` means the piece follows the colour the customer chose.
+ * That is the piece a reference file cannot state, which is exactly why it is
+ * the one left blank.
+ */
+export const ColourPartSchema = z.object({
+  id: z.string(),
+  role: z.string(),
+  part_name: z.string(),
+  colour_hex: z.string(),
+  position: z.number(),
+})
+
+export const ColourPartsResponseSchema = z.object({ items: z.array(ColourPartSchema) })
+
+export type ColourPart = z.infer<typeof ColourPartSchema>

@@ -28,6 +28,9 @@ import {
   type TemplateParam,
   TemplateParamSchema,
   type VariantDesignWriteInput,
+  type ColourPart,
+  ColourPartSchema,
+  ColourPartsResponseSchema,
 } from '@/lib/validators/registry'
 
 const log = createLogger('RegistryService')
@@ -354,5 +357,61 @@ export async function saveSKUPipelines(
     '/registry/sku-pipelines',
     { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify(input) },
     data => SKUPipelinesSchema.parse(data),
+  )
+}
+
+/** Every configured coloured piece of a product, across its design files. */
+export async function listColourParts(token: string, code: string): Promise<ColourPart[]> {
+  return call(
+    `/registry/products/${encodeURIComponent(code)}/colour-parts`,
+    { headers: { Authorization: `Bearer ${token}` } },
+    data => ColourPartsResponseSchema.parse(data).items,
+  )
+}
+
+/**
+ * Reads a reference 3MF and replaces one design file's pieces with what it
+ * contains.
+ *
+ * Replaces rather than merges: a piece that has gone from the file has gone
+ * from the product, and asking the template for one it no longer has renders
+ * nothing and holds the job.
+ */
+export async function uploadColourReference(
+  token: string,
+  target: { code: string; role: string },
+  form: FormData,
+): Promise<ColourPart[]> {
+  const { code, role } = target
+  return call(
+    `/registry/products/${encodeURIComponent(code)}/colour-parts/${encodeURIComponent(role)}`,
+    { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form },
+    data => ColourPartsResponseSchema.parse(data).items,
+  )
+}
+
+/** Moves one piece between a fixed colour and the customer's choice. */
+export async function setColourPartColour(
+  token: string,
+  id: string,
+  colourHex: string,
+): Promise<ColourPart> {
+  return call(
+    `/registry/colour-parts/${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ colour_hex: colourHex }),
+    },
+    data => ColourPartSchema.parse(data),
+  )
+}
+
+/** Returns one design file to the default white-base, coloured-lettering pair. */
+export async function clearColourParts(token: string, code: string, role: string): Promise<void> {
+  await call(
+    `/registry/products/${encodeURIComponent(code)}/colour-parts/${encodeURIComponent(role)}`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
+    () => null,
   )
 }
