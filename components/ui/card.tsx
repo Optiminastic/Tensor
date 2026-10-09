@@ -4,10 +4,21 @@ import { cn } from '@/lib/utils'
 
 type DivProps = HTMLAttributes<HTMLDivElement>
 
+/**
+ * A white panel on the page's grey ground.
+ *
+ * The lift comes from the surface change and a soft shadow, not from an
+ * outline: the hairline closes the shape, it does not draw a box around it.
+ * A heavier border on every card is what made the old UI read as a stack of
+ * framed boxes rather than as content on a page.
+ */
 export function Card({ className, ...props }: DivProps): JSX.Element {
   return (
     <div
-      className={cn('border-border bg-surface rounded-lg border shadow-xs', className)}
+      className={cn(
+        'border-border/70 bg-surface rounded-xl border shadow-[0_1px_2px_rgba(16,24,40,0.04)]',
+        className,
+      )}
       {...props}
     />
   )
@@ -16,7 +27,7 @@ export function Card({ className, ...props }: DivProps): JSX.Element {
 export function CardHeader({ className, ...props }: DivProps): JSX.Element {
   return (
     <div
-      className={cn('border-border flex flex-col gap-1 border-b px-5 py-4', className)}
+      className={cn('border-border/70 flex flex-col gap-1 border-b px-5 py-4', className)}
       {...props}
     />
   )
@@ -48,7 +59,7 @@ export function CardContent({ className, ...props }: DivProps): JSX.Element {
 export function CardFooter({ className, ...props }: DivProps): JSX.Element {
   return (
     <div
-      className={cn('border-border flex items-center gap-3 border-t px-5 py-4', className)}
+      className={cn('border-border/70 flex items-center gap-3 border-t px-5 py-4', className)}
       {...props}
     />
   )

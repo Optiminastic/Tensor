@@ -53,7 +53,7 @@ export function Tabs({ tabs, value, onValueChange, label, className }: TabsProps
       role="tablist"
       aria-label={label}
       className={cn(
-        'border-border bg-surface-muted inline-flex h-9 items-center gap-1 rounded-lg border p-1',
+        'border-border/70 bg-surface-muted inline-flex h-9 items-center gap-1 rounded-lg border p-1',
         className,
       )}
     >
