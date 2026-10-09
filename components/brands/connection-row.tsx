@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, type JSX } from 'react'
 
 import { removeConnection, saveConnection } from '@/app/dashboard/brands/actions'
+import { ProviderLogo } from '@/components/brands/provider-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,7 +88,11 @@ export function ConnectionRow({
   return (
     <div className="border-border flex flex-col gap-3 border-b py-3 last:border-b-0">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* The real mark where one exists. A row of names is slower to scan
+              than the logos people already recognise - see provider-logo.tsx
+              for which are genuine and which are stand-ins. */}
+          <ProviderLogo provider={provider} />
           <span className="text-sm font-medium">{PROVIDER_LABELS[provider]}</span>
           <Badge tone={connected ? 'success' : 'neutral'}>
             {connected ? 'Connected' : 'Not connected'}
