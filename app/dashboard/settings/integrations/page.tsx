@@ -1,0 +1,144 @@
+import type { Metadata } from 'next'
+import type { JSX } from 'react'
+
+import { BrandConnections } from '@/components/brands/brand-connections'
+import { ShopifyOrderImportStatus } from '@/components/brands/shopify-order-import-status'
+import {
+  NoBrandChosen,
+  SettingsHeader,
+  SettingsNotice,
+} from '@/components/settings/settings-header'
+import { env } from '@/lib/env'
+import type { Connection } from '@/lib/validators/connections'
+import type { Integration } from '@/lib/validators/integrations'
+import { listConnections, listShopifyOrderConnections } from '@/services/connections.service'
+import { listIntegrations } from '@/services/integrations.service'
+
+import { loadSettingsContext } from '../settings-context'
+
+export const metadata: Metadata = { title: 'Integrations' }
+
+export const dynamic = 'force-dynamic'
+
+// The OAuth round-trips redirect back here with a status query.
+const GOOGLE_NOTICES: Record<string, { tone: 'success' | 'danger'; message: string }> = {
+  connected: { tone: 'success', message: 'Google account connected.' },
+  denied: { tone: 'danger', message: 'Google connection was cancelled.' },
+  unconfigured: { tone: 'danger', message: 'Google OAuth is not configured on this server.' },
+  invalid_request: { tone: 'danger', message: 'That Google connection request was invalid.' },
+  error: { tone: 'danger', message: 'Could not connect the Google account. Please try again.' },
+}
+
+const SHOPIFY_NOTICES: Record<string, { tone: 'success' | 'danger'; message: string }> = {
+  connected: { tone: 'success', message: 'Shopify store connected.' },
+  invalid_request: {
+    tone: 'danger',
+    message: 'Enter your store domain (your-store.myshopify.com).',
+  },
+  error: { tone: 'danger', message: 'Could not connect Shopify. Please try again.' },
+}
+
+const SHOPIFY_ORDERS_NOTICES: Record<string, { tone: 'success' | 'danger'; message: string }> = {
+  connected: {
+    tone: 'success',
+    message: 'Shopify order import connected - paid and COD orders will flow in automatically.',
+  },
+  invalid_shop: { tone: 'danger', message: 'That doesn’t look like a Shopify store domain.' },
+  invalid_request: {
+    tone: 'danger',
+    message: 'A shop domain is required to connect order import.',
+  },
+  error: { tone: 'danger', message: 'Could not connect Shopify order import. Please try again.' },
+}
+
+interface IntegrationsPageProps {
+  searchParams: Promise<{
+    brand?: string
+    google?: string
+    shopify?: string
+    shopify_orders?: string
+  }>
+}
+
+/**
+ * Settings → Integrations: this brand's ad, commerce and carrier connections.
+ *
+ * Its own route rather than a tab, which is what lets the OAuth callbacks come
+ * back to a real URL instead of reconstructing a tab from a query string.
+ */
+export default async function IntegrationsPage({
+  searchParams,
+}: IntegrationsPageProps): Promise<JSX.Element> {
+  const { brand, google, shopify, shopify_orders: shopifyOrders } = await searchParams
+  const { token, profile } = await loadSettingsContext(brand, '/dashboard/settings/integrations')
+
+  const notice = google
+    ? GOOGLE_NOTICES[google]
+    : shopify
+      ? SHOPIFY_NOTICES[shopify]
+      : shopifyOrders
+        ? SHOPIFY_ORDERS_NOTICES[shopifyOrders]
+        : undefined
+
+  let connections: Connection[] = []
+  let integrations: Integration[] = []
+  let shopifyShopDomain: string | null = null
+  let orderImportMissing = false
+  if (token && profile) {
+    connections = await listConnections(token, profile.slug).catch(() => [])
+    // Catches rather than throws: a brand with no credential-based
+    // integrations configured is the normal case, and the OAuth half of this
+    // page is still worth showing if the lookup fails.
+    integrations = await listIntegrations(token, profile.slug).catch(() => [])
+    shopifyShopDomain =
+      connections.find(c => c.provider === 'shopify' && c.status === 'connected')
+        ?.external_account_id ?? null
+    // Nudge only when the store is connected for products but has not finished
+    // the separate order-import grant. Any failure means no nudge: UX only.
+    if (shopifyShopDomain) {
+      try {
+        const orderConnections = await listShopifyOrderConnections(token)
+        orderImportMissing = !orderConnections.some(
+          c => c.shop_domain.toLowerCase() === shopifyShopDomain?.toLowerCase(),
+        )
+      } catch {
+        orderImportMissing = false
+      }
+    }
+  }
+
+  const googleOAuthConfigured = Boolean(
+    env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET,
+  )
+
+  return (
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:px-6">
+      <SettingsHeader
+        title="Integrations"
+        description={
+          profile
+            ? `Connect ${profile.name}'s ad, commerce and carrier platforms.`
+            : "Connect a brand's ad, commerce and carrier platforms."
+        }
+      />
+
+      {notice ? <SettingsNotice tone={notice.tone}>{notice.message}</SettingsNotice> : null}
+
+      {profile ? (
+        <div className="flex flex-col gap-8">
+          <BrandConnections
+            brandSlug={profile.slug}
+            connections={connections}
+            googleOAuthConfigured={googleOAuthConfigured}
+            integrations={integrations}
+          />
+          {orderImportMissing && shopifyShopDomain ? (
+            <ShopifyOrderImportStatus brandSlug={profile.slug} shopDomain={shopifyShopDomain} />
+          ) : null}
+        </div>
+      ) : (
+        <NoBrandChosen what="Integrations" why="connections belong to one brand's store" />
+      )}
+    </main>
+  )
+}

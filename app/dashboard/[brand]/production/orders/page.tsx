@@ -17,7 +17,7 @@ import {
 } from '@/services/production.service'
 
 // Whether this brand's Shopify connection (the same one the create-brand
-// OAuth flow set up - see the Integrations tab on app/dashboard/settings for the
+// OAuth flow set up - see app/dashboard/settings/integrations for the
 // same lookup) is connected, so the live toggle knows whether an on-demand
 // sync is even possible. Any lookup failure defaults to false - UX only, no
 // need to error out just because the toggle can't confirm this.

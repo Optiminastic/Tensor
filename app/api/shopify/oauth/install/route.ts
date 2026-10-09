@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 // page reads the `shopify` status param and shows a message.
 function backTo(brand: string, reason: string): NextResponse {
   const path = brand
-    ? `/dashboard/settings?tab=integrations&brand=${encodeURIComponent(brand)}&shopify=${reason}`
+    ? `/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}&shopify=${reason}`
     : `/dashboard?shopify=${reason}`
   return NextResponse.redirect(new URL(path, env.NEXT_PUBLIC_APP_URL))
 }
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const requestHeaders = await headers()
   const session = await auth.api.getSession({ headers: requestHeaders })
   if (!session) {
-    const callback = `/dashboard/settings?tab=integrations&brand=${encodeURIComponent(brand)}`
+    const callback = `/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}`
     return NextResponse.redirect(
       new URL(`/login?callbackUrl=${encodeURIComponent(callback)}`, env.NEXT_PUBLIC_APP_URL),
     )

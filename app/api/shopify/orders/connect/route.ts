@@ -11,13 +11,13 @@ export const runtime = 'nodejs'
 // shopifyIntegrationsURL in internal/httpapi/shopify_oauth.go).
 function backTo(brand: string, reason: string): NextResponse {
   const path = brand
-    ? `/dashboard/settings?tab=integrations&brand=${encodeURIComponent(brand)}&shopify_orders=${reason}`
+    ? `/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}&shopify_orders=${reason}`
     : `/dashboard?shopify_orders=${reason}`
   return NextResponse.redirect(new URL(path, env.NEXT_PUBLIC_APP_URL))
 }
 
 function loginRedirect(brand: string): NextResponse {
-  const callback = `/dashboard/settings?tab=integrations&brand=${encodeURIComponent(brand)}`
+  const callback = `/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}`
   return NextResponse.redirect(
     new URL(`/login?callbackUrl=${encodeURIComponent(callback)}`, env.NEXT_PUBLIC_APP_URL),
   )

@@ -17,7 +17,7 @@ const STATE_MAX_AGE_S = 10 * 60
 // page reads the `google` status param and shows a message.
 function backTo(brand: string, reason: string): NextResponse {
   const path = brand
-    ? `/dashboard/settings?tab=integrations&brand=${encodeURIComponent(brand)}&google=${reason}`
+    ? `/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}&google=${reason}`
     : `/dashboard?google=${reason}`
   return NextResponse.redirect(new URL(path, env.NEXT_PUBLIC_APP_URL))
 }
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) {
-    const callback = `/dashboard/settings?tab=integrations&brand=${encodeURIComponent(brand)}`
+    const callback = `/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}`
     return NextResponse.redirect(
       new URL(`/login?callbackUrl=${encodeURIComponent(callback)}`, env.NEXT_PUBLIC_APP_URL),
     )

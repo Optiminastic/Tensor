@@ -148,7 +148,7 @@ function CatalogPicker({
             Try again
           </Button>
           <Link
-            href={`/dashboard/settings?tab=integrations&brand=${encodeURIComponent(brand)}`}
+            href={`/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}`}
             className="text-accent text-sm hover:underline"
           >
             Manage integrations
