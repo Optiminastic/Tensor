@@ -31,10 +31,24 @@ export const IntegrationSchema = z.object({
   /** False for a provider whose backend does not exist yet. */
   available: z.boolean(),
   connected: z.boolean(),
-  /** Non-secret settings only. */
-  values: z.record(z.string(), z.string()).default({}),
-  /** Which secrets are stored. Never the secrets themselves. */
-  secrets_set: z.array(z.string()).default([]),
+  /**
+   * Every setting this brand has, secrets included - unsealed on the way out.
+   *
+   * NULLABLE, like `fields`. A Go nil map and a Go nil slice both marshal to
+   * `null`, not to `{}` or `[]`, and `.default()` only fires on `undefined` -
+   * so a bare `.default({})` throws on the very payload it was meant to
+   * tolerate. The backend happens to send both initialised today; one early
+   * return on the environment-fallback path is all it would take.
+   */
+  values: z
+    .record(z.string(), z.string())
+    .nullish()
+    .transform(v => v ?? {}),
+  /** Which of them are secret, so the form knows to mask them. */
+  secrets_set: z
+    .array(z.string())
+    .nullish()
+    .transform(v => v ?? []),
   /**
    * These came from the process's environment, not from this page.
    *
