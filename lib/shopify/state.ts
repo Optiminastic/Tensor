@@ -9,6 +9,16 @@ import { safeEqualHex } from './oauth'
 export interface StatePayload {
   nonce: string
   shop: string
+  /**
+   * The brand to attach the token to, when one already exists.
+   *
+   * SIGNED, not a query param, which is what makes it safe to carry: the
+   * callback must be able to trust which brand it is finishing, and anything
+   * in the URL can be edited on the way past. Absent for the create-brand
+   * wizard, where the brand does not exist yet and the token waits in a
+   * single-use cookie instead.
+   */
+  brand?: string
 }
 
 export function randomNonce(): string {
@@ -31,12 +41,19 @@ export function verifyState(state: string, secret: string): StatePayload | null 
   if (!safeEqualHex(expected, sig)) return null
 
   try {
-    const parsed: unknown = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'))
-    if (typeof parsed !== 'object' || parsed === null) return null
-    const { nonce, shop } = parsed as Record<string, unknown>
-    if (typeof nonce !== 'string' || typeof shop !== 'string') return null
-    return { nonce, shop }
+    return asPayload(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')))
   } catch {
     return null
   }
+}
+
+/** Narrows a decoded state body, or rejects it. */
+function asPayload(parsed: unknown): StatePayload | null {
+  if (typeof parsed !== 'object' || parsed === null) return null
+  const { nonce, shop, brand } = parsed as Record<string, unknown>
+  if (typeof nonce !== 'string' || typeof shop !== 'string') return null
+  // A brand that is present but not a string is a malformed state, not a
+  // wizard one - refuse it rather than silently finishing the wrong flow.
+  if (brand !== undefined && typeof brand !== 'string') return null
+  return brand === undefined ? { nonce, shop } : { nonce, shop, brand }
 }

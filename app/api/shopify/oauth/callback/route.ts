@@ -1,7 +1,7 @@
 import { headers } from 'next/headers'
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { auth } from '@/lib/auth'
+import { auth, getTokenSafe } from '@/lib/auth'
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 import {
@@ -17,16 +17,19 @@ import {
   type ShopifyPending,
 } from '@/lib/shopify/pending'
 import { type StatePayload, verifyState } from '@/lib/shopify/state'
+import { upsertConnection } from '@/services/connections.service'
 import { fetchBrandAssets, fetchShopProfile } from '@/services/shopify.service'
 
 export const runtime = 'nodejs'
 
 const STATE_COOKIE = 'shopify_oauth_state'
 
-function redirectTo(reason: string): NextResponse {
-  const res = NextResponse.redirect(
-    new URL(`/create-brand?shopify=${reason}`, env.NEXT_PUBLIC_APP_URL),
-  )
+function redirectTo(reason: string, brand = ''): NextResponse {
+  const path =
+    brand === ''
+      ? `/create-brand?shopify=${reason}`
+      : `/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}&shopify=${reason}`
+  const res = NextResponse.redirect(new URL(path, env.NEXT_PUBLIC_APP_URL))
   res.cookies.delete(STATE_COOKIE)
   return res
 }
@@ -47,6 +50,8 @@ function verifiedState(request: NextRequest, secret: string): StatePayload | nul
 interface VerifiedCallback {
   shop: string
   code: string
+  /** Set when an existing brand started this, empty for the wizard. */
+  brand: string
 }
 
 function verifyCallback(request: NextRequest, secret: string): VerifiedCallback | null {
@@ -59,7 +64,10 @@ function verifyCallback(request: NextRequest, secret: string): VerifiedCallback 
 
   const code = params.get('code') ?? ''
   if (code === '') return null
-  return { shop, code }
+  // The brand comes from the SIGNED state, never from the query. Reading it
+  // off the URL would let somebody finish a legitimate consent screen against
+  // a brand they did not start it for.
+  return { shop, code, brand: payload.brand ?? '' }
 }
 
 async function loadProfile(shop: string, token: string): Promise<ShopifyPending> {
@@ -79,6 +87,46 @@ async function loadProfile(shop: string, token: string): Promise<ShopifyPending>
     logoUrl: brand.logoUrl,
     shopUrl: profile.shopUrl,
   }
+}
+
+/**
+ * Stores the freshly granted token against an existing brand.
+ *
+ * Goes through Tensor-Core with the admin's own bearer token rather than
+ * writing anything locally, so the backend's brand:manage check is still what
+ * decides - the signed state proves which brand the round-trip was for, not
+ * that this person may connect it.
+ */
+async function attachToBrand(
+  brand: string,
+  shop: string,
+  token: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const backend = await getTokenSafe(await headers())
+  if (!backend?.token) return { ok: false, error: 'no backend token for this session' }
+  try {
+    await upsertConnection(backend.token, {
+      brandSlug: brand,
+      provider: 'shopify',
+      input: { status: 'connected', external_account_id: shop, access_token: token },
+    })
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+/** Attaches the token to an existing brand and reports the outcome. */
+async function finishForBrand(brand: string, shop: string, token: string): Promise<NextResponse> {
+  const res = await attachToBrand(brand, shop, token)
+  if (!res.ok) {
+    logger.warn(
+      { shop, brand, err: res.error },
+      'shopify oauth callback: could not attach the token to the brand',
+    )
+    return redirectTo('error', brand)
+  }
+  return redirectTo('connected', brand)
 }
 
 function connectedRedirect(pending: ShopifyPending): NextResponse {
@@ -138,7 +186,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       { shop: verified.shop, err: err instanceof Error ? err.message : String(err) },
       'shopify oauth callback: code exchange failed',
     )
-    return redirectTo('error')
+    return redirectTo('error', verified.brand)
+  }
+
+  // An EXISTING brand: attach the token now and go back to Settings,
+  // rather than parking it in a cookie for a brand about to be created.
+  if (verified.brand !== '') {
+    return finishForBrand(verified.brand, verified.shop, token)
   }
 
   return connectedRedirect(await loadProfile(verified.shop, token))

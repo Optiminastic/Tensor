@@ -1,5 +1,6 @@
 import {
   Archive,
+  Bot,
   Building2,
   Box,
   CircleCheck,
@@ -16,11 +17,13 @@ import {
   PackageCheck,
   PackageSearch,
   PencilLine,
+  ScrollText,
   Plug,
   Printer,
   Receipt,
   Send,
   Settings,
+  ShoppingBag,
   ShoppingCart,
   Store,
   SlidersHorizontal,
@@ -180,6 +183,22 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
         icon: Library,
         permission: 'registry:read',
       },
+    ],
+  },
+  {
+    label: 'Agent',
+    icon: Bot,
+    segment: 'agent',
+    // order:read, not a permission of its own. Everything under here is about
+    // real customers and their baskets - the same data the Orders page shows,
+    // reached a different way - so the roles that may see orders are exactly
+    // the roles that may see this.
+    permission: 'order:read',
+    items: [
+      { label: 'Abandoned Checkout', href: '/agent/abandoned-checkout', icon: ShoppingBag },
+      // Directly below it, because it is the other half of the same story:
+      // one page says who walked away, the next says what was said to them.
+      { label: 'Logs', href: '/agent/call-logs', icon: ScrollText },
     ],
   },
   {

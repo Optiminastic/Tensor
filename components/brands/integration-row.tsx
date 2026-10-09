@@ -135,11 +135,17 @@ export function IntegrationRow({ brandSlug, integration }: IntegrationRowProps):
         </span>
       </div>
 
+      {/* A provider Tensor lists but cannot connect yet. Nothing is in this
+          state today - WhatsApp was, until there was code that read its token
+          - but the branch stays, because listing a planned integration is
+          more honest than hiding it, and storing credentials nothing reads
+          would put them at risk for no benefit. The sentence comes from the
+          backend's own catalogue rather than being written here, so the next
+          one does not inherit WhatsApp's explanation. */}
       {!integration.available ? (
         <p className="text-muted-foreground mt-2 text-sm text-pretty">
-          Connecting this needs a verified WhatsApp Business account and a number that is not on the
-          WhatsApp app. Until the backend that reads these exists, storing a permanent access token
-          here would put a credential at risk for no benefit.
+          {integration.summary} Tensor has nothing that reads these credentials yet, so there is
+          nowhere safe to store them.
         </p>
       ) : null}
 

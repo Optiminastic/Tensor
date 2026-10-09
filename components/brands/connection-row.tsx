@@ -147,7 +147,13 @@ export function ConnectionRow({
               type="button"
               size="sm"
               onClick={() => {
-                window.location.href = `/api/shopify/oauth/install?brand=${encodeURIComponent(
+                // /start, NOT /install. install asks Tensor-Core for a
+                // brand-bound authorize URL from an endpoint that was
+                // never built and answers 404, so one-click reconnect
+                // has never worked from here. /start is the flow the
+                // create-brand wizard already uses, and it now carries
+                // the brand in its signed state.
+                window.location.href = `/api/shopify/oauth/start?brand=${encodeURIComponent(
                   brandSlug,
                 )}&shop=${encodeURIComponent(accountId.trim().toLowerCase())}`
               }}

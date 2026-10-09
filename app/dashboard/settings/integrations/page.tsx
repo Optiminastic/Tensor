@@ -36,6 +36,16 @@ const SHOPIFY_NOTICES: Record<string, { tone: 'success' | 'danger'; message: str
     message: 'Enter your store domain (your-store.myshopify.com).',
   },
   error: { tone: 'danger', message: 'Could not connect Shopify. Please try again.' },
+  // Not a transient failure, so it must not say "try again": this
+  // deployment has no one-click authorize endpoint, and the token field
+  // under Advanced is the way through.
+  unavailable: {
+    tone: 'danger',
+    message:
+      'One-click Shopify connect is not available on this deployment. ' +
+      'Open Shopify below, choose "Advanced: paste an access token instead", ' +
+      'and paste a custom-app Admin API token for the store.',
+  },
 }
 
 const SHOPIFY_ORDERS_NOTICES: Record<string, { tone: 'success' | 'danger'; message: string }> = {

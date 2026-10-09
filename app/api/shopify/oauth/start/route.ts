@@ -25,6 +25,17 @@ function backToWizard(reason: string): NextResponse {
   return NextResponse.redirect(new URL(`/create-brand?shopify=${reason}`, env.NEXT_PUBLIC_APP_URL))
 }
 
+/** Back to wherever the connect was started from. */
+function backTo(brand: string, reason: string): NextResponse {
+  if (brand === '') return backToWizard(reason)
+  return NextResponse.redirect(
+    new URL(
+      `/dashboard/settings/integrations?brand=${encodeURIComponent(brand)}&shopify=${reason}`,
+      env.NEXT_PUBLIC_APP_URL,
+    ),
+  )
+}
+
 /**
  * Starts the Shopify OAuth flow for the create-brand wizard, where no brand
  * exists yet.
@@ -54,17 +65,32 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
+  // RECONNECTING AN EXISTING BRAND uses this same flow. There is no second
+  // route for it: /api/shopify/oauth/install was meant to be that, by asking
+  // Tensor-Core to sign a brand-bound state, but the backend endpoint it calls
+  // was never built and answers 404 - so one-click reconnect has never worked
+  // from Settings, and the only way back in was pasting a token by hand.
+  //
+  // The brand binding is just as strong here: it goes inside the HMAC-signed
+  // state, so it cannot be edited in the URL, and the save still goes through
+  // Tensor-Core with the admin's own token, which enforces brand:manage. What
+  // changes is only WHICH secret signs it.
+  const brand = (request.nextUrl.searchParams.get('brand') ?? '').trim()
+
   const clientId = env.SHOPIFY_API_KEY
   const secret = env.SHOPIFY_API_SECRET
-  if (!clientId || !secret) return backToWizard('unconfigured')
+  if (!clientId || !secret) return backTo(brand, 'unconfigured')
 
   // Accepts what an admin actually pastes - "store", the storefront URL, or the
   // new-style admin.shopify.com/store/<handle> - and normalises it before the
   // validity check, so a legitimate store is not rejected over its format.
   const shop = normaliseShopDomain(request.nextUrl.searchParams.get('shop') ?? '')
-  if (!isValidShopDomain(shop)) return backToWizard('invalid_shop')
+  if (!isValidShopDomain(shop)) return backTo(brand, 'invalid_shop')
 
-  const state = signState({ nonce: randomNonce(), shop }, secret)
+  const state = signState(
+    brand === '' ? { nonce: randomNonce(), shop } : { nonce: randomNonce(), shop, brand },
+    secret,
+  )
   const url = buildAuthorizeUrl({
     shop,
     clientId,
