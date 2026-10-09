@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import type { JSX } from 'react'
+import { type JSX, useState } from 'react'
 
+import { NavSearch } from '@/components/dashboard/nav-search'
 import { SignOutButton } from '@/components/dashboard/sign-out-button'
 import { cn } from '@/lib/utils'
 
@@ -30,6 +31,10 @@ interface ActiveSection {
   label: string
   description?: string
   items?: NavLeaf[]
+  // Workspace areas (Team, Settings) carry absolute hrefs; a primary area's
+  // are brand-relative and get the brand base prefixed. Without this flag a
+  // Settings row would resolve to /dashboard/<brand>/dashboard/settings.
+  absolute?: boolean
 }
 
 function resolveActiveSection(pathname: string): ActiveSection {
@@ -41,7 +46,14 @@ function resolveActiveSection(pathname: string): ActiveSection {
   const workspace = WORKSPACE_SECTIONS.find(
     item => pathname === item.href || pathname.startsWith(`${item.href}/`),
   )
-  if (workspace) return { label: workspace.label, description: workspace.description }
+  if (workspace) {
+    return {
+      label: workspace.label,
+      description: workspace.description,
+      items: workspace.items,
+      absolute: true,
+    }
+  }
   return { label: PRIMARY_SECTIONS[0].label, description: PRIMARY_SECTIONS[0].description }
 }
 
@@ -60,22 +72,25 @@ export function NavPanel({
   const pathname = usePathname()
   const currentView = useSearchParams().get('view')
   const section = resolveActiveSection(pathname)
+  const [query, setQuery] = useState('')
   // Only the sub-items this user may access, so the panel never lists a screen
   // whose data the backend would refuse.
   const items = visibleItems(permissions, section.items)
+  // One place decides how a leaf's href becomes a URL, so the panel and the
+  // active-row resolver below cannot disagree about it.
+  const hrefFor = (item: NavLeaf): string => (section.absolute ? item.href : `${base}${item.href}`)
+
+  // No useMemo: React Compiler memoizes this, and a hand-written one here
+  // stops it doing so for the whole component.
+  const needle = query.trim().toLowerCase()
+  const shown = needle ? items.filter(i => i.label.toLowerCase().includes(needle)) : items
   const activeHref =
-    items.length > 0
-      ? resolveActiveHref(
-          pathname,
-          currentView,
-          items.map(item => `${base}${item.href}`),
-        )
-      : null
+    items.length > 0 ? resolveActiveHref(pathname, currentView, items.map(hrefFor)) : null
 
   return (
-    <aside className="border-border bg-surface sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r lg:flex">
+    <aside className="border-border/70 bg-surface sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r lg:flex">
       {brands.length > 0 ? (
-        <div className="border-border border-b p-3">
+        <div className="p-3">
           <BrandSwitcher
             brands={brands}
             activeSlug={activeSlug}
@@ -84,26 +99,54 @@ export function NavPanel({
         </div>
       ) : null}
 
-      <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-        <p className="text-subtle-foreground px-2 pt-1 pb-2 text-xs font-medium tracking-wide uppercase">
-          {section.label}
-        </p>
+      {items.length > 0 ? (
+        <div className="px-3 pb-1">
+          <NavSearch
+            value={query}
+            onChange={setQuery}
+            label={`Filter ${section.label.toLowerCase()} pages`}
+          />
+        </div>
+      ) : null}
+
+      <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
+        {/*
+         * Sentence case, not the mono-uppercase used elsewhere. A section
+         * label here is a quiet grouping marker above its rows, not instrument
+         * chrome - uppercase tracking makes it compete with the rows it is
+         * meant to introduce.
+         */}
+        <p className="text-subtle-foreground px-3 pt-1 pb-2 text-xs font-medium">{section.label}</p>
 
         {items.length > 0 ? (
-          items.map(item => {
-            const href = `${base}${item.href}`
+          shown.map(item => {
+            const href = hrefFor(item)
             const active = href === activeHref
             return (
               <Link
                 key={item.href}
                 href={href}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-sm transition-colors',
+                  // A filled pill, not an underline or a left bar: the row is
+                  // the target, so the whole row is what lights up.
+                  //
+                  // NEUTRAL, not accent-tinted. Saturated colour in this
+                  // product means state - ready, late, held - and a nav row
+                  // tinted the same way competes with the badges on the page
+                  // it opens. Selection is a quiet raised row instead.
+                  'flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors',
                   active
-                    ? 'bg-accent-subtle text-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
+                    ? 'bg-surface-muted text-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-surface-muted/70 hover:text-foreground',
                 )}
               >
+                <item.icon
+                  className={cn(
+                    'size-4 shrink-0 transition-colors',
+                    active ? 'text-accent' : 'text-subtle-foreground',
+                  )}
+                  aria-hidden
+                />
                 {item.label}
               </Link>
             )
@@ -111,9 +154,15 @@ export function NavPanel({
         ) : (
           <p className="text-muted-foreground px-2 text-sm text-pretty">{section.description}</p>
         )}
+
+        {items.length > 0 && shown.length === 0 ? (
+          <p className="text-muted-foreground px-3 py-2 text-sm">
+            No page here matches “{query.trim()}”.
+          </p>
+        ) : null}
       </div>
 
-      <div className="border-border flex flex-col gap-2 border-t px-4 py-3">
+      <div className="border-border/70 flex flex-col gap-2 border-t px-4 py-3">
         <span className="text-subtle-foreground truncate text-xs" title={email}>
           {email}
         </span>

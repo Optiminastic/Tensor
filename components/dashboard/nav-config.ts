@@ -1,11 +1,33 @@
 import {
+  Archive,
+  Building2,
   Box,
+  CircleCheck,
+  ClipboardList,
   Coins,
   Factory,
+  FileSpreadsheet,
+  Gauge,
+  Layers,
   LayoutDashboard,
+  LayoutGrid,
+  Library,
   type LucideIcon,
+  PackageCheck,
+  PackageSearch,
+  PencilLine,
+  Plug,
+  Printer,
+  Receipt,
+  Send,
   Settings,
+  ShoppingCart,
+  Store,
+  SlidersHorizontal,
+  Truck,
+  Upload,
   Users,
+  Warehouse,
 } from 'lucide-react'
 
 // The nav is a double sidebar: an icon rail of top-level areas, and a panel that
@@ -22,6 +44,10 @@ export interface NavLeaf {
   label: string
   href: string // brand-relative subpath, e.g. '/designs?view=upload'
   permission?: string
+  // The row's icon. Required, not optional: a panel where some rows carry one
+  // and some do not reads as broken rather than as a deliberate mix, and the
+  // labels no longer line up.
+  icon: LucideIcon
 }
 
 export interface PrimarySection {
@@ -39,6 +65,10 @@ export interface WorkspaceSection {
   href: string // absolute
   description?: string
   permission?: string
+  // Sub-pages, with ABSOLUTE hrefs - unlike a PrimarySection's, which are
+  // brand-relative. A workspace area has no brand in its path, so there is
+  // nothing to prefix them with.
+  items?: NavLeaf[]
 }
 
 // Static dashboard routes that must never be treated as a brand slug (Next
@@ -58,19 +88,29 @@ export function isAllBrands(brand: string | null | undefined): boolean {
 }
 
 export const PRIMARY_SECTIONS: PrimarySection[] = [
-  { label: 'Overview', icon: LayoutDashboard, segment: '', description: 'This brand at a glance.' },
+  {
+    label: 'Overview',
+    icon: LayoutDashboard,
+    segment: '',
+    description: 'This brand at a glance.',
+  },
   {
     label: 'Designs',
     icon: Box,
     segment: 'designs',
     permission: 'design:read',
     items: [
-      { label: 'All Designs', href: '/designs' },
-      { label: 'Upload Design', href: '/designs?view=upload', permission: 'design:create' },
-      { label: 'Drafts', href: '/designs?view=drafts' },
-      { label: 'Submitted', href: '/designs?view=submitted' },
-      { label: 'Approved', href: '/designs?view=approved' },
-      { label: 'Archived', href: '/designs?view=archived' },
+      { label: 'All Designs', href: '/designs', icon: LayoutGrid },
+      {
+        label: 'Upload Design',
+        href: '/designs?view=upload',
+        icon: Upload,
+        permission: 'design:create',
+      },
+      { label: 'Drafts', href: '/designs?view=drafts', icon: PencilLine },
+      { label: 'Submitted', href: '/designs?view=submitted', icon: Send },
+      { label: 'Approved', href: '/designs?view=approved', icon: CircleCheck },
+      { label: 'Archived', href: '/designs?view=archived', icon: Archive },
     ],
   },
   {
@@ -79,8 +119,8 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     segment: 'costing',
     permission: 'pricing:read',
     items: [
-      { label: 'Cost Reports', href: '/costing' },
-      { label: 'Pricing Rules', href: '/costing?view=rules' },
+      { label: 'Cost Reports', href: '/costing', icon: Receipt },
+      { label: 'Pricing Rules', href: '/costing?view=rules', icon: SlidersHorizontal },
     ],
   },
   {
@@ -89,23 +129,43 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     segment: 'production',
     permission: 'production:read',
     items: [
-      { label: 'Overview', href: '/production' },
-      { label: 'Orders', href: '/production/orders', permission: 'order:read' },
-      { label: 'Production Jobs', href: '/production/jobs' },
-      { label: 'Batch Management', href: '/production/batches', permission: 'batch:read' },
-      { label: 'Machine Management', href: '/production/machines', permission: 'machine:read' },
+      { label: 'Overview', href: '/production', icon: Gauge },
+      { label: 'Orders', href: '/production/orders', icon: ShoppingCart, permission: 'order:read' },
+      { label: 'Production Jobs', href: '/production/jobs', icon: ClipboardList },
+      {
+        label: 'Batch Management',
+        href: '/production/batches',
+        icon: Layers,
+        permission: 'batch:read',
+      },
+      {
+        label: 'Machine Management',
+        href: '/production/machines',
+        icon: Printer,
+        permission: 'machine:read',
+      },
       // Assembly, finishing, QC and packaging are tabs on one page now, so no
       // single station permission fits - it inherits the section's
       // production:read, which every station role holds. Each tab's actions
       // are still gated by the backend (assembly:submit / finishing:submit /
       // qc:submit / packaging:submit).
-      { label: 'Packaging', href: '/production/packaging' },
-      { label: 'Inventory', href: '/production/inventory', permission: 'filament:read' },
+      { label: 'Packaging', href: '/production/packaging', icon: PackageCheck },
+      {
+        label: 'Inventory',
+        href: '/production/inventory',
+        icon: Warehouse,
+        permission: 'filament:read',
+      },
       // Directly below Inventory, where the shop asked for it, and ADMIN ONLY.
       // bulk_order:read is granted to no role but ADMIN, which holds every
       // permission by construction - so this leaf is invisible to everyone
       // else even though the Production section around it is not.
-      { label: 'Bulk Orders', href: '/production/bulk-orders', permission: 'bulk_order:read' },
+      {
+        label: 'Bulk Orders',
+        href: '/production/bulk-orders',
+        icon: FileSpreadsheet,
+        permission: 'bulk_order:read',
+      },
       // Below Inventory on purpose: the Registry is what Inventory is ABOUT.
       // Inventory says how many LED strips are on the shelf; the Registry says
       // which products need them, and what one costs.
@@ -114,8 +174,24 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // requires - while config:read also opens cost assumptions, which that
       // role never sees. The backend splits the same way, and withholds
       // parts_cost/line_cost from anyone without config:read.
-      { label: 'Registry', href: '/production/registry', permission: 'registry:read' },
+      {
+        label: 'Registry',
+        href: '/production/registry',
+        icon: Library,
+        permission: 'registry:read',
+      },
     ],
+  },
+  {
+    label: 'Shipping',
+    icon: Truck,
+    segment: 'shipping',
+    // order:read, for the same reason the Orders page uses it: a parcel is an
+    // order in a box, and the row carries the customer's name, address and
+    // phone number. The roles that may see orders are exactly the roles that
+    // would ring somebody about a delivery that failed.
+    permission: 'order:read',
+    items: [{ label: 'Deliveries', href: '/shipping/deliveries', icon: PackageSearch }],
   },
 ]
 
@@ -140,6 +216,15 @@ export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
     // they may work in), so it would gate nothing.
     permission: 'brand:manage',
     description: 'Workspace, brand and integrations.',
+    // Pages, not tabs. Three tabs inside one route meant the left panel showed
+    // a sentence where every other area shows its pages, so Settings was the
+    // one place the sidebar could not tell you what was in it - and no tab had
+    // a URL you could send anybody.
+    items: [
+      { label: 'Workspace', href: '/dashboard/settings', icon: Building2 },
+      { label: 'Brand', href: '/dashboard/settings/brand', icon: Store },
+      { label: 'Integrations', href: '/dashboard/settings/integrations', icon: Plug },
+    ],
   },
 ]
 
