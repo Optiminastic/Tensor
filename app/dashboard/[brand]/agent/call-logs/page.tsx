@@ -6,9 +6,9 @@ import { ProductionPageHeader } from '@/components/production/production-page-he
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { CallLog } from '@/lib/validators/call-logs'
-import type { MessageLog } from '@/lib/validators/message-logs'
+import type { MessageLog, MessageTemplate } from '@/lib/validators/message-logs'
 import { listCallLogs } from '@/services/call-logs.service'
-import { listMessageLogs } from '@/services/message-logs.service'
+import { getMessageTemplate, listMessageLogs } from '@/services/message-logs.service'
 
 export const metadata: Metadata = { title: 'Logs' }
 
@@ -37,6 +37,7 @@ export default async function LogsPage({ params }: LogsPageProps): Promise<JSX.E
 
   let calls: CallLog[] = []
   let messages: MessageLog[] = []
+  let template: MessageTemplate | null = null
   let callsError: string | null = null
   let messagesError: string | null = null
 
@@ -46,10 +47,17 @@ export default async function LogsPage({ params }: LogsPageProps): Promise<JSX.E
     callsError = expired
     messagesError = expired
   } else {
-    const [callResult, messageResult] = await Promise.allSettled([
+    // The template is fetched alongside, never in series: it is a footnote
+    // for rows whose own words were not recorded, and it must not add Meta's
+    // latency to a page that has everything else in hand.
+    const [callResult, messageResult, templateResult] = await Promise.allSettled([
       listCallLogs(token, brand),
       listMessageLogs(token, brand),
+      getMessageTemplate(token, brand),
     ])
+    if (templateResult.status === 'fulfilled') {
+      template = templateResult.value
+    }
     if (callResult.status === 'fulfilled') {
       calls = callResult.value
     } else {
@@ -74,6 +82,7 @@ export default async function LogsPage({ params }: LogsPageProps): Promise<JSX.E
         callsError={callsError}
         messages={messages}
         messagesError={messagesError}
+        template={template}
       />
     </main>
   )

@@ -14,10 +14,12 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/ui/table'
-import type { MessageLog, MessageLogStatus } from '@/lib/validators/message-logs'
+import type { MessageLog, MessageLogStatus, MessageTemplate } from '@/lib/validators/message-logs'
 
 interface MessageLogsTableProps {
   logs: MessageLog[]
+  /** The approved copy, shown for rows whose own words were not recorded. */
+  template: MessageTemplate | null
 }
 
 /**
@@ -47,7 +49,7 @@ function when(raw: string): string {
   })
 }
 
-export function MessageLogsTable({ logs }: MessageLogsTableProps): JSX.Element {
+export function MessageLogsTable({ logs, template }: MessageLogsTableProps): JSX.Element {
   const [open, setOpen] = useState<MessageLog | null>(null)
 
   return (
@@ -116,7 +118,7 @@ export function MessageLogsTable({ logs }: MessageLogsTableProps): JSX.Element {
         </Table>
       </Card>
 
-      <MessageDetailSheet message={open} onClose={() => setOpen(null)} />
+      <MessageDetailSheet message={open} template={template} onClose={() => setOpen(null)} />
     </>
   )
 }

@@ -6,7 +6,7 @@ import { CallLogsTable } from '@/components/agent/call-logs-table'
 import { MessageLogsTable } from '@/components/agent/message-logs-table'
 import { Tabs } from '@/components/ui/tabs'
 import type { CallLog } from '@/lib/validators/call-logs'
-import type { MessageLog } from '@/lib/validators/message-logs'
+import type { MessageLog, MessageTemplate } from '@/lib/validators/message-logs'
 
 interface LogsTabsProps {
   brand: string
@@ -14,6 +14,12 @@ interface LogsTabsProps {
   callsError: string | null
   messages: MessageLog[]
   messagesError: string | null
+  /**
+   * The approved copy, for rows sent before Tensor recorded the words. Null
+   * when WhatsApp is not connected or Meta could not be read - a footnote
+   * must not be a reason the page fails.
+   */
+  template: MessageTemplate | null
 }
 
 type View = 'calls' | 'messages'
@@ -37,6 +43,7 @@ export function LogsTabs({
   callsError,
   messages,
   messagesError,
+  template,
 }: LogsTabsProps): JSX.Element {
   const [view, setView] = useState<View>('calls')
 
@@ -67,7 +74,7 @@ export function LogsTabs({
             empty={messages.length === 0}
             emptyText="No win-back messages yet. One goes out ten minutes after a checkout is abandoned, once WhatsApp is switched on."
           >
-            <MessageLogsTable logs={messages} />
+            <MessageLogsTable logs={messages} template={template} />
           </Panel>
         )}
       </div>

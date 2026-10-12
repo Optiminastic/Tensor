@@ -13,11 +13,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import type { MessageLog } from '@/lib/validators/message-logs'
+import type { MessageLog, MessageTemplate } from '@/lib/validators/message-logs'
 
 interface MessageDetailSheetProps {
   /** The message to show, or null when the panel is closed. */
   message: MessageLog | null
+  /** The approved copy, for a row whose own words were not recorded. */
+  template: MessageTemplate | null
   onClose: () => void
 }
 
@@ -47,7 +49,11 @@ function when(raw: string): string {
  * fields. A message rendered as label-and-value pairs reads as data about a
  * message; the thing being checked here is how it came across.
  */
-export function MessageDetailSheet({ message, onClose }: MessageDetailSheetProps): JSX.Element {
+export function MessageDetailSheet({
+  message,
+  template,
+  onClose,
+}: MessageDetailSheetProps): JSX.Element {
   return (
     <Sheet open={message !== null} onOpenChange={open => !open && onClose()}>
       <SheetContent side="right" className="flex max-w-xl flex-col">
@@ -68,7 +74,7 @@ export function MessageDetailSheet({ message, onClose }: MessageDetailSheetProps
         </SheetHeader>
 
         <SheetBody className="flex-1">
-          {message ? <SentMessage message={message} /> : null}
+          {message ? <SentMessage message={message} template={template} /> : null}
         </SheetBody>
       </SheetContent>
     </Sheet>
@@ -77,9 +83,10 @@ export function MessageDetailSheet({ message, onClose }: MessageDetailSheetProps
 
 interface SentMessageProps {
   message: MessageLog
+  template: MessageTemplate | null
 }
 
-function SentMessage({ message }: SentMessageProps): JSX.Element {
+function SentMessage({ message, template }: SentMessageProps): JSX.Element {
   return (
     <div className="flex flex-col gap-5">
       {message.body ? (
@@ -106,10 +113,12 @@ function SentMessage({ message }: SentMessageProps): JSX.Element {
             ) : null}
           </div>
         </div>
+      ) : template && message.status === 'sent' ? (
+        <TemplateFallback template={template} customerName={message.customer_name} />
       ) : (
         <p className="text-muted-foreground text-sm">
           {message.status === 'sent'
-            ? 'This message was sent before Tensor began recording the words, so there is no copy of it here.'
+            ? 'This message was sent before Tensor began recording the words, and the approved template could not be read, so there is no copy of it here.'
             : 'Nothing was sent, so there is no message to show.'}
         </p>
       )}
@@ -172,6 +181,76 @@ function Field({ label, children }: FieldProps): JSX.Element {
         {label}
       </span>
       <span className="text-foreground text-sm">{children}</span>
+    </div>
+  )
+}
+
+/** What each unrecorded placeholder stood for, in the template's own order. */
+const PLACEHOLDERS: Record<string, string> = {
+  '{{2}}': 'their cart items',
+  '{{3}}': 'item count',
+  '{{4}}': 'cart total',
+  '{{5}}': 'discount code',
+}
+
+interface TemplateFallbackProps {
+  template: MessageTemplate
+  customerName: string
+}
+
+/**
+ * The approved template, for a message sent before Tensor kept its words.
+ *
+ * THE CUSTOMER'S NAME IS FILLED IN AND NOTHING ELSE IS. It is the one value
+ * on the row, so it is certain; the basket, the total and the code were never
+ * recorded and are not recoverable - Shopify's abandoned list has moved on
+ * and the code was minted per customer. Substituting a plausible value for
+ * any of them would turn a template into a forged message, and this panel is
+ * read by somebody deciding whether to honour a discount.
+ *
+ * So the unknown parts stay visibly unknown, as named gaps rather than as
+ * guesses, and the heading says this is the template rather than the message.
+ */
+function TemplateFallback({ template, customerName }: TemplateFallbackProps): JSX.Element {
+  const filled = template.body.replaceAll('{{1}}', customerName || 'there')
+  // Split on the placeholders so each one can be drawn as a gap rather than
+  // read as literal text the customer saw.
+  const parts = filled.split(/(\{\{[2-9]\}\})/g)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-muted-foreground text-sm text-pretty">
+        Sent before Tensor began recording the words. This is the template it was sent from,{' '}
+        <span className="text-foreground font-medium">not a copy of the message</span> — the basket
+        and the code it carried were not kept.
+      </p>
+
+      <div className="flex justify-end">
+        <div className="bg-surface-muted/60 border-border/70 max-w-[90%] rounded-xl rounded-br-sm border border-dashed px-3.5 py-2.5">
+          <p className="text-foreground text-sm whitespace-pre-line">
+            {parts.map((part, index) =>
+              PLACEHOLDERS[part] ? (
+                <span
+                  key={index}
+                  className="text-subtle-foreground bg-surface-muted rounded px-1 py-0.5 text-xs"
+                >
+                  {PLACEHOLDERS[part]}
+                </span>
+              ) : (
+                part
+              ),
+            )}
+          </p>
+          <span className="border-border/70 text-subtle-foreground mt-2.5 flex items-center justify-center gap-1.5 border-t pt-2 text-sm font-medium">
+            <ExternalLink className="size-3.5" aria-hidden />
+            Complete checkout
+          </span>
+        </div>
+      </div>
+
+      <p className="text-subtle-foreground text-xs">
+        {template.name} · {template.language} · {template.status.toLowerCase()}
+      </p>
     </div>
   )
 }

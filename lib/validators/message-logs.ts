@@ -59,3 +59,25 @@ export const MessageLogsResponseSchema = z.object({ items: z.array(MessageLogSch
 
 export type MessageLogStatus = z.infer<typeof MessageLogStatusSchema>
 export type MessageLog = z.infer<typeof MessageLogSchema>
+
+/**
+ * The approved template as Meta holds it today, placeholders and all.
+ *
+ * READ LIVE, unlike a row's own body, because it answers a different
+ * question: a row's body is the record of one send and must never change,
+ * while this is "what does the agent send", which is whatever the template
+ * says now. It is shown only for rows sent before Tensor recorded the words,
+ * and labelled as the template rather than as the message - presenting
+ * today's copy as last week's message is exactly the rewriting the frozen
+ * body exists to prevent.
+ */
+export const MessageTemplateSchema = z.object({
+  name: z.string(),
+  language: z.string(),
+  /** Meta's own word: APPROVED, PENDING, REJECTED. */
+  status: z.string(),
+  /** Carries {{1}}…{{5}}, unfilled. */
+  body: z.string(),
+})
+
+export type MessageTemplate = z.infer<typeof MessageTemplateSchema>
