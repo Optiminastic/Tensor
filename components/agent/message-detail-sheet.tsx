@@ -90,27 +90,42 @@ function SentMessage({ message, template }: SentMessageProps): JSX.Element {
   return (
     <div className="flex flex-col gap-5">
       {message.body ? (
-        <div className="flex justify-end">
-          <div className="bg-surface-muted max-w-[90%] rounded-xl rounded-br-sm px-3.5 py-2.5">
-            {/* whitespace-pre-line, because the approved copy carries its own
-                line breaks and collapsing them turns a laid-out message into
-                one long paragraph nobody would recognise. */}
-            <p className="text-foreground text-sm whitespace-pre-line">{message.body}</p>
+        <div className="flex flex-col gap-2">
+          {/* Said above the bubble, not below it. A reader who takes in the
+              message first and the caveat second has already formed a view
+              of what the customer was told. */}
+          {message.reconstructed ? (
+            <p className="text-muted-foreground text-sm text-pretty">
+              Rebuilt from Shopify — the values are this checkout&apos;s own, in today&apos;s
+              approved wording.{' '}
+              <span className="text-foreground font-medium">Not a recording of what was sent.</span>
+            </p>
+          ) : null}
 
-            {/* The button is drawn as a button. Meta keeps URL buttons out of
+          <div className="flex justify-end">
+            <div className="bg-surface-muted max-w-[90%] rounded-xl rounded-br-sm px-3.5 py-2.5">
+              {/* whitespace-pre-line, because the approved copy carries its own
+                  line breaks and collapsing them turns a laid-out message into
+                  one long paragraph nobody would recognise. */}
+              <p className="text-foreground text-sm whitespace-pre-line">
+                <Spelled body={message.body} />
+              </p>
+
+              {/* The button is drawn as a button. Meta keeps URL buttons out of
                 the body text, so a bubble showing only the body would describe
                 a message referring to a link that is not in it. */}
-            {message.link ? (
-              <a
-                href={message.link}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="border-border/70 text-link mt-2.5 flex items-center justify-center gap-1.5 border-t pt-2 text-sm font-medium hover:underline"
-              >
-                <ExternalLink className="size-3.5" aria-hidden />
-                Complete checkout
-              </a>
-            ) : null}
+              {message.link ? (
+                <a
+                  href={message.link}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="border-border/70 text-link mt-2.5 flex items-center justify-center gap-1.5 border-t pt-2 text-sm font-medium hover:underline"
+                >
+                  <ExternalLink className="size-3.5" aria-hidden />
+                  Complete checkout
+                </a>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : template && message.status === 'sent' ? (
@@ -187,6 +202,7 @@ function Field({ label, children }: FieldProps): JSX.Element {
 
 /** What each unrecorded placeholder stood for, in the template's own order. */
 const PLACEHOLDERS: Record<string, string> = {
+  '{{1}}': 'customer name',
   '{{2}}': 'their cart items',
   '{{3}}': 'item count',
   '{{4}}': 'cart total',
@@ -213,9 +229,6 @@ interface TemplateFallbackProps {
  */
 function TemplateFallback({ template, customerName }: TemplateFallbackProps): JSX.Element {
   const filled = template.body.replaceAll('{{1}}', customerName || 'there')
-  // Split on the placeholders so each one can be drawn as a gap rather than
-  // read as literal text the customer saw.
-  const parts = filled.split(/(\{\{[2-9]\}\})/g)
 
   return (
     <div className="flex flex-col gap-3">
@@ -228,18 +241,7 @@ function TemplateFallback({ template, customerName }: TemplateFallbackProps): JS
       <div className="flex justify-end">
         <div className="bg-surface-muted/60 border-border/70 max-w-[90%] rounded-xl rounded-br-sm border border-dashed px-3.5 py-2.5">
           <p className="text-foreground text-sm whitespace-pre-line">
-            {parts.map((part, index) =>
-              PLACEHOLDERS[part] ? (
-                <span
-                  key={index}
-                  className="text-subtle-foreground bg-surface-muted rounded px-1 py-0.5 text-xs"
-                >
-                  {PLACEHOLDERS[part]}
-                </span>
-              ) : (
-                part
-              ),
-            )}
+            <Spelled body={filled} />
           </p>
           <span className="border-border/70 text-subtle-foreground mt-2.5 flex items-center justify-center gap-1.5 border-t pt-2 text-sm font-medium">
             <ExternalLink className="size-3.5" aria-hidden />
@@ -252,5 +254,41 @@ function TemplateFallback({ template, customerName }: TemplateFallbackProps): JS
         {template.name} · {template.language} · {template.status.toLowerCase()}
       </p>
     </div>
+  )
+}
+
+interface SpelledProps {
+  body: string
+}
+
+/**
+ * The message text, with any placeholder that could not be filled drawn as a
+ * named gap.
+ *
+ * A recorded body never contains one - it was rendered against real values at
+ * send time. A rebuilt one can: Shopify still has the basket but the discount
+ * code was minted per customer and never written down, so a customer whose
+ * code collided has no recoverable code. Leaving {{5}} as literal text would
+ * read as something the customer actually received; filling it with a
+ * plausible code would be worse, because somebody reads this panel before
+ * honouring one.
+ */
+function Spelled({ body }: SpelledProps): JSX.Element {
+  const parts = body.split(/(\{\{[1-9]\}\})/g)
+  return (
+    <>
+      {parts.map((part, index) =>
+        PLACEHOLDERS[part] ? (
+          <span
+            key={index}
+            className="text-subtle-foreground bg-surface-muted rounded px-1 py-0.5 text-xs"
+          >
+            {PLACEHOLDERS[part]}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
   )
 }

@@ -50,6 +50,19 @@ export const MessageLogSchema = z.object({
     .string()
     .nullish()
     .transform(v => v ?? ''),
+  /**
+   * True when the body and link were rebuilt from Shopify after the fact
+   * rather than recorded at send time.
+   *
+   * Shown, not hidden. A rebuilt message carries this checkout's real values
+   * in today's approved wording, which is not the same as evidence of what
+   * was sent - and this panel is read while deciding whether to honour a
+   * discount a customer is quoting.
+   */
+  reconstructed: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
   attempts: z.number(),
   sent_at: z.string(),
   created_at: z.string(),
