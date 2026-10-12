@@ -1,7 +1,8 @@
 'use client'
 
-import type { JSX } from 'react'
+import { type JSX, useState } from 'react'
 
+import { MessageDetailSheet } from '@/components/agent/message-detail-sheet'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { CopyableId } from '@/components/ui/copyable-id'
@@ -47,57 +48,75 @@ function when(raw: string): string {
 }
 
 export function MessageLogsTable({ logs }: MessageLogsTableProps): JSX.Element {
+  const [open, setOpen] = useState<MessageLog | null>(null)
+
   return (
-    <Card>
-      <Table dense>
-        <TableHead>
-          <TableRow>
-            <TableHeaderCell className="whitespace-nowrap">When</TableHeaderCell>
-            <TableHeaderCell className="whitespace-nowrap">Checkout</TableHeaderCell>
-            <TableHeaderCell className="whitespace-nowrap">Customer</TableHeaderCell>
-            <TableHeaderCell className="whitespace-nowrap">Phone</TableHeaderCell>
-            <TableHeaderCell className="whitespace-nowrap">Status</TableHeaderCell>
-            <TableHeaderCell className="text-right whitespace-nowrap">Tries</TableHeaderCell>
-            <TableHeaderCell>Detail</TableHeaderCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {logs.map(log => {
-            const status = STATUS[log.status]
-            return (
-              <TableRow key={`${log.checkout_id}-${log.created_at}`}>
-                <TableCell className="whitespace-nowrap">{when(log.sent_at)}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {log.checkout_name ? (
-                    <CopyableId value={log.checkout_name} />
-                  ) : (
-                    <span className="text-subtle-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell className="max-w-[10rem] truncate" title={log.customer_name}>
-                  {log.customer_name || '—'}
-                </TableCell>
-                <TableCell className="font-mono whitespace-nowrap">{log.phone || '—'}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  <Badge tone={status.tone}>{status.label}</Badge>
-                </TableCell>
-                <TableCell className="text-right font-mono whitespace-nowrap tabular-nums">
-                  {log.attempts || '—'}
-                </TableCell>
-                {/* The sender's own sentence. On a failure this is the whole
+    <>
+      <Card>
+        <Table dense>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell className="whitespace-nowrap">When</TableHeaderCell>
+              <TableHeaderCell className="whitespace-nowrap">Checkout</TableHeaderCell>
+              <TableHeaderCell className="whitespace-nowrap">Customer</TableHeaderCell>
+              <TableHeaderCell className="whitespace-nowrap">Phone</TableHeaderCell>
+              <TableHeaderCell className="whitespace-nowrap">Status</TableHeaderCell>
+              <TableHeaderCell className="text-right whitespace-nowrap">Tries</TableHeaderCell>
+              <TableHeaderCell>Detail</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {logs.map(log => {
+              const status = STATUS[log.status]
+              return (
+                <TableRow
+                  key={`${log.checkout_id}-${log.created_at}`}
+                  // The whole row opens the panel, as it does on the call log
+                  // beside this one: the row is about one message, so aiming at
+                  // a link in the last column would be aiming at six pixels for
+                  // the thing the row is for.
+                  onClick={() => setOpen(log)}
+                  className="cursor-pointer"
+                >
+                  <TableCell className="whitespace-nowrap">{when(log.sent_at)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {log.checkout_name ? (
+                      // The id copies on click, which must not also open the
+                      // panel behind it.
+                      <span onClick={event => event.stopPropagation()}>
+                        <CopyableId value={log.checkout_name} />
+                      </span>
+                    ) : (
+                      <span className="text-subtle-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="max-w-[10rem] truncate" title={log.customer_name}>
+                    {log.customer_name || '—'}
+                  </TableCell>
+                  <TableCell className="font-mono whitespace-nowrap">{log.phone || '—'}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono whitespace-nowrap tabular-nums">
+                    {log.attempts || '—'}
+                  </TableCell>
+                  {/* The sender's own sentence. On a failure this is the whole
                     value of the row - it names the thing to fix - so it is
                     never truncated away entirely. */}
-                <TableCell
-                  className="text-muted-foreground max-w-[26rem] truncate"
-                  title={log.detail || log.message_id}
-                >
-                  {log.detail || (log.message_id ? 'Accepted by WhatsApp' : '—')}
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </Card>
+                  <TableCell
+                    className="text-muted-foreground max-w-[26rem] truncate"
+                    title={log.detail || log.message_id}
+                  >
+                    {log.detail || (log.message_id ? 'Accepted by WhatsApp' : '—')}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </Card>
+
+      <MessageDetailSheet message={open} onClose={() => setOpen(null)} />
+    </>
   )
 }

@@ -28,6 +28,28 @@ export const MessageLogSchema = z.object({
   detail: z.string(),
   /** Meta's wamid. Empty when nothing was sent. */
   message_id: z.string(),
+  /**
+   * The message as the customer saw it - the approved template with this
+   * customer's name, basket and code already in it.
+   *
+   * FROZEN AT SEND TIME, not rendered here. The copy lives at Meta and is
+   * edited there, so rendering from today's template would redraw last week's
+   * messages in this week's words. Empty for anything sent before Tensor
+   * began recording it.
+   */
+  body: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  /**
+   * The whole recovery address behind the button: the discount code, and the
+   * redirect back to this customer's own basket. Separate from the body
+   * because Meta keeps button URLs out of the body text.
+   */
+  link: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
   attempts: z.number(),
   sent_at: z.string(),
   created_at: z.string(),
