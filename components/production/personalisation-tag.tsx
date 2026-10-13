@@ -1,11 +1,13 @@
 'use client'
 
+import { Check, Copy } from 'lucide-react'
 import { type JSX, useState } from 'react'
 
 import { PERSONALISATION_STATUS_CONFIG } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { PersonalisationStatus } from '@/components/production/types'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { cn } from '@/lib/utils'
 import type { PersonalisationChange } from '@/lib/validators/personalisation-changes'
 import {
   fetchPersonalisationChanges,
@@ -33,13 +35,20 @@ interface PersonalisationTagProps {
  * "nothing to copy" is worse than one that plainly is not.
  */
 export function PersonalisationTag({ jobId, status }: PersonalisationTagProps): JSX.Element {
-  if (status === 'awaiting_customer') {
-    return <CopyLinkTag jobId={jobId} status={status} />
-  }
-  if (status === 'changed') {
-    return <ChangesTag jobId={jobId} status={status} />
-  }
-  return <TonePill {...PERSONALISATION_STATUS_CONFIG[status]} />
+  return (
+    <span className="flex items-center gap-1.5">
+      {status === 'changed' ? (
+        <ChangesTag jobId={jobId} status={status} />
+      ) : (
+        <TonePill {...PERSONALISATION_STATUS_CONFIG[status]} />
+      )}
+      {/* Its own control, beside the tag rather than inside it. Copying a
+          link and reading a status are two different acts, and a tag that
+          changed its own label to "Link copied" was briefly lying about the
+          job's state to report on a click. */}
+      {status === 'awaiting_customer' ? <CopyLinkButton jobId={jobId} /> : null}
+    </span>
+  )
 }
 
 /**
@@ -50,8 +59,12 @@ export function PersonalisationTag({ jobId, status }: PersonalisationTagProps): 
  * everybody who merely opened the queue, and in whatever logs sit in front of
  * it. This way the only links that leave the server are the ones somebody
  * asked for.
+ *
+ * Shown only while the window is open, which is the only time a link exists -
+ * the backend destroys its recoverable copy when the window closes, so on any
+ * other row this button could do nothing but apologise.
  */
-function CopyLinkTag({ jobId, status }: PersonalisationTagProps): JSX.Element {
+function CopyLinkButton({ jobId }: { jobId: string }): JSX.Element {
   const [state, setState] = useState<'idle' | 'copying' | 'copied' | 'gone'>('idle')
 
   async function copy(): Promise<void> {
@@ -72,26 +85,31 @@ function CopyLinkTag({ jobId, status }: PersonalisationTagProps): JSX.Element {
     }
   }
 
-  const label =
+  const title =
     state === 'copied'
-      ? 'Link copied'
-      : state === 'copying'
-        ? 'Copying…'
-        : state === 'gone'
-          ? 'Window closed'
-          : PERSONALISATION_STATUS_CONFIG[status].label
+      ? 'Copied'
+      : state === 'gone'
+        ? 'That window has closed'
+        : "Copy this customer's personalisation link"
 
   return (
     <button
       type="button"
       onClick={() => void copy()}
-      title="Copy this customer's personalisation link"
-      className="cursor-pointer"
+      title={title}
+      aria-label={title}
+      disabled={state === 'copying'}
+      className={cn(
+        'text-subtle-foreground hover:text-foreground rounded p-1 transition',
+        state === 'copied' && 'text-success',
+        state === 'gone' && 'text-danger',
+      )}
     >
-      <TonePill
-        label={label}
-        tone={state === 'copied' ? 'success' : PERSONALISATION_STATUS_CONFIG[status].tone}
-      />
+      {state === 'copied' ? (
+        <Check className="size-3.5" aria-hidden />
+      ) : (
+        <Copy className="size-3.5" aria-hidden />
+      )}
     </button>
   )
 }
