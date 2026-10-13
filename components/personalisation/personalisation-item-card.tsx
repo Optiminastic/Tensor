@@ -265,7 +265,13 @@ function useModel(token: string, item: PersonalisationItem, saves: number) {
     }
   }, [waiting, token, item.job_id, version])
 
-  return { version, rebuilding: waiting, ready: Boolean(version) && !waiting }
+  // A backend that predates model_version sends none, and the model would
+  // then never be shown at all. Falling back to model_ready keeps the page
+  // working against an older API; it only loses the ability to tell a rebuilt
+  // model from the one it replaced, which is exactly what that backend could
+  // not tell us anyway.
+  const exists = version !== '' ? true : item.model_ready
+  return { version, rebuilding: waiting, ready: exists && !waiting }
 }
 
 function ViewerPlaceholder({ text }: { text: string }): JSX.Element {
