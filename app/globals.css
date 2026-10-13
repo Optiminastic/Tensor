@@ -460,3 +460,40 @@
     text-wrap: pretty;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Landing page.
+ *
+ * The public homepage has its own look - sky blue, lime and ink, set in Inter
+ * Tight - and these tokens belong to it alone. The dashboard's Editorial Ink
+ * palette above is untouched; nothing inside /dashboard uses a landing token.
+ * --------------------------------------------------------------------------- */
+@theme inline {
+  --font-landing: var(--font-inter-tight);
+
+  --color-landing-sky-deep: #0f5fe0;
+  --color-landing-sky: #2d8af7;
+  --color-landing-sky-haze: #a9d4ff;
+  --color-landing-lime: #d7f75b;
+  --color-landing-lime-deep: #c2e83a;
+  --color-landing-ink: #0e1116;
+  --color-landing-paper: #f3f4f6;
+  --color-landing-muted: #8a8f99;
+
+  --animate-landing-marquee: landing-marquee 40s linear infinite;
+
+  @keyframes landing-marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-landing-marquee {
+    animation: none;
+  }
+}
