@@ -75,14 +75,6 @@
   --ring: var(--accent);
 
   /*
-   * The ground greyscale artwork is printed on. Artwork arrives on white
-   * paper; multiplying it onto this makes it read as ink on the page rather
-   * than a pasted rectangle. Transparent here, because in light mode the page
-   * already IS the paper.
-   */
-  --plate-paper: transparent;
-
-  /*
    * Tint strength for translucent status/accent fills.
    *
    * Raised from 10%, which was so faint that a Paid pill and a Past-due pill
@@ -129,15 +121,6 @@
   --subtle-foreground: oklch(0.665 0.006 265);
   --border: oklch(0.288 0.005 265);
   --border-strong: oklch(0.555 0.007 265);
-
-  /*
-   * In dark the page is no longer paper, so artwork is given its own: a
-   * mounted print on a dark wall. Inverting instead would be wrong — it
-   * flatters line art but turns a photograph into a negative, and these
-   * plates are one of each. Dimmed well below white so a lit plate reads as
-   * paper rather than a glaring panel.
-   */
-  --plate-paper: oklch(0.86 0.008 78);
 
   /*
    * Lifted so the blue stays legible as text on a dark surface
@@ -194,7 +177,6 @@
   --color-subtle-foreground: var(--subtle-foreground);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
-  --color-plate-paper: var(--plate-paper);
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);

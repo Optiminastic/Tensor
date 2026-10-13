@@ -1,37 +1,32 @@
-import type { ReactNode, JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
 
-import { AuthPlate } from '@/components/auth/auth-plate'
-
-/** The artwork each auth page is paired with. */
-export const AUTH_PLATES = {
-  /** A single pawn casting a long shadow. The first move. */
-  pawn: { src: '/auth/setup-pawn.jpg', width: 728, height: 731 },
-  /** A boulder and its fragments. */
-  stone: { src: '/auth/auth-stone.jpg', width: 735, height: 961 },
-} as const
+import type { AuthPanelCopy } from '@/components/auth/auth-panels'
+import { AuthSkyPanel } from '@/components/auth/auth-sky-panel'
+import { interTight } from '@/components/landing/landing-font'
 
 interface AuthSplitProps {
-  plate: (typeof AUTH_PLATES)[keyof typeof AUTH_PLATES]
+  panel: AuthPanelCopy
   children: ReactNode
 }
 
 /**
- * The shared shape of every auth page: content left, artwork right.
+ * The shared shape of every auth page (`/login`, `/admin`, `/accept-invite`):
+ * the landing page's sky on the left, the form on white on the right. Below
+ * `lg` the sky becomes a banner above the form.
  *
- * Three pages (`/admin`, `/login`, `/accept-invite`) are the same layout, so it
- * lives here once. The pair is centred as a unit rather than the form being
- * centred alone — the form holds the left of the column and the plate takes the
- * remaining width.
- *
- * Below `lg` the plate collapses and the content is on its own, because on a
- * phone the width belongs to the form.
+ * Inputs inside the form column are taller and rounder than the dashboard's,
+ * to match the landing page's pills; the shared Input component is untouched.
  */
-export function AuthSplit({ plate, children }: AuthSplitProps): JSX.Element {
+export function AuthSplit({ panel, children }: AuthSplitProps): JSX.Element {
   return (
-    <main className="min-h-dvh px-4 py-12 sm:px-6">
-      <div className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-5xl items-center justify-center gap-10 xl:gap-16">
-        <div className="flex w-full max-w-md shrink-0 flex-col gap-8">{children}</div>
-        <AuthPlate {...plate} className="hidden aspect-square max-w-sm flex-1 lg:flex" />
+    <main
+      className={`${interTight.variable} font-landing text-landing-ink grid min-h-dvh gap-3 bg-white p-3 lg:grid-cols-2`}
+    >
+      <AuthSkyPanel copy={panel} />
+      <div className="flex items-center justify-center px-2 py-10 sm:px-6">
+        <div className="flex w-full max-w-md flex-col gap-8 [&_input]:h-12 [&_input]:rounded-xl [&_input]:px-4">
+          {children}
+        </div>
       </div>
     </main>
   )

@@ -3,7 +3,9 @@ import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
 import { FirstAdminForm } from '@/components/admin/first-admin-form'
-import { AUTH_PLATES, AuthSplit } from '@/components/auth/auth-split'
+import { AuthHeading } from '@/components/auth/auth-heading'
+import { AUTH_PANELS } from '@/components/auth/auth-panels'
+import { AuthSplit } from '@/components/auth/auth-split'
 import { adminExists } from '@/services/admin.service'
 
 export const metadata: Metadata = { title: 'Set up Tensor' }
@@ -43,14 +45,11 @@ export default async function AdminSetupPage(): Promise<JSX.Element> {
   if (exists) redirect('/login')
 
   return (
-    <AuthSplit plate={AUTH_PLATES.pawn}>
-      <div className="flex flex-col gap-2">
-        <h1 className="text-display text-4xl">Set up Tensor</h1>
-        <p className="text-muted-foreground text-sm text-pretty">
-          Tensor has no admin yet. Create the first one. Everyone after this is invited from the
-          dashboard — there is no public sign-up.
-        </p>
-      </div>
+    <AuthSplit panel={AUTH_PANELS.setup}>
+      <AuthHeading eyebrow="First admin" title="Set up Tensor">
+        Tensor has no admin yet. Create the first one. Everyone after this is invited from the
+        dashboard - there is no public sign-up.
+      </AuthHeading>
       <FirstAdminForm />
     </AuthSplit>
   )
