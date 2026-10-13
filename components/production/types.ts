@@ -26,7 +26,20 @@ export interface ActivityPoint {
 }
 
 export type QueueStatus = 'queued' | 'in_progress' | 'on_hold' | 'completed' | 'failed'
-export type PersonalisationStatus = 'not_required' | 'required' | 'completed'
+/**
+ * How the personalisation check stands, as the floor reads it.
+ *
+ * Five values rather than the backend's four, because `validated` means two
+ * different things to a person: the customer looked and changed something, or
+ * nothing was changed at all. Those need different tags - one of them is a
+ * reason to read the job before making it.
+ */
+export type PersonalisationStatus =
+  | 'not_required'
+  | 'required'
+  | 'awaiting_customer'
+  | 'changed'
+  | 'completed'
 export type AssemblyStatus = 'pending' | 'completed' | 'not_required'
 export type QcStatus = 'pending' | 'passed' | 'failed'
 export type PackagingStatus = 'pending' | 'packed'

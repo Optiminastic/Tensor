@@ -5,11 +5,10 @@ import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
 import { JobModelUploadButton } from '@/components/production/job-model-upload-button'
-import { PriorityTag } from '@/components/production/priority-tag'
+import { PersonalisationTag } from '@/components/production/personalisation-tag'
 import {
   MODEL_STATUS_CONFIG,
   PACKAGING_STATUS_CONFIG,
-  PERSONALISATION_STATUS_CONFIG,
   QUEUE_STATUS_CONFIG,
 } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
@@ -89,13 +88,10 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
         <TonePill {...QUEUE_STATUS_CONFIG[job.status]} />
       </TableCell>
       <TableCell>
-        <TonePill {...PERSONALISATION_STATUS_CONFIG[job.personalisation]} />
+        <PersonalisationTag jobId={job.id} status={job.personalisation} />
       </TableCell>
       <TableCell>
         <TonePill {...PACKAGING_STATUS_CONFIG[job.packaging]} />
-      </TableCell>
-      <TableCell className="text-right">
-        <PriorityTag priority={job.priority} />
       </TableCell>
       <TableCell className="text-muted-foreground whitespace-nowrap">
         {dateTime(job.createdAt)}

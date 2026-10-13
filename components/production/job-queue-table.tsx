@@ -48,7 +48,10 @@ const COLUMNS = [
   'Status',
   'Personalisation',
   'Packaging',
-  'Priority',
+  // No Priority column. The rank is still stamped on the job and still
+  // matters to packing, but nothing has READ it when work is grouped since
+  // the floor went first-come-first-served - and a column ranking work by a
+  // number nothing acts on invites somebody to act on it.
   'Created',
 ]
 

@@ -90,6 +90,18 @@ export const ProductionJobSchema = z.object({
   personalisation_photo_file_id: z.string().nullish(),
   personalisation_validated_by: z.string().nullish(),
   personalisation_validated_at: z.string().nullish(),
+  /**
+   * Whether the customer moved anything on their own link.
+   *
+   * A bare boolean, because the queue carries hundreds of these and the
+   * values behind it belong to the one row somebody opens - see
+   * /production-jobs/:id/personalisation-changes. Defaulted, so a backend
+   * that predates this sends nothing and every job reads as unchanged.
+   */
+  personalisation_changed: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
   personalisation_log: z.string().array().nullish(),
   name_confirmed: z.boolean(),
   photo_confirmed: z.boolean(),

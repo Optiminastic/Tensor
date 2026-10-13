@@ -42,7 +42,14 @@ export const PERSONALISATION_STATUS_CONFIG: Record<
 > = {
   not_required: { label: 'None', tone: 'muted' },
   required: { label: 'Pending', tone: 'warning' },
-  completed: { label: 'Verified', tone: 'success' },
+  // The customer has the link and the clock is running. Nobody in the shop
+  // should act on this one - it clears itself when the window closes, and
+  // validating it by hand would overrule a customer mid-edit.
+  awaiting_customer: { label: 'Link sent', tone: 'accent' },
+  // They looked and moved something. Not an error, but the one state worth
+  // reading the job for before making it - hence its own tone.
+  changed: { label: 'Changed', tone: 'warning' },
+  completed: { label: 'Done', tone: 'success' },
 }
 
 export const ASSEMBLY_STATUS_CONFIG: Record<AssemblyStatus, { label: string; tone: PillTone }> = {

@@ -42,9 +42,14 @@ function toQueueStatus(job: ProductionJob): QueueStatus {
   return 'queued'
 }
 
-function toPersonalisation(status: string): PersonalisationStatus {
+function toPersonalisation(status: string, changed: boolean): PersonalisationStatus {
   if (status === 'not_required') return 'not_required'
-  if (status === 'validated') return 'completed'
+  if (status === 'awaiting_customer') return 'awaiting_customer'
+  // `validated` covers both halves of a closed window - the customer
+  // confirmed, or it simply ran out - and a job validated by hand long before
+  // any of this existed. What separates them for a reader is whether anything
+  // actually moved.
+  if (status === 'validated') return changed ? 'changed' : 'completed'
   return 'required'
 }
 
@@ -70,7 +75,7 @@ export function toQueueItem(job: ProductionJob): ProductionJobQueueItem {
     partRole: job.part_role && job.part_role !== 'body' ? job.part_role : null,
     qty: job.quantity,
     status: toQueueStatus(job),
-    personalisation: toPersonalisation(job.personalisation_status),
+    personalisation: toPersonalisation(job.personalisation_status, job.personalisation_changed),
     qc: toQc(job.qc_status),
     packaging: toPackaging(job.packaging_status),
     priority: job.priority,
@@ -250,7 +255,7 @@ export function toOrderJobPersonalisation(job: ProductionJob): OrderJobPersonali
     jobId: job.id,
     jobNumber: job.job_number,
     description: job.product_name ?? job.description,
-    personalisation: toPersonalisation(job.personalisation_status),
+    personalisation: toPersonalisation(job.personalisation_status, job.personalisation_changed),
     log: job.personalisation_log ?? [],
   }
 }
