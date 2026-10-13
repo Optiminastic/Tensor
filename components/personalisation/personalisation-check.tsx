@@ -66,7 +66,13 @@ export function PersonalisationCheck({ token, link }: PersonalisationCheckProps)
 
       <div className="flex flex-col gap-5">
         {link.items.map(item => (
-          <PersonalisationItemCard key={item.job_id} token={token} item={item} />
+          <PersonalisationItemCard
+            key={item.job_id}
+            token={token}
+            item={item}
+            colours={link.colours}
+            editable={open}
+          />
         ))}
       </div>
 
