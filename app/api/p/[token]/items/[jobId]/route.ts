@@ -29,3 +29,19 @@ export async function PATCH(request: NextRequest, { params }: RouteContext): Pro
   )
   return Response.json(await upstream.json().catch(() => ({})), { status: upstream.status })
 }
+
+/**
+ * One item, for a page waiting on its own re-render.
+ *
+ * Cheaper than re-reading the whole order every few seconds, and the model id
+ * it carries is the only thing changing.
+ */
+export async function GET(_request: NextRequest, { params }: RouteContext): Promise<Response> {
+  const { token, jobId } = await params
+  const upstream = await fetch(
+    `${env.TENSOR_CORE_URL}/public/personalisation/${encodeURIComponent(token)}` +
+      `/items/${encodeURIComponent(jobId)}`,
+    { cache: 'no-store', signal: AbortSignal.timeout(10_000) },
+  )
+  return Response.json(await upstream.json().catch(() => ({})), { status: upstream.status })
+}

@@ -30,6 +30,18 @@ export const PersonalisationItemSchema = z.object({
    */
   model_ready: z.boolean(),
   /**
+   * Changes when the model does - it is the print file's id, and a re-render
+   * mints a new file rather than overwriting the old one.
+   *
+   * The page needs it because "is there a model" is true both before and
+   * after a save: without a version it would poll, see the old file answer,
+   * and show the customer the colour they just changed away from.
+   */
+  model_version: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  /**
    * Which of several identical products this is - "2 of 3".
    *
    * Zero when the order holds only one, so the page says nothing rather than

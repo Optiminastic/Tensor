@@ -46,9 +46,9 @@ export function PersonalisationItemCard({
   const [error, setError] = useState<string | null>(null)
   // Bumped after a save so the viewer refetches rather than showing the model
   // the customer just changed.
-  const [version, setVersion] = useState(0)
+  const [saves, setSaves] = useState(0)
 
-  const ready = useModelReady(token, item, version)
+  const { version: modelVersion, rebuilding, ready } = useModel(token, item, saves)
   const dirty = colour !== item.colour || item.fields.some(f => values[f.label] !== f.value)
 
   async function save(): Promise<void> {
@@ -70,7 +70,7 @@ export function PersonalisationItemCard({
         setError(body.detail ?? 'Could not save that. Please try again.')
         return
       }
-      if (body.saved) setVersion(v => v + 1)
+      if (body.saved) setSaves(n => n + 1)
     } catch {
       setError('Could not save that. Please try again.')
     } finally {
@@ -181,14 +181,14 @@ export function PersonalisationItemCard({
       <div className="bg-surface-muted h-64 w-full overflow-hidden rounded-lg">
         {ready ? (
           <JobModelViewer
-            key={version}
-            modelUrl={`/api/p/${encodeURIComponent(token)}/items/${encodeURIComponent(item.job_id)}/model?v=${version}`}
+            key={modelVersion}
+            modelUrl={`/api/p/${encodeURIComponent(token)}/items/${encodeURIComponent(item.job_id)}/model?v=${modelVersion}`}
             showPlate={false}
             captureName={`${item.job_number}.png`}
           />
         ) : (
           <ViewerPlaceholder
-            text={version > 0 ? 'Rebuilding your preview…' : 'Building your preview…'}
+            text={rebuilding ? 'Rebuilding your preview…' : 'Building your preview…'}
           />
         )}
       </div>
@@ -211,55 +211,61 @@ export function PersonalisationItemCard({
 }
 
 /**
- * Polls until the model exists.
+ * Follows the model: whether one exists, and whether it is still the old one.
  *
- * The link is sent the moment the order arrives and the render follows 20-45
- * seconds later, so the first answer is almost always "not yet". The same
- * applies after a save, which is why a version bump restarts it.
+ * WATCHES THE MODEL'S ID, not merely whether a file answers. A re-render mints
+ * a new file rather than overwriting the old one, so the id is an exact
+ * signal - and without it the obvious implementation is wrong in the one case
+ * that matters: after a save the previous model is still there, answers
+ * immediately, and the customer is shown the colour they just changed away
+ * from, which reads as the save having failed.
  *
  * Gives up after a few minutes. A render that has not landed by then has
  * failed, and a spinner that never stops is a worse answer than a still
  * picture of nothing.
  */
-function useModelReady(token: string, item: PersonalisationItem, version: number): boolean {
-  const [ready, setReady] = useState(item.model_ready)
+function useModel(token: string, item: PersonalisationItem, saves: number) {
+  const [version, setVersion] = useState(item.model_version)
+  const [waiting, setWaiting] = useState(false)
 
   useEffect(() => {
-    // A save means the model on screen is now the old one.
-    if (version > 0) setReady(false)
-  }, [version])
+    if (saves === 0) return
+    // A save means whatever is on screen is now out of date.
+    setWaiting(true)
+  }, [saves])
 
   useEffect(() => {
-    if (ready) return
+    if (!waiting) return
     let cancelled = false
     let attempts = 0
-    const url =
-      `/api/p/${encodeURIComponent(token)}/items/${encodeURIComponent(item.job_id)}/model` +
-      `?v=${version}`
+    const url = `/api/p/${encodeURIComponent(token)}/items/${encodeURIComponent(item.job_id)}`
 
     const poll = setInterval(() => {
       attempts += 1
       if (attempts > 40) {
         clearInterval(poll)
+        setWaiting(false)
         return
       }
       void fetch(url, { cache: 'no-store' })
-        .then(response => {
-          if (!cancelled && response.ok) {
-            setReady(true)
-            clearInterval(poll)
-          }
+        .then(response => (response.ok ? response.json() : null))
+        .then((body: { model_version?: string } | null) => {
+          const latest = body?.model_version ?? ''
+          if (cancelled || !latest || latest === version) return
+          setVersion(latest)
+          setWaiting(false)
+          clearInterval(poll)
         })
         .catch(() => undefined)
-    }, 5000)
+    }, 4000)
 
     return () => {
       cancelled = true
       clearInterval(poll)
     }
-  }, [ready, token, item.job_id, version])
+  }, [waiting, token, item.job_id, version])
 
-  return ready
+  return { version, rebuilding: waiting, ready: Boolean(version) && !waiting }
 }
 
 function ViewerPlaceholder({ text }: { text: string }): JSX.Element {
