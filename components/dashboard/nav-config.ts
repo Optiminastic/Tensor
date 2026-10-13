@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   Library,
   type LucideIcon,
+  MessageSquare,
   PackageCheck,
   PackageSearch,
   PencilLine,
@@ -203,6 +204,14 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // Logs page of their own: the question is always "what did we do about
       // THIS cart", and a separate log made it two places to look.
       { label: 'Abandoned Checkout', href: '/agent/abandoned-checkout', icon: ShoppingBag },
+      // A permission of its own: reading customers' chats is narrower than
+      // seeing their orders, and replying speaks for the shop.
+      {
+        label: 'WhatsApp Inbox',
+        href: '/agent/inbox',
+        icon: MessageSquare,
+        permission: 'whatsapp:read',
+      },
     ],
   },
   {
