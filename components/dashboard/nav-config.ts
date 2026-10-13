@@ -17,7 +17,6 @@ import {
   PackageCheck,
   PackageSearch,
   PencilLine,
-  ScrollText,
   Plug,
   Printer,
   Receipt,
@@ -195,10 +194,10 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     // the roles that may see this.
     permission: 'order:read',
     items: [
+      // The calls and messages about a checkout live in its drawer, not on a
+      // Logs page of their own: the question is always "what did we do about
+      // THIS cart", and a separate log made it two places to look.
       { label: 'Abandoned Checkout', href: '/agent/abandoned-checkout', icon: ShoppingBag },
-      // Directly below it, because it is the other half of the same story:
-      // one page says who walked away, the next says what was said to them.
-      { label: 'Logs', href: '/agent/call-logs', icon: ScrollText },
     ],
   },
   {

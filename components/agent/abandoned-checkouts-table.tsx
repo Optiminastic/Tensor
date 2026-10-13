@@ -1,9 +1,11 @@
 'use client'
 
-import { type JSX, useMemo, useState } from 'react'
+import { type JSX, type ReactNode, type SyntheticEvent, useMemo, useState } from 'react'
 import type { SortDescriptor } from 'react-aria-components'
 
 import { CallCheckoutButton } from '@/components/agent/call-checkout-button'
+import { CheckoutDetailSheet, type DrawerContext } from '@/components/agent/checkout-detail-sheet'
+import { CheckoutStatusBadge } from '@/components/agent/checkout-status-badge'
 import { FilterBar } from '@/components/production/filter-bar'
 import { TablePagination } from '@/components/production/table-pagination'
 import {
@@ -19,7 +21,17 @@ import { Card } from '@/components/ui/card'
 import { CopyableId } from '@/components/ui/copyable-id'
 import { usePagination } from '@/hooks/use-pagination'
 import { useTableSort } from '@/hooks/use-table-sort'
+import {
+  type CheckoutActivity,
+  NO_ACTIVITY,
+  freshness,
+  groupActivity,
+  money,
+  sinceWhen,
+} from '@/lib/checkout-format'
 import type { AbandonedCheckout } from '@/lib/validators/abandoned-checkouts'
+import type { CallLog } from '@/lib/validators/call-logs'
+import type { MessageLog } from '@/lib/validators/message-logs'
 
 type SortKey = 'abandoned' | 'customer' | 'value'
 
@@ -39,6 +51,7 @@ const COLUMNS: { id: string; label: string; sort?: SortKey }[] = [
   { id: 'phone', label: 'Phone' },
   { id: 'items', label: 'Items' },
   { id: 'value', label: 'Value', sort: 'value' },
+  { id: 'agent', label: 'Agent' },
   { id: 'call', label: 'Call' },
   { id: 'actions', label: 'Actions' },
 ]
@@ -56,43 +69,9 @@ type Reachable = 'all' | 'phone' | 'no-phone' | 'recovered'
 
 interface AbandonedCheckoutsTableProps {
   checkouts: AbandonedCheckout[]
-  /** False when the backend has no Sarvam credentials; the Call buttons go flat. */
-  callingEnabled: boolean
-}
-
-/** ₹ with Indian grouping, from Shopify's decimal string. */
-function money(amount: string, currency: string): string {
-  const value = Number(amount)
-  if (!Number.isFinite(value)) return `${amount} ${currency}`
-  const symbol = currency === 'INR' ? '₹' : `${currency} `
-  return `${symbol}${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
-}
-
-/**
- * How hot a basket still is.
- *
- * Colour here is state, not decoration: a cart abandoned an hour ago is worth
- * a call and one from last Tuesday is not, so the tone is the thing an
- * operator scans the column for. Three bands rather than a gradient - a reader
- * needs "act now / today / cold", not twelve shades.
- */
-function freshness(iso: string): 'accent' | 'warning' | 'neutral' {
-  const hours = (Date.now() - new Date(iso).getTime()) / 3_600_000
-  if (!Number.isFinite(hours)) return 'neutral'
-  if (hours <= 3) return 'accent'
-  if (hours <= 24) return 'warning'
-  return 'neutral'
-}
-
-function sinceWhen(iso: string): string {
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return '—'
-  const minutes = Math.max(0, Math.round((Date.now() - then) / 60_000))
-  if (minutes < 60) return `${minutes} min ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours} hr ago`
-  const days = Math.round(hours / 24)
-  return `${days} day${days === 1 ? '' : 's'} ago`
+  /** Every call and message the agent made; grouped by checkout here. */
+  agent: { calls: CallLog[]; messages: MessageLog[] }
+  context: DrawerContext
 }
 
 function itemSummary(checkout: AbandonedCheckout): string {
@@ -114,9 +93,15 @@ function itemSummary(checkout: AbandonedCheckout): string {
  */
 export function AbandonedCheckoutsTable({
   checkouts,
-  callingEnabled,
+  agent,
+  context,
 }: AbandonedCheckoutsTableProps): JSX.Element {
   const [search, setSearch] = useState('')
+  const activity = useMemo(() => groupActivity(agent.calls, agent.messages), [agent])
+  // The drawer keeps the last checkout while closing, so it slides out whole
+  // instead of emptying first.
+  const [selected, setSelected] = useState<AbandonedCheckout | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [reachable, setReachable] = useState<Reachable>('all')
 
   // Split on whether there is a phone number, because that is the only thing
@@ -197,6 +182,14 @@ export function AbandonedCheckoutsTable({
           size="sm"
           sortDescriptor={sortDescriptor}
           onSortChange={descriptor => sorted.toggle(descriptor.column as SortKey)}
+          // The whole row opens the checkout's drawer - by click, or Enter on a
+          // focused row. The Call and Recover controls keep their own clicks.
+          onRowAction={key => {
+            const checkout = checkouts.find(c => c.id === key)
+            if (!checkout) return
+            setSelected(checkout)
+            setDrawerOpen(true)
+          }}
         >
           <TableHeader>
             {COLUMNS.map(column => (
@@ -220,7 +213,7 @@ export function AbandonedCheckoutsTable({
             )}
           >
             {checkout => (
-              <TableRow id={checkout.id}>
+              <TableRow id={checkout.id} className="cursor-pointer">
                 <TableCell>
                   {/* name, not id: Shopify's `name` is the merchant-facing
                       reference ("#66850843623637"), while `id` is the
@@ -229,15 +222,7 @@ export function AbandonedCheckoutsTable({
                   <CopyableId value={checkout.name} label={`checkout ${checkout.name}`} />
                 </TableCell>
                 <TableCell>
-                  {/* Recovered wins. "Ready to call" on a cart the customer
-                      already paid for is not a nuance, it is wrong. */}
-                  {checkout.completed_at ? (
-                    <Badge tone="success">Recovered</Badge>
-                  ) : checkout.phone.trim() ? (
-                    <Badge tone="accent">Ready to call</Badge>
-                  ) : (
-                    <Badge tone="neutral">No phone</Badge>
-                  )}
+                  <CheckoutStatusBadge checkout={checkout} />
                 </TableCell>
                 <TableCell>
                   <span className="text-muted-foreground">
@@ -268,21 +253,28 @@ export function AbandonedCheckoutsTable({
                   </span>
                 </TableCell>
                 <TableCell>
+                  <AgentSummary activity={activity.get(checkout.id) ?? NO_ACTIVITY} />
+                </TableCell>
+                <TableCell>
                   {/* Reads the row it sits in - name, number, every product
                       title, the quantity and the total - and hands them to
                       the agent, so what the customer hears always matches
                       what the operator is looking at. */}
-                  <CallCheckoutButton checkout={checkout} disabled={!callingEnabled} />
+                  <OwnClicks>
+                    <CallCheckoutButton checkout={checkout} disabled={!context.callingEnabled} />
+                  </OwnClicks>
                 </TableCell>
                 <TableCell>
-                  <a
-                    href={checkout.recovery_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent text-xs underline underline-offset-2"
-                  >
-                    Recover
-                  </a>
+                  <OwnClicks>
+                    <a
+                      href={checkout.recovery_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent text-xs underline underline-offset-2"
+                    >
+                      Recover
+                    </a>
+                  </OwnClicks>
                 </TableCell>
               </TableRow>
             )}
@@ -290,6 +282,42 @@ export function AbandonedCheckoutsTable({
         </Table>
         <TablePagination page={page} noun="abandoned checkouts" />
       </Card>
+
+      <CheckoutDetailSheet
+        checkout={selected}
+        open={drawerOpen}
+        activity={(selected && activity.get(selected.id)) || NO_ACTIVITY}
+        context={context}
+        onClose={() => setDrawerOpen(false)}
+      />
+    </div>
+  )
+}
+
+/** What the agent has done about a row, at a glance; the drawer has the rest. */
+function AgentSummary({ activity }: { activity: CheckoutActivity }): JSX.Element {
+  const calls = activity.calls.length
+  const messages = activity.messages.length
+  if (calls === 0 && messages === 0) return <span className="text-muted-foreground">—</span>
+  return (
+    <span className="text-muted-foreground text-xs whitespace-nowrap">
+      {calls > 0 ? `${calls} call${calls === 1 ? '' : 's'}` : null}
+      {calls > 0 && messages > 0 ? ' · ' : null}
+      {messages > 0 ? `${messages} msg${messages === 1 ? '' : 's'}` : null}
+    </span>
+  )
+}
+
+/**
+ * Keeps a control's press from also opening the row's drawer. Pointer and
+ * click only: keyboard events still reach the grid, so arrow keys keep
+ * walking cell to cell.
+ */
+function OwnClicks({ children }: { children: ReactNode }): JSX.Element {
+  const stop = (event: SyntheticEvent): void => event.stopPropagation()
+  return (
+    <div onPointerDown={stop} onPointerUp={stop} onClick={stop}>
+      {children}
     </div>
   )
 }
