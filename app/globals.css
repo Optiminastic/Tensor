@@ -455,12 +455,20 @@
 
   --color-landing-sky-deep: #0f5fe0;
   --color-landing-sky: #2d8af7;
+  /* The darkest blue white body text still reads on (5.2:1). */
+  --color-landing-sky-mid: #1667e6;
   --color-landing-sky-haze: #a9d4ff;
   --color-landing-lime: #d7f75b;
   --color-landing-lime-deep: #c2e83a;
   --color-landing-ink: #0e1116;
   --color-landing-paper: #f3f4f6;
   --color-landing-muted: #8a8f99;
+  /* Chart series on white and on the dark surface. Validated with the dataviz
+   * palette checks (lightness, chroma, colour-blind separation, 3:1 contrast)
+   * in both modes. Pure lime fails contrast on white, so it is a tile colour
+   * and never a line. */
+  --color-landing-chart-sky: #2d8af7;
+  --color-landing-chart-olive: #7a9c00;
 
   --animate-landing-marquee: landing-marquee 40s linear infinite;
 

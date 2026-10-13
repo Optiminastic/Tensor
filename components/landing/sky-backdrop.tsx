@@ -25,15 +25,31 @@ function rows(): JSX.Element[] {
   })
 }
 
+interface SkyBackdropProps {
+  /**
+   * "hero" fades to a pale horizon, for content that ends in dark text.
+   * "deep" stays saturated top to bottom and leaves out the build plate, so
+   * white text holds its contrast everywhere on the card.
+   */
+  variant?: 'hero' | 'deep'
+}
+
 /**
  * The hero's sky, given a 3D-printing surface: the fine horizontal ridges of
  * printed layers, and a build plate receding to the horizon where the
  * inspiration had clouds. Decorative only, so hidden from assistive tech.
  */
-export function SkyBackdrop(): JSX.Element {
+export function SkyBackdrop({ variant = 'hero' }: SkyBackdropProps): JSX.Element {
+  const deep = variant === 'deep'
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="from-landing-sky-deep via-landing-sky to-landing-sky-haze absolute inset-0 bg-gradient-to-b" />
+      <div
+        className={`absolute inset-0 bg-gradient-to-b ${
+          deep
+            ? 'from-landing-sky-deep to-landing-sky-mid'
+            : 'from-landing-sky-deep via-landing-sky to-landing-sky-haze'
+        }`}
+      />
       <svg
         className="absolute inset-0 size-full"
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
@@ -52,12 +68,16 @@ export function SkyBackdrop(): JSX.Element {
           </mask>
         </defs>
         <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="url(#landing-layers)" />
-        <g mask="url(#landing-plate-mask)" stroke="white" strokeOpacity="0.35" strokeWidth="1">
-          {rails()}
-          {rows()}
-        </g>
+        {deep ? null : (
+          <g mask="url(#landing-plate-mask)" stroke="white" strokeOpacity="0.35" strokeWidth="1">
+            {rails()}
+            {rows()}
+          </g>
+        )}
       </svg>
-      <div className="absolute inset-x-[-10%] bottom-[-35%] h-2/3 rounded-full bg-white/45 blur-3xl" />
+      {deep ? null : (
+        <div className="absolute inset-x-[-10%] bottom-[-35%] h-2/3 rounded-full bg-white/45 blur-3xl" />
+      )}
     </div>
   )
 }
