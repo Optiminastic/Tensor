@@ -28,6 +28,15 @@ export const PersonalisationItemSchema = z.object({
    * order lands and a render is 20-45 seconds behind it, so "not yet" is the
    * ordinary first answer rather than a fault.
    */
+  /**
+   * Which piece of a multi-part product this is - a Soulmate Combo prints as
+   * a plank, a rose and a keychain. Empty for a product that is one piece, so
+   * the card says nothing rather than labelling the only thing in the order.
+   */
+  part: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
   model_ready: z.boolean(),
   /**
    * Changes when the model does - it is the print file's id, and a re-render
