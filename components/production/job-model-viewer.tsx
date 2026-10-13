@@ -10,6 +10,23 @@ import { centerOnPlate, fitScaleFor, PrintBedPlate } from '@/components/producti
 
 interface JobModelViewerProps {
   modelUrl: string
+  /**
+   * Show the printer bed under the model.
+   *
+   * True for the floor, where "will this fit the plate" is the question.
+   * False for a customer, who is looking at a present and has no reason to
+   * be shown the machine it is made on.
+   */
+  showPlate?: boolean
+  /**
+   * Offer the picture as a download, under this file name.
+   *
+   * Off by default because it costs something: capturing a canvas needs
+   * preserveDrawingBuffer, which keeps the drawing buffer around after every
+   * frame and is slower on weak hardware. Worth it only where somebody is
+   * actually going to save the image.
+   */
+  captureName?: string
 }
 
 /**
@@ -19,7 +36,11 @@ interface JobModelViewerProps {
  * that); this is just "what does this product look like," matching
  * components/production/batch-plate-viewer.tsx's simpler treatment.
  */
-export function JobModelViewer({ modelUrl }: JobModelViewerProps): JSX.Element {
+export function JobModelViewer({
+  modelUrl,
+  showPlate = true,
+  captureName,
+}: JobModelViewerProps): JSX.Element {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null)
   // A Dual Name Plank is two objects in one 3MF - a white plate and lettering
   // in the customer's colour. Showing it in flat grey would hide the one
@@ -75,6 +96,11 @@ export function JobModelViewer({ modelUrl }: JobModelViewerProps): JSX.Element {
     <Canvas
       camera={{ up: [0, 0, 1], position: [90, -90, 70], fov: 45, near: 0.1, far: 8000 }}
       dpr={[1, 2]}
+      // Without this the buffer is cleared after each frame and toDataURL
+      // returns a blank image - the canvas looks right and the download is
+      // empty, which is the worst shape of failure for a save button.
+      gl={captureName ? { preserveDrawingBuffer: true } : undefined}
+      onCreated={captureName ? state => registerCapture(state.gl.domElement) : undefined}
     >
       <color attach="background" args={['#f4f3ef']} />
       <ambientLight intensity={0.75} />
@@ -96,11 +122,32 @@ export function JobModelViewer({ modelUrl }: JobModelViewerProps): JSX.Element {
             metalness={0}
           />
         </mesh>
-        <PrintBedPlate />
+        {showPlate ? <PrintBedPlate /> : null}
       </Bounds>
       <OrbitControls makeDefault enableDamping target={[0, 0, 10]} />
     </Canvas>
   )
+}
+
+// registerCapture hands the live canvas to downloadViewerImage.
+//
+// A module-level handle rather than a ref passed down, because the element
+// belongs to react-three-fiber and is created after the component renders;
+// the alternative is threading a ref through the Canvas, which it does not
+// forward.
+let capturedCanvas: HTMLCanvasElement | null = null
+
+function registerCapture(canvas: HTMLCanvasElement): void {
+  capturedCanvas = canvas
+}
+
+/** downloadViewerImage saves what is currently on screen, or does nothing. */
+export function downloadViewerImage(fileName: string): void {
+  if (!capturedCanvas) return
+  const link = document.createElement('a')
+  link.download = fileName
+  link.href = capturedCanvas.toDataURL('image/png')
+  link.click()
 }
 
 function ViewerMessage({ text }: { text: string }): JSX.Element {
