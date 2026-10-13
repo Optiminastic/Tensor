@@ -7,7 +7,10 @@ import { TonePill } from '@/components/production/tone-pill'
 import type { PersonalisationStatus } from '@/components/production/types'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import type { PersonalisationChange } from '@/lib/validators/personalisation-changes'
-import { fetchPersonalisationChanges } from '@/services/personalisation-changes.service'
+import {
+  fetchPersonalisationChanges,
+  fetchPersonalisationLink,
+} from '@/services/personalisation-changes.service'
 
 interface PersonalisationTagProps {
   jobId: string
@@ -15,24 +18,88 @@ interface PersonalisationTagProps {
 }
 
 /**
- * How the customer's check stands, and - when they changed something - what.
+ * How the customer's check stands, and what to do about it.
  *
- * FETCHED ON HOVER, not with the row. The queue carries hundreds of jobs and
- * the values behind "Changed" are wanted for the one somebody is pointing at;
- * sending them all would put every customer's old and new names into every
- * page load of a screen that mostly shows neither.
+ * The tag does different work in its two interesting states, because the two
+ * questions are different:
  *
- * Only "Changed" opens anything. A tag that looks interactive and then says
- * "nothing to show" is worse than a tag that plainly is not.
+ *   Link sent  the window is open - CLICK COPIES the customer's own link, so
+ *              whoever takes the phone call can send them back to the page
+ *              they are describing.
+ *   Changed    the window has closed and something moved - HOVER SHOWS what,
+ *              for the person about to make it.
+ *
+ * Nothing else is interactive. A tag that looks clickable and then says
+ * "nothing to copy" is worse than one that plainly is not.
  */
 export function PersonalisationTag({ jobId, status }: PersonalisationTagProps): JSX.Element {
-  const config = PERSONALISATION_STATUS_CONFIG[status]
+  if (status === 'awaiting_customer') {
+    return <CopyLinkTag jobId={jobId} status={status} />
+  }
+  if (status === 'changed') {
+    return <ChangesTag jobId={jobId} status={status} />
+  }
+  return <TonePill {...PERSONALISATION_STATUS_CONFIG[status]} />
+}
+
+/**
+ * Copies the live link.
+ *
+ * FETCHED ON CLICK, never with the row. A link is a credential: shipping one
+ * for every open window into every page load would put them in the browser of
+ * everybody who merely opened the queue, and in whatever logs sit in front of
+ * it. This way the only links that leave the server are the ones somebody
+ * asked for.
+ */
+function CopyLinkTag({ jobId, status }: PersonalisationTagProps): JSX.Element {
+  const [state, setState] = useState<'idle' | 'copying' | 'copied' | 'gone'>('idle')
+
+  async function copy(): Promise<void> {
+    setState('copying')
+    try {
+      const { url } = await fetchPersonalisationLink(jobId)
+      if (!url) {
+        // The window closed between the page loading and the click. Said
+        // plainly rather than copying nothing and claiming success.
+        setState('gone')
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setState('copied')
+      setTimeout(() => setState('idle'), 2000)
+    } catch {
+      setState('gone')
+    }
+  }
+
+  const label =
+    state === 'copied'
+      ? 'Link copied'
+      : state === 'copying'
+        ? 'Copying…'
+        : state === 'gone'
+          ? 'Window closed'
+          : PERSONALISATION_STATUS_CONFIG[status].label
+
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      title="Copy this customer's personalisation link"
+      className="cursor-pointer"
+    >
+      <TonePill
+        label={label}
+        tone={state === 'copied' ? 'success' : PERSONALISATION_STATUS_CONFIG[status].tone}
+      />
+    </button>
+  )
+}
+
+/** Shows what the customer moved, on hover. */
+function ChangesTag({ jobId, status }: PersonalisationTagProps): JSX.Element {
   const [changes, setChanges] = useState<PersonalisationChange[] | null>(null)
   const [failed, setFailed] = useState(false)
-
-  if (status !== 'changed') {
-    return <TonePill {...config} />
-  }
 
   function load(open: boolean): void {
     // Once. The values are frozen the moment the window closes, so a second
@@ -49,7 +116,7 @@ export function PersonalisationTag({ jobId, status }: PersonalisationTagProps): 
         {/* A button, not a span: the card has to be reachable from the
             keyboard, and hover alone never is. */}
         <button type="button" className="cursor-help">
-          <TonePill {...config} />
+          <TonePill {...PERSONALISATION_STATUS_CONFIG[status]} />
         </button>
       </HoverCardTrigger>
       <HoverCardContent className="w-80">

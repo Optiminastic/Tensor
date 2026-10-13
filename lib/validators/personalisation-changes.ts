@@ -22,3 +22,23 @@ export const PersonalisationChangesResponseSchema = z.object({
 })
 
 export type PersonalisationChange = z.infer<typeof PersonalisationChangeSchema>
+
+/**
+ * The customer's live link, for the floor to hand back on the phone.
+ *
+ * An empty url is the ordinary answer, not an error: no link was issued, the
+ * window has closed, or this deployment keeps no recoverable copy. The page
+ * says the same thing for all three - there is nothing to copy.
+ */
+export const PersonalisationLinkSchema = z.object({
+  url: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  expires_at: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+})
+
+export type PersonalisationLinkCopy = z.infer<typeof PersonalisationLinkSchema>
