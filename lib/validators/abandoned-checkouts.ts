@@ -12,11 +12,47 @@ import { z } from 'zod'
  * customer record needs the `read_customers` scope this app does not hold - so
  * the name and phone come off the billing address, which `read_orders` covers.
  */
+/**
+ * A key/value the storefront attached - on this store, the personalisation the
+ * customer typed, such as the names on a plank.
+ */
+export const CheckoutAttributeSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+})
+
+/** Absent on an older backend, so every new field below has a default. */
+const attributes = z
+  .array(CheckoutAttributeSchema)
+  .nullish()
+  .transform(v => v ?? [])
+const text = z
+  .string()
+  .nullish()
+  .transform(v => v ?? '')
+
+export const CheckoutAddressSchema = z.object({
+  name: text,
+  phone: text,
+  address1: text,
+  address2: text,
+  city: text,
+  province: text,
+  zip: text,
+  country: text,
+})
+
 export const AbandonedLineItemSchema = z.object({
   title: z.string(),
   variant_title: z.string(),
   sku: z.string(),
   quantity: z.number(),
+  image_url: text,
+  /** List price of one. */
+  unit_price: text,
+  /** After any code discount, so it can be less than unit × quantity. */
+  line_total: text,
+  attributes,
 })
 
 export const AbandonedCheckoutSchema = z.object({
@@ -43,6 +79,26 @@ export const AbandonedCheckoutSchema = z.object({
    * ring a customer about a basket they already paid for.
    */
   completed_at: z.string().nullable().default(null),
+
+  /** The rest of what Shopify's own checkout page shows. */
+  updated_at: text,
+  note: text,
+  discount_codes: z
+    .array(z.string())
+    .nullish()
+    .transform(v => v ?? []),
+  taxes_included: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
+  attributes,
+  line_items_amount: text,
+  subtotal_amount: text,
+  discount_amount: text,
+  tax_amount: text,
+  /** Null when the customer never gave that address. */
+  shipping_address: CheckoutAddressSchema.nullish().transform(v => v ?? null),
+  billing_address: CheckoutAddressSchema.nullish().transform(v => v ?? null),
 })
 
 export const AbandonedCheckoutsResponseSchema = z.object({
@@ -50,6 +106,8 @@ export const AbandonedCheckoutsResponseSchema = z.object({
   shop: z.string(),
 })
 
+export type CheckoutAttribute = z.infer<typeof CheckoutAttributeSchema>
+export type CheckoutAddress = z.infer<typeof CheckoutAddressSchema>
 export type AbandonedLineItem = z.infer<typeof AbandonedLineItemSchema>
 export type AbandonedCheckout = z.infer<typeof AbandonedCheckoutSchema>
 export type AbandonedCheckoutsResponse = z.infer<typeof AbandonedCheckoutsResponseSchema>

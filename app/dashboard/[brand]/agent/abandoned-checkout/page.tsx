@@ -6,25 +6,44 @@ import { ProductionPageHeader } from '@/components/production/production-page-he
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { AbandonedCheckout } from '@/lib/validators/abandoned-checkouts'
+import type { CallLog } from '@/lib/validators/call-logs'
+import type { MessageLog, MessageTemplate } from '@/lib/validators/message-logs'
 import {
   AbandonedCheckoutsServiceError,
   listAbandonedCheckouts,
 } from '@/services/abandoned-checkouts.service'
+import { listCallLogs } from '@/services/call-logs.service'
+import { getMessageTemplate, listMessageLogs } from '@/services/message-logs.service'
 import { getVoiceStatus } from '@/services/voice-calls.service'
 
 export const metadata: Metadata = { title: 'Abandoned Checkouts' }
+
+export const dynamic = 'force-dynamic'
 
 interface AbandonedCheckoutPageProps {
   params: Promise<{ brand: string }>
 }
 
+interface AgentData {
+  calls: CallLog[]
+  messages: MessageLog[]
+  template: MessageTemplate | null
+  errors: { calls: string | null; messages: string | null }
+}
+
 /**
- * Checkouts a customer started and walked away from, live from Shopify.
+ * Checkouts a customer started and walked away from, live from Shopify, with
+ * everything the win-back agent did about each one in its drawer.
  *
- * Nothing is stored. There is no state to keep yet - no row is marked handled
- * or recovered - so a table and a sync job would buy staleness and a migration
- * for nothing. The day this page grows a "contacted" column is the day it earns
- * storage.
+ * Nothing is stored for the checkouts themselves. There is no state to keep
+ * yet - no row is marked handled - so a table and a sync job would buy
+ * staleness and a migration for nothing.
+ *
+ * FOUR SOURCES, read side by side and failing apart. The checkouts are
+ * Shopify's; the calls are Sarvam's analytics API; the messages are Tensor's
+ * own ledger; the template is Meta's. Sarvam being unreachable must not take
+ * the list down with it - the list is worth reading even when the transcripts
+ * are not there.
  */
 export default async function AbandonedCheckoutPage({
   params,
@@ -34,56 +53,94 @@ export default async function AbandonedCheckoutPage({
 
   let checkouts: AbandonedCheckout[] = []
   let error: string | null = null
-  // Asked up front so a Call button is never offered that cannot work. An
-  // unconfigured backend is a setup problem with a known fix, and finding it
-  // out by ringing a customer is the wrong way round.
+  // Asked up front so a Call button is never offered that cannot work.
   let callingEnabled = false
+  let agent: AgentData = { calls: [], messages: [], template: null, errors: none() }
 
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
   } else {
-    try {
-      const [response, voice] = await Promise.all([
-        listAbandonedCheckouts(token, brand),
-        // A failure here must not take the table down with it: the list is
-        // worth reading even when nobody can be rung.
-        getVoiceStatus(token).catch(() => null),
-      ])
-      checkouts = response.items
-      callingEnabled = voice?.configured ?? false
-    } catch (err) {
-      error =
-        err instanceof AbandonedCheckoutsServiceError
-          ? err.message
-          : 'Could not load abandoned checkouts.'
-    }
+    const [response, voice, agentData] = await Promise.all([
+      listAbandonedCheckouts(token, brand).then(
+        ok => ok,
+        (err: unknown) =>
+          err instanceof AbandonedCheckoutsServiceError
+            ? err.message
+            : 'Could not load abandoned checkouts.',
+      ),
+      // A failure here must not take the table down: the list is worth
+      // reading even when nobody can be rung.
+      getVoiceStatus(token).catch(() => null),
+      loadAgentData(token, brand),
+    ])
+    agent = agentData
+    callingEnabled = voice?.configured ?? false
+    if (typeof response === 'string') error = response
+    else checkouts = response.items
   }
 
   return (
     <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <ProductionPageHeader
-          title="Abandoned Checkouts"
-          description="Baskets a customer started and did not finish, from the last 30 days."
-        />
-      </div>
+      <ProductionPageHeader
+        title="Abandoned Checkouts"
+        description="Baskets a customer started and did not finish, from the last 30 days. Open one for its details, the agent's call and the messages sent."
+      />
 
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
           {error}
         </p>
       ) : checkouts.length === 0 ? (
-        // Worth saying WHY it can be empty. Shopify only records a checkout as
-        // abandoned once the customer entered contact details, so an empty list
-        // is the normal state for a quiet day rather than a broken page.
+        // Shopify only records a checkout as abandoned once the customer
+        // entered contact details, so an empty list is the normal state for a
+        // quiet day rather than a broken page.
         <p className="text-muted-foreground rounded-md border border-dashed px-4 py-8 text-center text-sm">
           No abandoned checkouts in the last 30 days. Shopify only records one once the customer has
           entered their contact details.
         </p>
       ) : (
-        <AbandonedCheckoutsTable checkouts={checkouts} callingEnabled={callingEnabled} />
+        <AbandonedCheckoutsTable
+          checkouts={checkouts}
+          agent={{ calls: agent.calls, messages: agent.messages }}
+          context={{ brand, errors: agent.errors, template: agent.template, callingEnabled }}
+        />
       )}
     </main>
   )
+}
+
+function none(): AgentData['errors'] {
+  return { calls: null, messages: null }
+}
+
+/**
+ * The agent's calls, messages and template. Each settles on its own: one half
+ * failing leaves the other readable, and the template - a footnote for old
+ * messages - is never a reason for anything to fail.
+ */
+async function loadAgentData(token: string, brand: string): Promise<AgentData> {
+  const [calls, messages, template] = await Promise.allSettled([
+    listCallLogs(token, brand),
+    listMessageLogs(token, brand),
+    getMessageTemplate(token, brand),
+  ])
+  return {
+    calls: calls.status === 'fulfilled' ? calls.value : [],
+    messages: messages.status === 'fulfilled' ? messages.value : [],
+    template: template.status === 'fulfilled' ? template.value : null,
+    errors: {
+      calls:
+        calls.status === 'rejected' ? describe(calls.reason, 'Could not load the calls.') : null,
+      messages:
+        messages.status === 'rejected'
+          ? describe(messages.reason, 'Could not load the messages.')
+          : null,
+    },
+  }
+}
+
+/** The upstream's own sentence where there is one - its refusals name the fix. */
+function describe(reason: unknown, fallback: string): string {
+  return reason instanceof Error ? reason.message : fallback
 }

@@ -4,26 +4,9 @@ import { ExternalLink } from 'lucide-react'
 import type { JSX, ReactNode } from 'react'
 
 import { Badge } from '@/components/ui/badge'
-import { CopyableId } from '@/components/ui/copyable-id'
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 import type { MessageLog, MessageTemplate } from '@/lib/validators/message-logs'
 
-interface MessageDetailSheetProps {
-  /** The message to show, or null when the panel is closed. */
-  message: MessageLog | null
-  /** The approved copy, for a row whose own words were not recorded. */
-  template: MessageTemplate | null
-  onClose: () => void
-}
-
-function when(raw: string): string {
+export function when(raw: string): string {
   if (!raw) return '—'
   const parsed = new Date(raw)
   if (Number.isNaN(parsed.getTime())) return raw
@@ -49,44 +32,13 @@ function when(raw: string): string {
  * fields. A message rendered as label-and-value pairs reads as data about a
  * message; the thing being checked here is how it came across.
  */
-export function MessageDetailSheet({
-  message,
-  template,
-  onClose,
-}: MessageDetailSheetProps): JSX.Element {
-  return (
-    <Sheet open={message !== null} onOpenChange={open => !open && onClose()}>
-      <SheetContent side="right" className="flex max-w-xl flex-col">
-        <SheetHeader>
-          <SheetTitle>Message details</SheetTitle>
-          <SheetDescription asChild>
-            <div className="flex flex-wrap items-center gap-2">
-              {message?.checkout_name ? (
-                <CopyableId value={message.checkout_name} label="checkout" />
-              ) : (
-                <span className="text-subtle-foreground text-sm">No checkout recorded</span>
-              )}
-              <span className="text-subtle-foreground text-sm">
-                {message?.customer_name || 'Unnamed customer'} · {message?.phone}
-              </span>
-            </div>
-          </SheetDescription>
-        </SheetHeader>
-
-        <SheetBody className="flex-1">
-          {message ? <SentMessage message={message} template={template} /> : null}
-        </SheetBody>
-      </SheetContent>
-    </Sheet>
-  )
-}
-
 interface SentMessageProps {
   message: MessageLog
+  /** The approved copy, for a row whose own words were not recorded. */
   template: MessageTemplate | null
 }
 
-function SentMessage({ message, template }: SentMessageProps): JSX.Element {
+export function SentMessage({ message, template }: SentMessageProps): JSX.Element {
   return (
     <div className="flex flex-col gap-5">
       {message.body ? (
