@@ -56,6 +56,10 @@ export interface PrimarySection {
   label: string
   icon: LucideIcon
   segment: string // '' for overview, 'designs', 'costing', ...
+  // Where the rail's icon goes, brand-relative, when the area has no page of
+  // its own at its root. Without it the icon lands on the root and waits for
+  // a server redirect to reach the page it meant.
+  landing?: string
   items?: NavLeaf[]
   description?: string
   permission?: string
@@ -188,6 +192,7 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     label: 'Agent',
     icon: Bot,
     segment: 'agent',
+    landing: '/agent/abandoned-checkout',
     // order:read, not a permission of its own. Everything under here is about
     // real customers and their baskets - the same data the Orders page shows,
     // reached a different way - so the roles that may see orders are exactly
@@ -320,6 +325,12 @@ export function brandFromPathname(pathname: string): string | null {
  * The brand-relative segment for the primary area in the URL ('' = overview), or
  * null when the route is workspace-level (Team/Settings) or the bare root.
  */
+/** The URL a primary area's rail icon opens. */
+export function sectionHref(section: PrimarySection, base: string): string {
+  if (section.landing) return `${base}${section.landing}`
+  return section.segment ? `${base}/${section.segment}` : base
+}
+
 export function primarySegment(pathname: string): string | null {
   const segments = pathname.split('/').filter(Boolean)
   if (segments[0] !== 'dashboard') return null

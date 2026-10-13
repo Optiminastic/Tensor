@@ -7,7 +7,12 @@ import type { JSX } from 'react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
-import { primarySegment, visiblePrimarySections, visibleWorkspaceSections } from './nav-config'
+import {
+  primarySegment,
+  sectionHref,
+  visiblePrimarySections,
+  visibleWorkspaceSections,
+} from './nav-config'
 
 interface NavRailProps {
   base: string
@@ -56,7 +61,7 @@ export function NavRail({ base, permissions }: NavRailProps): JSX.Element {
 
       {primary.map(section => {
         const Icon = section.icon
-        const href = section.segment ? `${base}/${section.segment}` : base
+        const href = sectionHref(section, base)
         const active = segment !== null && segment === section.segment
         return (
           <Link
