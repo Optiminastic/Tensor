@@ -65,24 +65,33 @@ export function PersonalisationTag({ jobId, status }: PersonalisationTagProps): 
  * other row this button could do nothing but apologise.
  */
 function CopyLinkButton({ jobId }: { jobId: string }): JSX.Element {
-  const [state, setState] = useState<'idle' | 'copying' | 'copied' | 'gone'>('idle')
+  const [state, setState] = useState<'idle' | 'copying' | 'copied' | 'gone' | 'failed'>('idle')
 
   async function copy(): Promise<void> {
     setState('copying')
+    let url: string
     try {
-      const { url } = await fetchPersonalisationLink(jobId)
-      if (!url) {
-        // The window closed between the page loading and the click. Said
-        // plainly rather than copying nothing and claiming success.
-        setState('gone')
-        return
-      }
-      await navigator.clipboard.writeText(url)
+      url = (await fetchPersonalisationLink(jobId)).url
+    } catch {
+      setState('failed')
+      return
+    }
+    if (!url) {
+      // The window closed between the page loading and the click. Said plainly
+      // rather than copying nothing and claiming success.
+      setState('gone')
+      return
+    }
+    // THREE OUTCOMES, NOT TWO. "There is no link" and "the clipboard refused"
+    // are different things and were being reported with the same sentence -
+    // so a browser blocking the write told the floor the customer's window had
+    // closed, which it had not.
+    if (await writeToClipboard(url)) {
       setState('copied')
       setTimeout(() => setState('idle'), 2000)
-    } catch {
-      setState('gone')
+      return
     }
+    setState('failed')
   }
 
   const title =
@@ -90,19 +99,28 @@ function CopyLinkButton({ jobId }: { jobId: string }): JSX.Element {
       ? 'Copied'
       : state === 'gone'
         ? 'That window has closed'
-        : "Copy this customer's personalisation link"
+        : state === 'failed'
+          ? 'Could not copy — try again'
+          : "Copy this customer's personalisation link"
 
   return (
     <button
       type="button"
-      onClick={() => void copy()}
+      onClick={event => {
+        // THE ROW NAVIGATES. This button lives inside a table row whose own
+        // click opens the job, so without stopping here a copy opens the job
+        // page instead - the click reaches the row, the router moves, and the
+        // clipboard write is abandoned with the page.
+        event.stopPropagation()
+        void copy()
+      }}
       title={title}
       aria-label={title}
       disabled={state === 'copying'}
       className={cn(
         'text-subtle-foreground hover:text-foreground rounded p-1 transition',
         state === 'copied' && 'text-success',
-        state === 'gone' && 'text-danger',
+        (state === 'gone' || state === 'failed') && 'text-danger',
       )}
     >
       {state === 'copied' ? (
@@ -133,7 +151,13 @@ function ChangesTag({ jobId, status }: PersonalisationTagProps): JSX.Element {
       <HoverCardTrigger asChild>
         {/* A button, not a span: the card has to be reachable from the
             keyboard, and hover alone never is. */}
-        <button type="button" className="cursor-help">
+        <button
+          type="button"
+          className="cursor-help"
+          // Same row, same reason: reading what changed should not navigate
+          // away from the list you are reading it in.
+          onClick={event => event.stopPropagation()}
+        >
           <TonePill {...PERSONALISATION_STATUS_CONFIG[status]} />
         </button>
       </HoverCardTrigger>
@@ -167,4 +191,41 @@ function ChangesTag({ jobId, status }: PersonalisationTagProps): JSX.Element {
       </HoverCardContent>
     </HoverCard>
   )
+}
+
+/**
+ * Writes to the clipboard, with a fallback for when the API is unavailable.
+ *
+ * navigator.clipboard needs a secure context, which localhost and https both
+ * are - but it is also refused when the browser decides the user gesture has
+ * gone stale, and this write happens after a network round trip. The old
+ * textarea trick has no such rule, so it covers exactly the case the modern
+ * API drops.
+ *
+ * Returns whether anything was actually copied, so the caller never reports
+ * success it did not have.
+ */
+async function writeToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    // Fall through to the older path rather than giving up.
+  }
+
+  try {
+    const field = document.createElement('textarea')
+    field.value = text
+    // Off-screen rather than hidden: a display:none element cannot be
+    // selected, and selection is what the fallback copies.
+    field.style.position = 'fixed'
+    field.style.opacity = '0'
+    document.body.appendChild(field)
+    field.select()
+    const copied = document.execCommand('copy')
+    document.body.removeChild(field)
+    return copied
+  } catch {
+    return false
+  }
 }
