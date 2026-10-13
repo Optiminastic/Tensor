@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 
+import { CustomerChanges } from '@/components/production/customer-changes'
 import { OrderLineProperties } from '@/components/production/order-line-properties'
 import type { ProductionJobDetail } from '@/components/production/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -60,7 +61,13 @@ export function JobCustomisationCard({ job }: JobCustomisationCardProps): JSX.El
             page to fetch them.
           </p>
         ) : (
-          <OrderLineProperties properties={properties} />
+          <>
+            {/* Above the values, not below them: somebody scanning this card
+                should know the names were corrected before they read the
+                names. */}
+            <CustomerChanges jobId={job.id} />
+            <OrderLineProperties properties={properties} />
+          </>
         )}
       </CardContent>
     </Card>

@@ -81,7 +81,17 @@ export function PersonalisationItemCard({
   return (
     <section className="border-border/70 flex flex-col gap-4 rounded-xl border p-4">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-foreground font-medium">{item.product_name}</h2>
+        <h2 className="text-foreground font-medium">
+          {item.product_name}
+          {/* Three identical headings with different names under them is a
+              page nobody can check. */}
+          {item.unit_count > 1 ? (
+            <span className="text-muted-foreground font-normal">
+              {' '}
+              — {item.unit_index} of {item.unit_count}
+            </span>
+          ) : null}
+        </h2>
         {item.quantity > 1 ? (
           <span className="text-subtle-foreground text-xs">× {item.quantity}</span>
         ) : null}

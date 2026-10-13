@@ -29,6 +29,21 @@ export const PersonalisationItemSchema = z.object({
    * ordinary first answer rather than a fault.
    */
   model_ready: z.boolean(),
+  /**
+   * Which of several identical products this is - "2 of 3".
+   *
+   * Zero when the order holds only one, so the page says nothing rather than
+   * "1 of 1". Counted by the backend from what is on the page, because the
+   * line's own quantity reads 1 on each of the three jobs it became.
+   */
+  unit_index: z
+    .number()
+    .nullish()
+    .transform(v => v ?? 0),
+  unit_count: z
+    .number()
+    .nullish()
+    .transform(v => v ?? 0),
 })
 
 export const PersonalisationColourSchema = z.object({
