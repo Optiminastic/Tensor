@@ -14,8 +14,11 @@ interface RouteContext {
  * browser never handles it - same pattern as
  * /api/batches/[id]/preview/route.ts.
  */
-export async function GET(_request: NextRequest, { params }: RouteContext): Promise<Response> {
+export async function GET(request: NextRequest, { params }: RouteContext): Promise<Response> {
   const { id } = await params
+  // ?preview=1 asks for a form the 3D viewer can colour. Only the viewer
+  // passes it; the download link deliberately does not.
+  const preview = request.nextUrl.searchParams.get('preview') === '1'
   const { token, error } = await resolveBackendToken()
   if (!token) {
     return Response.json(
@@ -25,7 +28,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext): Prom
   }
 
   try {
-    const upstream = await fetchFile(token, id)
+    const upstream = await fetchFile(token, id, preview)
     const headers = new Headers({
       'Content-Type': upstream.headers.get('Content-Type') ?? 'application/octet-stream',
     })

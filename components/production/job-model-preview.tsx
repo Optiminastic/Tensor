@@ -73,6 +73,9 @@ export function JobModelPreview({
   }
 
   const fileUrl = `/api/files/${printFileId}`
+  // The viewer gets a form it can colour; the link above gets the real file.
+  // See fetchFile - a slicer writes colour where three.js does not look.
+  const previewUrl = `${fileUrl}?preview=1`
   return (
     <Card className="flex h-full min-h-[420px] flex-col">
       <CardHeader className="flex-row items-center justify-between">
@@ -104,7 +107,7 @@ export function JobModelPreview({
       </CardHeader>
       <CardContent className="min-h-0 flex-1 p-0">
         <div className="bg-surface-muted border-border relative h-full min-h-[380px] w-full overflow-hidden rounded-md border">
-          <JobModelViewer modelUrl={fileUrl} />
+          <JobModelViewer modelUrl={previewUrl} />
         </div>
       </CardContent>
     </Card>

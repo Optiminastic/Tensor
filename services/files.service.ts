@@ -15,10 +15,18 @@ export class FileServiceError extends Error {}
 // fetchFile streams a stored file's raw bytes. Returns the raw Response so a
 // proxy route can pipe the body straight through without buffering, same
 // pattern as batches.service.ts#fetchBatchPreview.
-export async function fetchFile(token: string, id: string): Promise<Response> {
+/**
+ * @param preview asks Tensor-Core for a form a browser can draw rather than
+ *   the stored bytes. A slicer writes colour in its own config files, where
+ *   three.js never looks, so a designer's 3MF renders grey without this. The
+ *   download link must NOT pass it: an operator taking the print file to a
+ *   slicer has to get exactly what was uploaded.
+ */
+export async function fetchFile(token: string, id: string, preview = false): Promise<Response> {
+  const query = preview ? '?preview=1' : ''
   let response: Response
   try {
-    response = await fetch(`${env.TENSOR_CORE_URL}/files/${encodeURIComponent(id)}`, {
+    response = await fetch(`${env.TENSOR_CORE_URL}/files/${encodeURIComponent(id)}${query}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
       signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
