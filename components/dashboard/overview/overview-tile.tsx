@@ -16,7 +16,7 @@ const TONES: Record<TileTone, string> = {
   surface: 'bg-surface text-foreground ring-1 ring-border',
   paper: 'bg-surface-muted text-foreground',
   lime: 'bg-landing-lime text-landing-ink',
-  ink: 'bg-landing-ink text-white',
+  ink: 'bg-landing-ink text-white dark:ring-1 dark:ring-border',
 }
 
 /** One rounded bento tile, in the landing page's palette. */

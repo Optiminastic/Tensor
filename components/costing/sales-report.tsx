@@ -1,8 +1,7 @@
 import type { JSX } from 'react'
 
-import { RevenueCard } from '@/components/dashboard/revenue-card'
-import { StatCard } from '@/components/dashboard/stat-card'
-import { TopProductsCard } from '@/components/dashboard/top-products-card'
+import { RevenueTile } from '@/components/dashboard/overview/revenue-tile'
+import { TopProductsTile } from '@/components/dashboard/overview/top-products-tile'
 import { resolveBackendToken } from '@/lib/backend-token'
 import {
   type TopProduct,
@@ -15,6 +14,9 @@ import { type RevenueSummary, summariseRevenue } from '@/lib/dashboard/overview'
 import { inr } from '@/lib/format'
 import type { Order, ProductionJob } from '@/lib/validators/production'
 import { listOrders, listProductionJobs } from '@/services/production.service'
+
+import { FigureTile } from './figure-tile'
+import { PaymentSplitTile } from './payment-split-tile'
 
 interface SalesData {
   revenue: RevenueSummary
@@ -46,31 +48,35 @@ function SalesReportView({ data }: { data: SalesData }): JSX.Element {
   const { revenue, trend, products } = data
   const revenueDelta = weekOverWeekDelta(trend.map(point => point.value))
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-foreground text-lg font-medium">Sales</h2>
-        <span className="text-subtle-foreground text-xs tracking-wide uppercase">
-          Workspace-wide
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
-        <StatCard
-          label="Gross revenue"
-          value={inr(revenue.total)}
-          hint={`${revenue.orderCount} orders`}
-          accent="var(--accent)"
-          delta={revenueDelta}
-        />
-        <StatCard
+    <section aria-labelledby="sales-title" className="flex flex-col gap-4">
+      <h2
+        id="sales-title"
+        className="text-muted-foreground font-mono text-xs tracking-[0.18em] uppercase"
+      >
+        Sales · workspace-wide
+      </h2>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 [&>*]:min-w-0">
+        <div className="md:col-span-2">
+          <RevenueTile revenue={revenue} trend={trend} delta={revenueDelta} />
+        </div>
+        <FigureTile
+          tone="lime"
           label="Avg order value"
           value={inr(revenue.averageOrderValue)}
-          accent="var(--success)"
+          hint="Across every imported order"
         />
-        <StatCard label="Orders" value={String(revenue.orderCount)} />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <RevenueCard revenue={revenue} trend={trend} />
-        <TopProductsCard products={products} />
+        <FigureTile
+          tone="ink"
+          label="Orders"
+          value={String(revenue.orderCount)}
+          hint="Imported from Shopify"
+        />
+        <div className="md:col-span-2">
+          <PaymentSplitTile revenue={revenue} />
+        </div>
+        <div className="md:col-span-2">
+          <TopProductsTile products={products} />
+        </div>
       </div>
     </section>
   )

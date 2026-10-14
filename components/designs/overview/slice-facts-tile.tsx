@@ -1,10 +1,9 @@
 import type { JSX } from 'react'
 
 import { OverviewTile } from '@/components/dashboard/overview/overview-tile'
+import { TileFigure } from '@/components/dashboard/overview/tile-figure'
 import { TileLabel } from '@/components/dashboard/overview/tile-label'
 import type { DesignMetrics } from '@/lib/validators/designs'
-
-import { TileFigure } from './tile-figure'
 
 const MM_PER_M = 1000
 

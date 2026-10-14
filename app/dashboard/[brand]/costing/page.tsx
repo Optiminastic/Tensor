@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
 import { PricingRulesDialog } from '@/components/costing/pricing-rules-dialog'
+import { RulesOverview } from '@/components/costing/rules-overview'
 import { SalesReport } from '@/components/costing/sales-report'
 import { PageHeading } from '@/components/dashboard/page-heading'
 import { requirePermission } from '@/lib/authz'
@@ -80,7 +81,9 @@ async function PricingRulesView(): Promise<JSX.Element> {
         <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {loadError}
         </p>
-      ) : null}
+      ) : (
+        <RulesOverview rules={initial} />
+      )}
     </main>
   )
 }

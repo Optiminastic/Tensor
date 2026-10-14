@@ -176,10 +176,11 @@ The design language is "Editorial Ink" (tokens in `app/globals.css`). Its premiu
 
 The public landing page, the auth pages and the dashboard (layout and navigation) use the newer landing UI, chosen by the product owner after the rules above were written:
 
-- **Inter Tight** (`font-landing`, loaded by `next/font` in `components/landing/landing-font.ts`, OFL) is the interface face there, set once on the landing page, `AuthSplit` and `app/dashboard/layout.tsx`. It replaces Geist Sans in those areas; Geist Mono still carries figures and mono labels, and `.text-display` keeps Mona Sans for page titles.
+- **Inter Tight** (`font-landing`, loaded by `next/font` in `components/landing/landing-font.ts`, OFL) is the interface face there, set once on the landing page, `AuthSplit` and `app/dashboard/layout.tsx`. It replaces Geist Sans in those areas; Geist Mono still carries figures and mono labels. It is loaded at the root layout too, so dialogs and sheets (portalled to `<body>`) share it, and `.text-display` now sets page titles in Inter Tight (Mona Sans remains only as its fallback).
 - **Landing tokens** in `app/globals.css` (`--color-landing-*`: sky, lime, ink, paper, and two chart series validated with the dataviz checks) are the only additions. They are tokens, not raw hex in components.
 - Lime is a fill (selected nav item, pills, tiles), never a line or text colour on white: it fails contrast there. Selection never relies on lime alone - weight, a dot or a marker and `aria-current` carry it too.
-- Pages inside the dashboard keep their Editorial Ink components until they are restyled one by one.
+- The shared primitives carry the landing UI, so every dashboard page picks it up: `Button` (primary is lime on ink; `soft-*` variants for colour-coded actions), `Dialog`/`Sheet`, `Card`, `Tabs` (pill by default), `Table`, `PageHeading` (every page title; `ProductionPageHeader` wraps it), and status tags through `components/ui/tag.tsx` (`.tag-*` colours in `app/globals.css`).
+- `--accent` is the landing ink in both themes, not blue. Blue only appears where it means something: the "under way" tag.
 
 ---
 
