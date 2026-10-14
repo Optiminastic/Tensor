@@ -1,8 +1,19 @@
 import 'server-only'
 
+import { z } from 'zod'
+
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import { ProductionJobSchema, type ProductionJob } from '@/lib/validators/production'
+
+const DesignQueueSchema = z.object({
+  jobs: ProductionJobSchema.array(),
+  colours: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+})
 
 const log = createLogger('DesignJobsService')
 const TIMEOUT_MS = 15_000
@@ -20,7 +31,13 @@ const UPLOAD_TIMEOUT_MS = 120_000
  */
 export class DesignJobsServiceError extends Error {}
 
-export async function listDesignJobs(token: string): Promise<ProductionJob[]> {
+export interface DesignQueue {
+  jobs: ProductionJob[]
+  /** Every filament this shop can print, for naming a colour in a file. */
+  colours: string[]
+}
+
+export async function listDesignJobs(token: string): Promise<DesignQueue> {
   let response: Response
   try {
     response = await fetch(`${env.TENSOR_CORE_URL}/design-jobs`, {
@@ -42,7 +59,7 @@ export async function listDesignJobs(token: string): Promise<ProductionJob[]> {
     throw new DesignJobsServiceError(detail ?? `Request failed (${response.status})`)
   }
 
-  return ProductionJobSchema.array().parse(await response.json())
+  return DesignQueueSchema.parse(await response.json())
 }
 
 /**

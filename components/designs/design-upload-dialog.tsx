@@ -20,6 +20,8 @@ interface DesignUploadDialogProps {
   jobNumber: string
   productName: string
   hasModel: boolean
+  /** The filaments this shop can print, for naming a colour in a file. */
+  colours: string[]
 }
 
 const ACCEPTED = '.stl,.3mf'
@@ -43,12 +45,16 @@ export function DesignUploadDialog({
   jobNumber,
   productName,
   hasModel,
+  colours,
 }: DesignUploadDialogProps): JSX.Element {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [picked, setPicked] = useState<File[]>([])
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Hexes the chosen files declare, and what the designer says each one is.
+  const [found, setFound] = useState<string[]>([])
+  const [named, setNamed] = useState<Record<string, string>>({})
 
   /**
    * ADDS to the selection; it does not replace it.
@@ -76,6 +82,28 @@ export function DesignUploadDialog({
       return next
     })
     setError(null)
+    void detectColours(chosen)
+  }
+
+  /**
+   * Reads what filaments the chosen files ask for.
+   *
+   * A slicer writes its OWN hex - a Bambu export says #C12E1F, which is Bambu
+   * Basic Red and not this shop's RED - so the designer is asked which
+   * filament each one is. Nothing guesses: the nearest colour would reserve
+   * the wrong spool, and the person looking at the model is the one who knows.
+   */
+  async function detectColours(files: File[]): Promise<void> {
+    const { inspectModelFile } = await import('@/components/designs/model-colours')
+    const seen: string[] = []
+    for (const file of files) {
+      const inspection = await inspectModelFile(file).catch(() => null)
+      for (const hex of inspection?.colours ?? []) {
+        const key = hex.toUpperCase()
+        if (!seen.includes(key)) seen.push(key)
+      }
+    }
+    setFound(current => [...current, ...seen.filter(h => !current.includes(h))])
   }
 
   function remove(file: File): void {
@@ -89,6 +117,10 @@ export function DesignUploadDialog({
 
     const form = new FormData()
     for (const file of picked) form.append('files', file)
+    const declared = Object.fromEntries(Object.entries(named).filter(([, name]) => name !== ''))
+    if (Object.keys(declared).length > 0) {
+      form.set('colour_names', JSON.stringify(declared))
+    }
     const result = await supplyDesignJobModelAction(jobId, form)
     setPending(false)
 
@@ -98,6 +130,8 @@ export function DesignUploadDialog({
     }
     setOpen(false)
     setPicked([])
+    setFound([])
+    setNamed({})
     // The row leaves the queue once it has a file, so the list is what changes.
     router.refresh()
   }
@@ -109,6 +143,8 @@ export function DesignUploadDialog({
         setOpen(next)
         if (!next) {
           setPicked([])
+          setFound([])
+          setNamed({})
           setError(null)
         }
       }}
@@ -171,6 +207,40 @@ export function DesignUploadDialog({
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+
+          {found.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-subtle-foreground text-xs">
+                These files ask for {found.length === 1 ? 'this filament' : 'these filaments'}. Say
+                which one the shop prints it in, or leave it and the job will report that it has no
+                colour.
+              </p>
+              {found.map(hex => (
+                <div key={hex} className="flex items-center gap-2.5">
+                  <span
+                    className="border-border/70 size-6 shrink-0 rounded border"
+                    style={{ backgroundColor: hex }}
+                    aria-hidden
+                  />
+                  <span className="text-subtle-foreground w-20 shrink-0 font-mono text-xs">
+                    {hex}
+                  </span>
+                  <select
+                    value={named[hex] ?? ''}
+                    onChange={e => setNamed(current => ({ ...current, [hex]: e.target.value }))}
+                    className="border-border/70 bg-surface h-9 flex-1 rounded-md border px-2 text-sm"
+                  >
+                    <option value="">Not set</option>
+                    {colours.map(name => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
             </div>
           ) : null}
 

@@ -31,13 +31,16 @@ export default async function NonDnpPage({ params }: NonDnpPageProps): Promise<J
   await requirePermission('design:job_read', `/dashboard/${brand}`)
 
   let jobs: ProductionJob[] = []
+  let colours: string[] = []
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
   } else {
     try {
-      jobs = await listDesignJobs(token)
+      const queue = await listDesignJobs(token)
+      jobs = queue.jobs
+      colours = queue.colours
     } catch (err) {
       error =
         err instanceof DesignJobsServiceError ? err.message : 'Could not load the design queue.'
@@ -59,7 +62,7 @@ export default async function NonDnpPage({ params }: NonDnpPageProps): Promise<J
           {error}
         </p>
       ) : (
-        <NonDnpTable jobs={jobs} />
+        <NonDnpTable jobs={jobs} colours={colours} />
       )}
     </main>
   )

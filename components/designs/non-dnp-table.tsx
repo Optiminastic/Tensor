@@ -10,6 +10,8 @@ import type { ProductionJob } from '@/lib/validators/production'
 
 interface NonDnpTableProps {
   jobs: ProductionJob[]
+  /** The filaments this shop can print, for naming a colour in a file. */
+  colours: string[]
 }
 
 type Tab = 'needs' | 'changed'
@@ -23,7 +25,7 @@ type Tab = 'needs' | 'changed'
  * not how anyone chooses. Opening a row shows the only thing that matters -
  * what the customer actually asked for.
  */
-export function NonDnpTable({ jobs }: NonDnpTableProps): JSX.Element {
+export function NonDnpTable({ jobs, colours }: NonDnpTableProps): JSX.Element {
   const [tab, setTab] = useState<Tab>('needs')
   const [open, setOpen] = useState<string | null>(null)
 
@@ -65,6 +67,7 @@ export function NonDnpTable({ jobs }: NonDnpTableProps): JSX.Element {
             <JobRow
               key={job.id}
               job={job}
+              colours={colours}
               expanded={open === job.id}
               onToggle={() => setOpen(open === job.id ? null : job.id)}
             />
@@ -77,11 +80,12 @@ export function NonDnpTable({ jobs }: NonDnpTableProps): JSX.Element {
 
 interface JobRowProps {
   job: ProductionJob
+  colours: string[]
   expanded: boolean
   onToggle: () => void
 }
 
-function JobRow({ job, expanded, onToggle }: JobRowProps): JSX.Element {
+function JobRow({ job, colours, expanded, onToggle }: JobRowProps): JSX.Element {
   const changed = job.personalisation_changes
   const fields = customerFields(job)
 
@@ -124,6 +128,7 @@ function JobRow({ job, expanded, onToggle }: JobRowProps): JSX.Element {
           jobNumber={job.job_number}
           productName={job.product_name ?? 'this product'}
           hasModel={Boolean(job.print_file_id)}
+          colours={colours}
         />
       </div>
 
