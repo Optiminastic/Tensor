@@ -98,10 +98,46 @@ export const ProductionJobSchema = z.object({
    * /production-jobs/:id/personalisation-changes. Defaulted, so a backend
    * that predates this sends nothing and every job reads as unchanged.
    */
+  /**
+   * The model's measured footprint, in millimetres. Null until a file is
+   * attached - which is why the design queue shows a dash for a job that has
+   * none yet, and the real envelope once one is uploaded.
+   */
+  bbox_x_mm: z.number().nullish(),
+  bbox_y_mm: z.number().nullish(),
+  bbox_z_mm: z.number().nullish(),
   personalisation_changed: z
     .boolean()
     .nullish()
     .transform(v => v ?? false),
+  /**
+   * What the customer altered after placing the order, old value -> new.
+   *
+   * Sent ONLY by the design queue, which is the one screen whose whole purpose
+   * is answering it; everywhere else the boolean above is enough and these
+   * values are heavy. Nullish and defaulted, so every other response - which
+   * omits the field entirely - still parses.
+   */
+  personalisation_changes: z
+    .object({
+      label: z.string(),
+      from: z.string(),
+      to: z.string(),
+    })
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+  /**
+   * Hexes an uploaded 3MF asked for that the shop has never recorded as a
+   * filament. Present only on an upload response, and only when the file named
+   * a colour nothing could be matched to - the job then keeps whatever colour
+   * it had and goes on reporting that it has none.
+   */
+  unmapped_colours: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
   personalisation_log: z.string().array().nullish(),
   name_confirmed: z.boolean(),
   photo_confirmed: z.boolean(),

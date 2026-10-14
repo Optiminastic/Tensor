@@ -3,6 +3,7 @@ import {
   Bot,
   Building2,
   Box,
+  Boxes,
   CircleCheck,
   ClipboardList,
   Coins,
@@ -108,6 +109,14 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     items: [
       { label: 'All Designs', href: '/designs', icon: LayoutGrid },
       {
+        label: 'Non-DNP',
+        href: '/designs/non-dnp',
+        icon: Boxes,
+        // design:job_read, not design:read: this is the production queue's
+        // designer half, and the permission says so.
+        permission: 'design:job_read',
+      },
+      {
         label: 'Upload Design',
         href: '/designs?view=upload',
         icon: Upload,
@@ -202,6 +211,9 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // The calls and messages about a checkout live in its drawer, not on a
       // Logs page of their own: the question is always "what did we do about
       // THIS cart", and a separate log made it two places to look.
+      // Above the list: what the agent achieved and cost, before the carts one
+      // by one.
+      { label: 'Overview', href: '/agent/overview', icon: LayoutDashboard },
       { label: 'Abandoned Checkout', href: '/agent/abandoned-checkout', icon: ShoppingBag },
     ],
   },

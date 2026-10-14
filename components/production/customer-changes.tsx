@@ -2,6 +2,7 @@
 
 import { type JSX, useEffect, useState } from 'react'
 
+import { ChangeList } from '@/components/production/change-list'
 import type { PersonalisationChange } from '@/lib/validators/personalisation-changes'
 import { fetchPersonalisationChanges } from '@/services/personalisation-changes.service'
 
@@ -43,23 +44,7 @@ export function CustomerChanges({ jobId }: CustomerChangesProps): JSX.Element | 
       <p className="text-foreground text-xs font-medium">
         The customer corrected this after ordering
       </p>
-      <dl className="flex flex-col gap-2">
-        {changes.map(change => (
-          <div key={change.label} className="flex flex-col gap-0.5">
-            <dt className="text-subtle-foreground text-[10px] font-medium tracking-wide uppercase">
-              {change.label}
-            </dt>
-            <dd className="flex flex-wrap items-center gap-1.5 text-sm">
-              {/* Struck-through old, plain new. Whoever reads this is about to
-                  make the new one and must not have to work out which is
-                  which. */}
-              <span className="text-muted-foreground line-through">{change.from}</span>
-              <span className="text-subtle-foreground">→</span>
-              <span className="text-foreground font-medium">{change.to}</span>
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <ChangeList changes={changes} />
     </div>
   )
 }
