@@ -21,8 +21,8 @@ interface TabsProps {
   onValueChange: (value: string) => void
   // Names the tablist for screen readers.
   label: string
-  // 'segmented' (default) is the muted track used across the product; 'pill'
-  // is the landing UI's row of rounded pills, used on the redesigned pages.
+  // 'pill' (default) is the landing UI's row of rounded pills; 'segmented' is
+  // the older muted track, kept for a dense spot that needs it.
   variant?: TabsVariant
   className?: string
 }
@@ -32,7 +32,7 @@ type TabsVariant = 'segmented' | 'pill'
 const LIST_CLASSES: Record<TabsVariant, string> = {
   segmented:
     'border-border/70 bg-surface-muted inline-flex h-9 items-center gap-1 rounded-lg border p-1',
-  pill: 'flex max-w-full items-center gap-1 overflow-x-auto',
+  pill: 'bg-surface ring-border inline-flex w-max max-w-full items-center gap-1 overflow-x-auto rounded-full p-1 ring-1',
 }
 
 const TAB_CLASSES: Record<TabsVariant, { base: string; active: string; idle: string }> = {
@@ -59,7 +59,7 @@ export function Tabs({
   value,
   onValueChange,
   label,
-  variant = 'segmented',
+  variant = 'pill',
   className,
 }: TabsProps): JSX.Element {
   const look = TAB_CLASSES[variant]

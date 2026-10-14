@@ -64,7 +64,6 @@ export function DesignDetailTabs({
         value={tab}
         onValueChange={value => setTab(value as TabValue)}
         label="Design sections"
-        variant="pill"
       />
       <div
         role="tabpanel"

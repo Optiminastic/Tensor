@@ -61,6 +61,7 @@ export default async function DeliveriesPage({
   return (
     <main className="flex w-full flex-col gap-6 px-4 py-10 sm:px-6 md:px-8">
       <ProductionPageHeader
+        eyebrow="Shipping"
         title="Deliveries"
         description="Every parcel Delhivery is carrying for this brand, with the ones nobody could take at the top."
       />

@@ -14,13 +14,7 @@ type DivProps = HTMLAttributes<HTMLDivElement>
  */
 export function Card({ className, ...props }: DivProps): JSX.Element {
   return (
-    <div
-      className={cn(
-        'border-border/70 bg-surface rounded-xl border shadow-[0_1px_2px_rgba(16,24,40,0.04)]',
-        className,
-      )}
-      {...props}
-    />
+    <div className={cn('border-border/70 bg-surface rounded-3xl border', className)} {...props} />
   )
 }
 

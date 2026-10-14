@@ -83,6 +83,7 @@ export default async function AbandonedCheckoutPage({
   return (
     <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <ProductionPageHeader
+        eyebrow="Agent"
         title="Abandoned Checkouts"
         description="Baskets a customer started and did not finish, from the last 30 days. Open one for its details, the agent's call and the messages sent."
       />

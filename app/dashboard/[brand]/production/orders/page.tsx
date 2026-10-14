@@ -97,16 +97,17 @@ export default async function ProductionOrdersPage({
 
   return (
     <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <ProductionPageHeader title="Orders" description="Real orders imported from Shopify." />
-        <OrdersSyncButton brand={brand} shopifyConnected={shopifyConnected} />
-      </div>
+      <ProductionPageHeader
+        title="Orders"
+        description="Real orders imported from Shopify."
+        actions={<OrdersSyncButton brand={brand} shopifyConnected={shopifyConnected} />}
+      />
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : orders.length === 0 ? (
-        <p className="text-muted-foreground rounded-md border border-dashed px-4 py-8 text-center text-sm">
+        <p className="text-muted-foreground bg-surface ring-border rounded-3xl px-6 py-16 text-center text-sm ring-1">
           No live orders yet. Click Sync from Shopify to pull in the latest orders.
         </p>
       ) : (

@@ -95,15 +95,13 @@ export default async function MachineManagementPage({
       {/* The sync sits beside the header, matching the Orders page. Without it
           the fleet can only be populated by calling the API directly, which is
           why a fresh deployment showed an empty table with no way forward. */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <ProductionPageHeader
-          title="Machine Management"
-          description="What is queued, what is printing it, and what came off the bed."
-        />
-        <FleetSyncButton brand={brand} />
-      </div>
+      <ProductionPageHeader
+        title="Machine Management"
+        description="What is queued, what is printing it, and what came off the bed."
+        actions={<FleetSyncButton brand={brand} />}
+      />
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : (

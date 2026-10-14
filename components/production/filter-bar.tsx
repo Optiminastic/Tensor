@@ -109,7 +109,8 @@ export function FilterBar({
           // be chosen back once a real filter had been.
           selectedKey={filter.value === '' ? ALL : filter.value}
           onSelectionChange={key => filter.onChange(key === ALL ? '' : String(key))}
-          className="w-40 shrink-0"
+          className="w-44 shrink-0"
+          triggerClassName="bg-surface h-11 rounded-full border-border px-4 shadow-none"
         >
           <SelectItem id={ALL}>{filter.label}: All</SelectItem>
           {filter.options.map(option => (
@@ -120,26 +121,30 @@ export function FilterBar({
         </Select>
       ))}
 
-      <div className="relative ml-auto w-56 min-w-40">
-        <Search
-          className="text-subtle-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
-          aria-hidden
-        />
-        <Input
-          type="search"
-          value={searchValue}
-          onChange={e => onSearchChange(e.target.value)}
-          placeholder={searchPlaceholder}
-          aria-label="Search"
-          className="pl-8"
-        />
-      </div>
-
-      {period && onPeriodChange ? (
-        <div className="shrink-0">
-          <OverviewDateRange value={period} onChange={onPeriodChange} />
+      {/* Search and the period travel together: when the row runs out of
+          room they wrap as a pair, rather than stranding the date alone. */}
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="relative w-64 min-w-40">
+          <Search
+            className="text-subtle-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            value={searchValue}
+            onChange={e => onSearchChange(e.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label="Search"
+            className="h-11 rounded-full pl-10 shadow-none"
+          />
         </div>
-      ) : null}
+
+        {period && onPeriodChange ? (
+          <div className="shrink-0">
+            <OverviewDateRange value={period} onChange={onPeriodChange} />
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

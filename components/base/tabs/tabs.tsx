@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ComponentType, ReactNode, Ref } from 'react'
 import {
   Tab as AriaTab,
@@ -15,10 +14,7 @@ import type {
   TabsProps as AriaTabsProps,
 } from 'react-aria-components'
 
-import { useDirection } from '@/components/foundations/direction/direction'
 import { cx } from '@/utils/cx'
-
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 /**
  * Figma source: Board UI → Tab (node 3793:2942).
@@ -66,68 +62,23 @@ export interface TabListProps<T extends object> extends AriaTabListProps<T> {
   ref?: Ref<HTMLDivElement>
 }
 
-type Underline = { left: number; width: number }
-
+/**
+ * Re-skinned for Tensor: a rounded track of pills, the selected one filled
+ * ink, in place of BoardUI's ruled list with a sliding underline. The pill
+ * marks the selection by itself, so nothing has to be measured.
+ */
 export function TabList<T extends object>({ className, ref, ...props }: TabListProps<T>) {
-  const direction = useDirection()
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [underline, setUnderline] = useState<Underline | null>(null)
-
-  useIsomorphicLayoutEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const measure = () => {
-      const selected = el.querySelector<HTMLElement>("[role='tab'][data-selected]")
-      if (selected) {
-        setUnderline({ left: selected.offsetLeft, width: selected.offsetWidth })
-      }
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    // Labels and fonts can change width without resizing the full tab strip.
-    const observeTabs = () => el.querySelectorAll("[role='tab']").forEach(tab => ro.observe(tab))
-    observeTabs()
-    const mo = new MutationObserver(() => {
-      observeTabs()
-      measure()
-    })
-    mo.observe(el, {
-      attributes: true,
-      childList: true,
-      characterData: true,
-      subtree: true,
-      attributeFilter: ['data-selected'],
-    })
-    return () => {
-      mo.disconnect()
-      ro.disconnect()
-    }
-  }, [direction])
-
   return (
-    <div ref={wrapperRef} className="relative w-full">
-      <AriaTabList
-        ref={ref}
-        {...props}
-        className={state =>
-          cx(
-            'border-separator-border flex w-full items-center gap-1 border-b',
-            typeof className === 'function' ? className(state) : className,
-          )
-        }
-      />
-      {underline && (
-        <span
-          aria-hidden
-          className="bg-accent-600 ease pointer-events-none absolute bottom-0 left-0 h-0.5 transition-[transform,width] duration-200"
-          style={{
-            transform: `translateX(${underline.left}px)`,
-            width: underline.width,
-          }}
-        />
-      )}
-    </div>
+    <AriaTabList
+      ref={ref}
+      {...props}
+      className={state =>
+        cx(
+          'bg-surface ring-border inline-flex w-max items-center gap-1 rounded-full p-1 ring-1',
+          typeof className === 'function' ? className(state) : className,
+        )
+      }
+    />
   )
 }
 
@@ -147,9 +98,12 @@ export function Tab({ className, children, icon: Icon, count, ref, ...props }: T
       {...props}
       className={state =>
         cx(
-          'relative inline-flex cursor-pointer items-center gap-2.5 px-2.5 py-2 whitespace-nowrap',
+          'relative inline-flex h-9 cursor-pointer items-center gap-2 rounded-full px-3.5 text-sm whitespace-nowrap',
           'ease transition-colors duration-150 outline-none',
-          'focus-visible:ring-border-focus-ring focus-visible:rounded-sm focus-visible:ring-2',
+          'focus-visible:ring-ring focus-visible:ring-2',
+          state.isSelected
+            ? 'bg-landing-ink dark:bg-foreground dark:text-background text-white'
+            : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
           state.isDisabled && 'cursor-not-allowed opacity-50',
           typeof className === 'function' ? className(state) : className,
         )
@@ -157,24 +111,15 @@ export function Tab({ className, children, icon: Icon, count, ref, ...props }: T
     >
       {({ isSelected }) => (
         <>
-          <span
-            className={cx(
-              'inline-flex items-center gap-1.5',
-              isSelected
-                ? 'text-body-medium text-accent-600'
-                : 'text-body-regular text-text-primary',
-            )}
-          >
+          <span className="inline-flex items-center gap-1.5 font-medium">
             {Icon && <Icon className="size-4 shrink-0" aria-hidden />}
             {children}
           </span>
           {count != null && (
             <span
               className={cx(
-                'text-caption-1-medium inline-flex items-center justify-center rounded-sm px-1 py-px whitespace-nowrap',
-                isSelected
-                  ? 'bg-tab-count-selected-background text-accent-600'
-                  : 'text-text-primary bg-black/10 opacity-50',
+                'inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 font-mono text-xs whitespace-nowrap tabular-nums',
+                isSelected ? 'dark:bg-background/20 bg-white/20' : 'bg-surface-muted',
               )}
             >
               {count}
