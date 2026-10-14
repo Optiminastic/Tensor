@@ -2,9 +2,10 @@
 
 import type { JSX } from 'react'
 
-import { TranscriptView, callTime } from '@/components/agent/call-parts'
+import { TranscriptView } from '@/components/agent/call-parts'
 import { Tabs } from '@/components/ui/tabs'
 import { useTranscript } from '@/hooks/use-transcript'
+import { callTime, hasConversation, readable } from '@/lib/call-format'
 import type { CallLog } from '@/lib/validators/call-logs'
 
 interface CheckoutTranscriptProps {
@@ -28,7 +29,10 @@ export function CheckoutTranscript({
   selection,
 }: CheckoutTranscriptProps): JSX.Element {
   const call = calls[selection.index]
-  const transcript = useTranscript(brand, call?.interaction_id ?? '')
+  const spoken = call !== undefined && hasConversation(call)
+  // Not asked for at all when there was no conversation: Sarvam refuses the
+  // id of a call nobody answered, and its refusal is not news to anyone.
+  const transcript = useTranscript(brand, spoken ? call.interaction_id : '')
 
   if (selection.error) {
     return (
@@ -60,11 +64,19 @@ export function CheckoutTranscript({
           />
         </div>
       ) : null}
-      <TranscriptView
-        loading={transcript.loading}
-        error={transcript.error}
-        turns={transcript.turns}
-      />
+      {spoken ? (
+        <TranscriptView
+          loading={transcript.loading}
+          error={transcript.error}
+          turns={transcript.turns}
+        />
+      ) : (
+        <p className="text-muted-foreground text-sm text-pretty">
+          This call did not connect
+          {readable(call.failure_reason) !== '—' ? ` (${readable(call.failure_reason)})` : ''}, so
+          there is no conversation or recording.
+        </p>
+      )}
     </div>
   )
 }

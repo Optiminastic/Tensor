@@ -3,7 +3,6 @@
 import { type JSX, useState } from 'react'
 
 import type { ActivityErrors } from '@/components/agent/agent-activity-summary'
-import { duration } from '@/components/agent/call-parts'
 import { CheckoutMessages } from '@/components/agent/checkout-messages'
 import { CheckoutOverview } from '@/components/agent/checkout-overview'
 import { CheckoutStatusBadge } from '@/components/agent/checkout-status-badge'
@@ -18,6 +17,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Tabs } from '@/components/ui/tabs'
+import { duration, hasConversation } from '@/lib/call-format'
 import type { CheckoutActivity } from '@/lib/checkout-format'
 import type { AbandonedCheckout } from '@/lib/validators/abandoned-checkouts'
 import type { CallLog } from '@/lib/validators/call-logs'
@@ -136,7 +136,11 @@ function DrawerContents({ checkout, activity, context }: DrawerContentsProps): J
         )}
       </SheetBody>
 
-      {view === 'transcript' && call ? <RecordingPlayer brand={context.brand} call={call} /> : null}
+      {/* No player for a call nobody answered: there is no audio, and an
+          empty 0:00 player reads as a recording that failed to load. */}
+      {view === 'transcript' && call && hasConversation(call) ? (
+        <RecordingPlayer brand={context.brand} call={call} />
+      ) : null}
     </>
   )
 }
