@@ -32,7 +32,7 @@ const SheetOverlay = forwardRef<
   return (
     <DialogPrimitive.Overlay
       ref={ref}
-      className={cn('bg-foreground/40 fixed inset-0 z-50 backdrop-blur-sm', className)}
+      className={cn('bg-landing-ink/40 fixed inset-0 z-50 backdrop-blur-md', className)}
       {...props}
     />
   )
@@ -62,15 +62,17 @@ export const SheetContent = forwardRef<
         className={cn(
           // h-dvh, not h-full: on mobile the retracting address bar is part of
           // 100vh, which would hide the bottom of the panel.
-          'border-border bg-surface fixed inset-y-0 z-50 flex h-dvh w-full flex-col shadow-lg',
-          side === 'right' ? 'right-0 max-w-3xl border-l' : 'left-0 max-w-xs border-r',
+          'border-border bg-surface font-landing fixed inset-y-0 z-50 flex h-dvh w-full flex-col shadow-2xl',
+          side === 'right'
+            ? 'right-0 max-w-3xl border-l sm:rounded-l-3xl'
+            : 'left-0 max-w-xs border-r sm:rounded-r-3xl',
           className,
         )}
         {...props}
       >
         {children}
         <DialogPrimitive.Close
-          className="text-muted-foreground hover:text-foreground absolute top-4 right-4 rounded-sm transition-colors focus:outline-none"
+          className="text-muted-foreground hover:text-foreground hover:bg-surface-muted focus-visible:ring-ring absolute top-4 right-4 grid size-8 place-items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2"
           aria-label="Close"
         >
           <X className="size-4" aria-hidden />
@@ -85,7 +87,7 @@ export function SheetHeader({ className, ...props }: HTMLAttributes<HTMLDivEleme
   return (
     <div
       className={cn(
-        'border-border flex shrink-0 flex-col gap-1 border-b px-6 py-4 pr-12',
+        'border-border flex shrink-0 flex-col gap-1.5 border-b px-6 py-5 pr-14',
         className,
       )}
       {...props}
@@ -111,7 +113,7 @@ export const SheetTitle = forwardRef<
   return (
     <DialogPrimitive.Title
       ref={ref}
-      className={cn('text-foreground text-lg font-medium', className)}
+      className={cn('text-foreground text-2xl font-medium tracking-[-0.03em]', className)}
       {...props}
     />
   )

@@ -26,7 +26,7 @@ export function OrderDetailHeader({ order }: OrderDetailHeaderProps): JSX.Elemen
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-display text-3xl">{order.orderNumber}</h1>
+        <h1 className="text-display text-4xl sm:text-5xl">{order.orderNumber}</h1>
         <TonePill label={status.label} tone={status.tone} />
         {order.fulfillmentStatus ? (
           <TonePill

@@ -17,7 +17,7 @@ export function PageHeading({
   actions,
 }: PageHeadingProps): JSX.Element {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-6">
+    <header className="flex w-full flex-wrap items-end justify-between gap-6">
       <div className="flex max-w-2xl flex-col gap-3">
         <p className="text-muted-foreground font-mono text-xs tracking-[0.18em] uppercase">
           <span aria-hidden className="mr-2">

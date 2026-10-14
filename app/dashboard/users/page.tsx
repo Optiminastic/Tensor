@@ -5,6 +5,7 @@ import type { JSX } from 'react'
 
 import { InviteManager } from '@/components/admin/invite-manager'
 import { MembersList, type MemberView } from '@/components/admin/members-list'
+import { PageHeading } from '@/components/dashboard/page-heading'
 import { getSessionSafe, getTokenSafe, getUserDirectory } from '@/lib/auth'
 import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import type { Invite, Member } from '@/lib/validators/admin'
@@ -70,14 +71,15 @@ export default async function UsersPage(): Promise<JSX.Element> {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:px-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-display text-4xl">People</h1>
-        <p className="text-muted-foreground max-w-prose text-sm text-pretty">
-          {canManageUsers
+      <PageHeading
+        eyebrow="Workspace"
+        title="People"
+        description={
+          canManageUsers
             ? 'Invite someone by email and they set their own password. Links work once and expire after 72 hours. Every role can access every store.'
-            : 'View the team and remove junior members. Inviting people is done by an admin.'}
-        </p>
-      </div>
+            : 'View the team and remove junior members. Inviting people is done by an admin.'
+        }
+      />
       {canManageUsers ? <InviteManager initialInvites={invites} loadError={loadError} /> : null}
       <MembersList
         members={members}

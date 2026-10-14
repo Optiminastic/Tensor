@@ -77,7 +77,7 @@ export default async function MachinePage({ params }: MachinePageProps): Promise
       {queueError ? (
         <p
           role="alert"
-          className="bg-danger-subtle text-danger shrink-0 rounded-md px-3 py-2 text-sm"
+          className="bg-danger-subtle text-danger shrink-0 rounded-2xl px-4 py-3 text-sm"
         >
           {queueError}
         </p>

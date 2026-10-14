@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { JSX, ReactNode } from 'react'
 
+import { PageHeading } from '@/components/dashboard/page-heading'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -18,12 +19,7 @@ interface SettingsHeaderProps {
  * would read as three unrelated screens that happen to share a URL prefix.
  */
 export function SettingsHeader({ title, description }: SettingsHeaderProps): JSX.Element {
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-display text-4xl">{title}</h1>
-      <p className="text-muted-foreground max-w-prose text-sm text-pretty">{description}</p>
-    </div>
-  )
+  return <PageHeading eyebrow="Settings" title={title} description={description} />
 }
 
 interface SettingsNoticeProps {

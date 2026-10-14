@@ -9,7 +9,8 @@ interface StatCardProps {
   label: string
   value: ReactNode
   hint?: string
-  accent?: string // CSS var for the top accent rule, e.g. 'var(--accent)'
+  /** Kept for callers; the tile no longer draws a coloured rule. */
+  accent?: string
   delta?: TrendDelta | null
 }
 
@@ -20,24 +21,17 @@ const DIRECTION: Record<TrendDirection, { icon: typeof Minus; className: string 
 }
 
 /**
- * A KPI tile with presence: a hairline accent rule on top, the figure in mono, and
- * an optional week-over-week chip (arrow + label, never colour alone).
+ * A KPI tile in the landing UI: a mono label, a large figure, and an optional
+ * week-over-week chip (arrow + label, never colour alone).
  */
-export function StatCard({ label, value, hint, accent, delta }: StatCardProps): JSX.Element {
+export function StatCard({ label, value, hint, delta }: StatCardProps): JSX.Element {
   const direction = delta ? DIRECTION[delta.direction] : null
   const Icon = direction?.icon
 
   return (
-    <Card className="relative overflow-hidden p-5">
-      {accent ? (
-        <span
-          className="absolute inset-x-0 top-0 h-0.5"
-          style={{ backgroundColor: accent }}
-          aria-hidden
-        />
-      ) : null}
+    <Card className="relative overflow-hidden p-6">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-subtle-foreground text-xs font-medium tracking-wide uppercase">
+        <p className="text-muted-foreground font-mono text-xs tracking-[0.16em] uppercase">
           {label}
         </p>
         {delta && direction && Icon ? (
@@ -52,7 +46,7 @@ export function StatCard({ label, value, hint, accent, delta }: StatCardProps): 
           </span>
         ) : null}
       </div>
-      <p className="text-foreground mt-3 font-mono text-3xl font-medium tracking-tight tabular-nums">
+      <p className="text-foreground mt-4 text-4xl font-medium tracking-[-0.04em] tabular-nums">
         {value}
       </p>
       {hint ? <p className="text-muted-foreground mt-1.5 text-xs">{hint}</p> : null}

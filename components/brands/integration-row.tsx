@@ -152,7 +152,7 @@ export function IntegrationRow({ brandSlug, integration }: IntegrationRowProps):
       {open && integration.available ? (
         <div className="mt-4 flex flex-col gap-4 pl-6">
           {integration.from_environment ? (
-            <p className="bg-surface-muted text-muted-foreground rounded-md px-3 py-2 text-sm text-pretty">
+            <p className="bg-surface-muted text-muted-foreground rounded-2xl px-4 py-3 text-sm text-pretty">
               These are the values this deployment was started with, shown so you can see what is in
               use. Saving copies them here, after which this page is where they are changed — and
               the deployment&apos;s own settings stop mattering for this brand.
@@ -221,7 +221,7 @@ export function IntegrationRow({ brandSlug, integration }: IntegrationRowProps):
           </div>
 
           {error ? (
-            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+            <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
               {error}
             </p>
           ) : null}

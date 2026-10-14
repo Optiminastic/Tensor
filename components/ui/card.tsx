@@ -19,12 +19,7 @@ export function Card({ className, ...props }: DivProps): JSX.Element {
 }
 
 export function CardHeader({ className, ...props }: DivProps): JSX.Element {
-  return (
-    <div
-      className={cn('border-border/70 flex flex-col gap-1 border-b px-5 py-4', className)}
-      {...props}
-    />
-  )
+  return <div className={cn('flex flex-col gap-1.5 px-6 pt-6 pb-2', className)} {...props} />
 }
 
 export function CardTitle({
@@ -33,7 +28,10 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>): JSX.Element {
   return (
     <h3
-      className={cn('text-foreground text-sm font-semibold tracking-tight', className)}
+      className={cn(
+        'text-muted-foreground font-mono text-xs font-normal tracking-[0.16em] uppercase',
+        className,
+      )}
       {...props}
     />
   )
@@ -47,13 +45,13 @@ export function CardDescription({
 }
 
 export function CardContent({ className, ...props }: DivProps): JSX.Element {
-  return <div className={cn('px-5 py-4', className)} {...props} />
+  return <div className={cn('px-6 py-5', className)} {...props} />
 }
 
 export function CardFooter({ className, ...props }: DivProps): JSX.Element {
   return (
     <div
-      className={cn('border-border/70 flex items-center gap-3 border-t px-5 py-4', className)}
+      className={cn('border-border/70 flex items-center gap-3 border-t px-6 py-4', className)}
       {...props}
     />
   )

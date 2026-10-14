@@ -58,9 +58,12 @@
   /* The edge of an interactive control. Holds 3:1 for WCAG 1.4.11. */
   --border-strong: oklch(0.625 0.008 265);
 
-  /* Signal accent - azure blue (#0F56A1), used sparingly */
-  --accent: oklch(0.456 0.138 255);
-  --accent-hover: oklch(0.405 0.132 255);
+  /* Signal accent - the landing UI's ink. Was azure blue; the redesign is
+   * ink, lime and sky, so blue now only appears where it means something (the
+   * "under way" tag, a chart's sky series). Links, focus, progress and chart
+   * ramps all read from here. */
+  --accent: oklch(0.2 0.01 260);
+  --accent-hover: oklch(0.32 0.01 260);
   /* Label colour for text sitting on an --accent fill */
   --accent-foreground: oklch(1 0 0);
 
@@ -72,7 +75,7 @@
   --danger: oklch(0.52 0.2 25);
 
   /* Focus ring */
-  --ring: var(--accent);
+  --ring: var(--foreground);
 
   /*
    * Tint strength for translucent status/accent fills.
@@ -123,12 +126,11 @@
   --border-strong: oklch(0.555 0.007 265);
 
   /*
-   * Lifted so the blue stays legible as text on a dark surface
-   * (link / badge). At this lightness a white label on an --accent
-   * fill would fail AA, so --accent-foreground flips to ink here.
+   * Ink inverts on the dark page: near-white, so links and focus stay
+   * legible, and a label on an --accent fill flips to ink.
    */
-  --accent: oklch(0.67 0.13 255);
-  --accent-hover: oklch(0.73 0.115 255);
+  --accent: oklch(0.93 0.005 260);
+  --accent-hover: oklch(0.85 0.005 260);
   --accent-foreground: oklch(0.19 0.003 78);
 
   /*
@@ -424,12 +426,13 @@
    * are part of the treatment, so they ship with the family rather than
    * being re-specified (and drifted) at every call site.
    */
+  /* Page titles, in the landing UI's type: Inter Tight, medium, tightly set.
+   * Every older page that used the Mona Sans display face picks this up. */
   .text-display {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-optical-sizing: auto;
+    font-family: var(--font-inter-tight), var(--font-display);
+    font-weight: 500;
     line-height: 1.05;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.04em;
   }
 
   .tabular-nums {

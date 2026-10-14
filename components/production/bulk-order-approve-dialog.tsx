@@ -163,7 +163,7 @@ export function BulkOrderApproveDialog({
           </Field>
 
           {error ? (
-            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+            <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
               {error}
             </p>
           ) : null}
@@ -181,7 +181,7 @@ export function BulkOrderApproveDialog({
           ) : null}
 
           {result ? (
-            <p role="status" className="bg-success/10 text-success rounded-md px-3 py-2 text-sm">
+            <p role="status" className="bg-success/10 text-success rounded-2xl px-4 py-3 text-sm">
               {result}
             </p>
           ) : null}
