@@ -1,6 +1,6 @@
 'use client'
 
-import { Upload } from 'lucide-react'
+import { Upload, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { type ChangeEvent, type JSX, useState } from 'react'
 
@@ -50,9 +50,36 @@ export function DesignUploadDialog({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  /**
+   * ADDS to the selection; it does not replace it.
+   *
+   * A designer picks a body, then goes back for the clip - and a file input
+   * hands you only the files chosen on THAT trip, so assigning them wholesale
+   * threw the first pick away silently. The picker is also reset afterwards,
+   * because without it choosing the same file again fires no change event and
+   * the dialog looks broken after a removal.
+   */
   function choose(event: ChangeEvent<HTMLInputElement>): void {
-    setPicked(Array.from(event.target.files ?? []))
+    const chosen = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    if (chosen.length === 0) return
+
+    setPicked(current => {
+      const next = [...current]
+      for (const file of chosen) {
+        // Keyed on more than the name: two pieces exported from different
+        // folders can share one, and the same file picked twice is a slip
+        // rather than two copies of a piece.
+        if (next.some(f => sameFile(f, file))) continue
+        next.push(file)
+      }
+      return next
+    })
     setError(null)
+  }
+
+  function remove(file: File): void {
+    setPicked(current => current.filter(f => !sameFile(f, file)))
   }
 
   async function send(): Promise<void> {
@@ -104,9 +131,13 @@ export function DesignUploadDialog({
         <div className="flex flex-col gap-4">
           <label className="border-border/70 hover:border-foreground/40 flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center transition">
             <Upload className="text-subtle-foreground size-5" aria-hidden />
-            <span className="text-sm">Choose one file per piece</span>
+            <span className="text-sm">
+              {picked.length === 0 ? 'Choose one file per piece' : 'Add another piece'}
+            </span>
             <span className="text-subtle-foreground text-xs">
-              .3mf or .stl — a 3MF carries its own colours
+              {picked.length === 0
+                ? '.3mf or .stl — a 3MF carries its own colours'
+                : 'Pick several at once, or come back for each one'}
             </span>
             <input type="file" accept={ACCEPTED} multiple className="hidden" onChange={choose} />
           </label>
@@ -121,13 +152,22 @@ export function DesignUploadDialog({
               <ul className="flex flex-col gap-1">
                 {picked.map(file => (
                   <li
-                    key={file.name}
-                    className="bg-surface-muted flex items-center justify-between gap-3 rounded px-2.5 py-1.5 text-sm"
+                    key={`${file.name}-${file.size}-${file.lastModified}`}
+                    className="bg-surface-muted flex items-center gap-3 rounded px-2.5 py-1.5 text-sm"
                   >
-                    <span className="truncate">{file.name}</span>
+                    <span className="min-w-0 flex-1 truncate">{file.name}</span>
                     <span className="text-subtle-foreground font-mono text-xs tabular-nums">
                       {(file.size / 1_000_000).toFixed(1)} MB
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => remove(file)}
+                      disabled={pending}
+                      aria-label={`Remove ${file.name}`}
+                      className="text-subtle-foreground hover:text-danger shrink-0 transition"
+                    >
+                      <X className="size-3.5" aria-hidden />
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -160,4 +200,15 @@ export function DesignUploadDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+/**
+ * Whether two picks are the same file.
+ *
+ * The browser gives a new File object on every visit to the picker, so
+ * identity is useless; name, size and modified time together are what
+ * distinguishes one piece from another.
+ */
+function sameFile(a: File, b: File): boolean {
+  return a.name === b.name && a.size === b.size && a.lastModified === b.lastModified
 }
