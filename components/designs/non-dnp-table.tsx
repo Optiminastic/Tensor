@@ -4,7 +4,6 @@ import { ChevronRight } from 'lucide-react'
 import { type JSX, useMemo, useState } from 'react'
 
 import { DesignUploadDialog } from '@/components/designs/design-upload-dialog'
-import { ChangeList } from '@/components/production/change-list'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { ProductionJob } from '@/lib/validators/production'
@@ -83,6 +82,7 @@ interface JobRowProps {
 }
 
 function JobRow({ job, expanded, onToggle }: JobRowProps): JSX.Element {
+  const changed = job.personalisation_changes
   const fields = customerFields(job)
 
   return (
@@ -101,10 +101,20 @@ function JobRow({ job, expanded, onToggle }: JobRowProps): JSX.Element {
               expanded && 'rotate-90',
             )}
           />
-          <span className="truncate text-sm">{job.product_name ?? 'Unnamed product'}</span>
-          {fields.length > 0 ? (
-            <span className="text-subtle-foreground shrink-0 text-xs">
-              {fields.length} {fields.length === 1 ? 'field' : 'fields'}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm">{job.product_name ?? 'Unnamed product'}</span>
+            {/* Which production job this is, and which order it came off.
+                A designer about to draw something has to be able to say
+                what they drew it for. */}
+            <span className="text-subtle-foreground block truncate font-mono text-[11px]">
+              {job.job_number}
+              {job.order_number ? ` · ${job.order_number}` : ''}
+              {job.part_role && job.part_role !== 'body' ? ` · ${job.part_role}` : ''}
+            </span>
+          </span>
+          {changed.length > 0 ? (
+            <span className="bg-warning-subtle text-warning shrink-0 rounded-full px-2 py-0.5 text-[11px]">
+              {changed.length} changed
             </span>
           ) : null}
         </button>
@@ -118,32 +128,51 @@ function JobRow({ job, expanded, onToggle }: JobRowProps): JSX.Element {
       </div>
 
       {expanded ? (
-        <div className="bg-surface-muted/50 flex flex-col gap-4 px-4 pb-4 pl-11">
-          {job.personalisation_changes.length > 0 ? (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-subtle-foreground text-[11px] font-medium tracking-wide uppercase">
-                The customer changed this after ordering
-              </p>
-              <ChangeList changes={job.personalisation_changes} />
-            </div>
-          ) : null}
+        <div className="bg-surface-muted/50 flex flex-col gap-3 px-4 pb-4 pl-11">
+          <p className="text-subtle-foreground text-[11px] font-medium tracking-wide uppercase">
+            {changed.length === 0
+              ? 'What the customer ordered'
+              : 'What the customer ordered, and what they corrected in their 30 minutes'}
+          </p>
 
           {fields.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               The customer gave no customisation for this item.
             </p>
           ) : (
-            <dl className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+            <dl className="grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
               {fields.map(field => (
                 <div key={field.label} className="flex flex-col gap-0.5">
                   <dt className="text-subtle-foreground text-[11px] tracking-wide uppercase">
                     {field.label}
                   </dt>
-                  <dd className="text-foreground text-sm break-words">{field.value}</dd>
+                  <dd className="text-sm break-words">
+                    {field.was === undefined ? (
+                      <span className="text-foreground">{field.value}</span>
+                    ) : (
+                      // BOTH VALUES, on the field itself rather than in a
+                      // list of their own. The designer builds from the new
+                      // one and needs the old one only to see what moved, so
+                      // separating them into two blocks made them read the
+                      // same field twice.
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-muted-foreground line-through">{field.was}</span>
+                        <span className="text-subtle-foreground">→</span>
+                        <span className="text-foreground font-medium">{field.value}</span>
+                        <span className="text-warning text-[11px]">changed</span>
+                      </span>
+                    )}
+                  </dd>
                 </div>
               ))}
             </dl>
           )}
+
+          {changed.length === 0 ? (
+            <p className="text-subtle-foreground text-xs">
+              Nothing was changed after the order — build from these values.
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -153,6 +182,8 @@ function JobRow({ job, expanded, onToggle }: JobRowProps): JSX.Element {
 interface CustomerField {
   label: string
   value: string
+  /** What it said at checkout, when the customer later changed it. */
+  was?: string
 }
 
 /**
@@ -167,13 +198,23 @@ interface CustomerField {
  * storefront carries for itself, never something a person typed.
  */
 function customerFields(job: ProductionJob): CustomerField[] {
+  // Keyed on the label the customer saw, which is what the diff is keyed on
+  // too - so a field that moved during the window carries both values.
+  const before = new Map(job.personalisation_changes.map(c => [c.label, c.from]))
+
   const out: CustomerField[] = []
   if (job.variant_title) {
     out.push({ label: 'Variant', value: job.variant_title })
   }
   for (const prop of job.personalisation_properties ?? []) {
     if (prop.name.startsWith('_') || prop.value.trim() === '') continue
-    out.push({ label: prop.name, value: prop.value })
+    out.push({ label: prop.name, value: prop.value, was: before.get(prop.name) })
+  }
+  // A colour change is recorded against the job rather than among the
+  // properties, so it has no field to attach to and is appended.
+  for (const change of job.personalisation_changes) {
+    if (out.some(f => f.label === change.label)) continue
+    out.push({ label: change.label, value: change.to, was: change.from })
   }
   return out
 }
