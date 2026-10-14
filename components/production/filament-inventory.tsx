@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { pillClasses } from '@/components/ui/pill-shape'
 import {
   Table,
   TableBody,
@@ -34,6 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { TabItem } from '@/components/ui/tabs'
+import { Tag } from '@/components/ui/tag'
 import type { Filament } from '@/lib/validators/production'
 
 interface FilamentInventoryProps {
@@ -207,9 +207,7 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
                           })}
                         </TableCell>
                         <TableCell>
-                          <span className={pillClasses(low ? 'warning' : 'success')}>
-                            {low ? 'Low' : 'In stock'}
-                          </span>
+                          <Tag tone={low ? 'warning' : 'success'}>{low ? 'Low' : 'In stock'}</Tag>
                         </TableCell>
                       </TableRow>
                     )

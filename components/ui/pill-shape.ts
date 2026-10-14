@@ -3,17 +3,17 @@ import { cn } from '@/lib/utils'
 export type PillTone = 'success' | 'warning' | 'danger' | 'accent' | 'muted'
 
 /**
- * The one shape every status tag in Tensor uses: a solid, saturated tile with
- * its word in a deep shade of the same hue, a slight bevel and a soft glow of
- * its own colour. The colours, bevel and glow live in app/globals.css (`.tag`,
- * `.tag-<tone>`), so every tag changes from one place.
+ * The one shape every status tag in Tensor uses: a pastel fill with a
+ * hairline edge, a glossy top and a soft shadow, the word in a strong shade of
+ * the same hue. Colours and depth live in app/globals.css (`.tag`,
+ * `.tag-<tone>`), so every tag changes from one place. Render it through
+ * <Tag> (components/ui/tag.tsx), which adds the tone's icon.
  *
  * Normal case and `whitespace-nowrap` on purpose: "Design file required" stays
- * one tile in a table cell instead of breaking over three lines. No dot - the
- * fill is the colour and the word is the meaning.
+ * one tag in a table cell instead of breaking over three lines.
  */
 const BASE =
-  'tag inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold whitespace-nowrap'
+  'tag inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold whitespace-nowrap'
 
 const TONES: Record<PillTone, string> = {
   success: 'tag-success',

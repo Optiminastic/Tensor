@@ -2,7 +2,8 @@ import type { JSX } from 'react'
 
 import { OverviewTile } from '@/components/dashboard/overview/overview-tile'
 import { TileLabel } from '@/components/dashboard/overview/tile-label'
-import { pillClasses, type PillTone } from '@/components/ui/pill-shape'
+import type { PillTone } from '@/components/ui/pill-shape'
+import { Tag } from '@/components/ui/tag'
 import type { FailureRisk } from '@/lib/validators/designs'
 
 const BANDS: Record<FailureRisk['band'], { label: string; tone: PillTone }> = {
@@ -19,7 +20,7 @@ export function DesignFailureRisk({ risk }: { risk: FailureRisk }): JSX.Element 
     <OverviewTile label="Failure risk" className="h-full">
       <div className="flex items-center justify-between gap-3">
         <TileLabel>Failure risk</TileLabel>
-        <span className={pillClasses(band.tone)}>{band.label}</span>
+        <Tag tone={band.tone}>{band.label}</Tag>
       </div>
       <p className="text-4xl font-medium tracking-[-0.04em] tabular-nums">
         {risk.score}

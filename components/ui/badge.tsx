@@ -1,34 +1,42 @@
-import { cva, type VariantProps } from 'class-variance-authority'
 import type { HTMLAttributes, JSX } from 'react'
 
-import { pillClasses } from '@/components/ui/pill-shape'
+import type { PillTone } from '@/components/ui/pill-shape'
+import { Tag } from '@/components/ui/tag'
 import { cn } from '@/lib/utils'
 
-// Every tone but outline is a status tag in the shared shape
-// (components/ui/pill-shape.ts). Outline stays a quiet bordered label, for
-// facts that are not a status - which brand a design belongs to.
-const badgeVariants = cva('', {
-  variants: {
-    tone: {
-      neutral: pillClasses('muted'),
-      accent: pillClasses('accent'),
-      success: pillClasses('success'),
-      warning: pillClasses('warning'),
-      danger: pillClasses('danger'),
-      outline:
-        'border-border text-muted-foreground inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium whitespace-nowrap',
-    },
-  },
-  defaultVariants: {
-    tone: 'neutral',
-  },
-})
+type BadgeTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'outline'
 
-export interface BadgeProps
-  extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
-
-export function Badge({ className, tone, ...props }: BadgeProps): JSX.Element {
-  return <span className={cn(badgeVariants({ tone }), className)} {...props} />
+const STATUS_TONE: Record<Exclude<BadgeTone, 'outline'>, PillTone> = {
+  neutral: 'muted',
+  accent: 'accent',
+  success: 'success',
+  warning: 'warning',
+  danger: 'danger',
 }
 
-export { badgeVariants }
+const OUTLINE =
+  'border-border text-muted-foreground inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-medium whitespace-nowrap'
+
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  tone?: BadgeTone | null
+}
+
+/**
+ * Every tone but outline is a status tag (components/ui/tag.tsx), icon and
+ * all. Outline stays a quiet bordered label, for facts that are not a status -
+ * which brand a design belongs to.
+ */
+export function Badge({ className, tone, children, ...props }: BadgeProps): JSX.Element {
+  if (tone === 'outline') {
+    return (
+      <span className={cn(OUTLINE, className)} {...props}>
+        {children}
+      </span>
+    )
+  }
+  return (
+    <Tag tone={STATUS_TONE[tone ?? 'neutral']} className={className}>
+      {children}
+    </Tag>
+  )
+}

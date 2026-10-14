@@ -491,66 +491,105 @@
 /* ---------------------------------------------------------------------------
  * Tags.
  *
- * Every status tag in the product: a solid, saturated fill with its label in
- * a deep shade of the same hue, a bevel (a light top edge, a darker bottom
- * one) and a soft glow of its own colour - small printed tiles rather than
- * flat tints. Each label/fill pair holds AA (4.5:1) on its own; the word is
- * the meaning, the colour only echoes it.
+ * Every status tag in the product: a pastel fill that deepens a touch towards
+ * the bottom, a hairline edge a step darker than the fill, a glossy top
+ * highlight and a soft shadow - with the word and its icon in a strong shade
+ * of the same hue. Each ink/fill pair holds AA (4.5:1) at the tag's 12px
+ * size; the word is the meaning, the colour only echoes it.
  *
- * The fills stay saturated in dark mode - they read as light objects on the
- * dark page - except muted, which is grey and so flips to stay quiet.
+ * Dark mode keeps the hues but turns the fills to deep tints of them, with
+ * the ink lightened, so a tag glows on the dark page instead of shouting.
+ *
+ * Plain custom properties, not @theme inline: the .tag-* rules read them at
+ * runtime, and @theme inline bakes values into utilities without declaring
+ * the variables.
  * --------------------------------------------------------------------------- */
-/* Plain custom properties, not @theme inline: the .tag-* rules below read
- * them at runtime, and @theme inline bakes values into utilities without
- * declaring the variables. */
 :root {
-  --tag-success: #63d68b;
-  --tag-success-ink: #0a3a1c;
-  --tag-warning: #ffc93c;
-  --tag-warning-ink: #4a2a00;
-  --tag-danger: #ff9a9a;
-  --tag-danger-ink: #5c0b14;
-  --tag-accent: #5aa2ff;
-  --tag-accent-ink: #0a2a5c;
-  --tag-muted: #e4e5e9;
-  --tag-muted-ink: #3b3e46;
+  --tag-green-top: #e3f8ec;
+  --tag-green-bottom: #cff1dd;
+  --tag-green-edge: #a8e2c0;
+  --tag-green-ink: #0d6b3f;
+  --tag-amber-top: #fff1dc;
+  --tag-amber-bottom: #ffe2bd;
+  --tag-amber-edge: #f9c98d;
+  --tag-amber-ink: #9a4500;
+  --tag-red-top: #ffe8ea;
+  --tag-red-bottom: #ffd6da;
+  --tag-red-edge: #f8b3bb;
+  --tag-red-ink: #b0182f;
+  --tag-blue-top: #e7f1ff;
+  --tag-blue-bottom: #d4e6ff;
+  --tag-blue-edge: #b0cff8;
+  --tag-blue-ink: #1b5bc0;
+  --tag-grey-top: #f3f4f6;
+  --tag-grey-bottom: #e7e9ed;
+  --tag-grey-edge: #d3d6dc;
+  --tag-grey-ink: #4b505a;
+  --tag-highlight: rgb(255 255 255 / 0.75);
 }
 
 .dark {
-  --tag-muted: #3b3e46;
-  --tag-muted-ink: #e4e5e9;
+  --tag-green-top: #183a29;
+  --tag-green-bottom: #143223;
+  --tag-green-edge: #26583e;
+  --tag-green-ink: #86e3ae;
+  --tag-amber-top: #3f2e19;
+  --tag-amber-bottom: #372815;
+  --tag-amber-edge: #644624;
+  --tag-amber-ink: #ffc27e;
+  --tag-red-top: #45222a;
+  --tag-red-bottom: #3c1d24;
+  --tag-red-edge: #6c3340;
+  --tag-red-ink: #ffa4ae;
+  --tag-blue-top: #1c2f4d;
+  --tag-blue-bottom: #182843;
+  --tag-blue-edge: #2e4c7c;
+  --tag-blue-ink: #a2c7ff;
+  --tag-grey-top: #2b2e34;
+  --tag-grey-bottom: #26292e;
+  --tag-grey-edge: #3d4149;
+  --tag-grey-ink: #c7cbd3;
+  --tag-highlight: rgb(255 255 255 / 0.08);
 }
 
 @layer components {
   .tag {
+    color: var(--tag-ink);
+    background-image: linear-gradient(to bottom, var(--tag-top), var(--tag-bottom));
+    border: 1px solid var(--tag-edge);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.45),
-      inset 0 -1px 0 rgb(0 0 0 / 0.14),
-      0 2px 8px -2px var(--tag-glow, transparent);
+      inset 0 1px 0 var(--tag-highlight),
+      0 1px 2px rgb(0 0 0 / 0.06),
+      0 3px 8px -4px var(--tag-edge);
   }
   .tag-success {
-    background-color: var(--tag-success);
-    color: var(--tag-success-ink);
-    --tag-glow: color-mix(in oklab, var(--tag-success) 60%, transparent);
+    --tag-top: var(--tag-green-top);
+    --tag-bottom: var(--tag-green-bottom);
+    --tag-edge: var(--tag-green-edge);
+    --tag-ink: var(--tag-green-ink);
   }
   .tag-warning {
-    background-color: var(--tag-warning);
-    color: var(--tag-warning-ink);
-    --tag-glow: color-mix(in oklab, var(--tag-warning) 60%, transparent);
+    --tag-top: var(--tag-amber-top);
+    --tag-bottom: var(--tag-amber-bottom);
+    --tag-edge: var(--tag-amber-edge);
+    --tag-ink: var(--tag-amber-ink);
   }
   .tag-danger {
-    background-color: var(--tag-danger);
-    color: var(--tag-danger-ink);
-    --tag-glow: color-mix(in oklab, var(--tag-danger) 60%, transparent);
+    --tag-top: var(--tag-red-top);
+    --tag-bottom: var(--tag-red-bottom);
+    --tag-edge: var(--tag-red-edge);
+    --tag-ink: var(--tag-red-ink);
   }
   .tag-accent {
-    background-color: var(--tag-accent);
-    color: var(--tag-accent-ink);
-    --tag-glow: color-mix(in oklab, var(--tag-accent) 60%, transparent);
+    --tag-top: var(--tag-blue-top);
+    --tag-bottom: var(--tag-blue-bottom);
+    --tag-edge: var(--tag-blue-edge);
+    --tag-ink: var(--tag-blue-ink);
   }
   .tag-muted {
-    background-color: var(--tag-muted);
-    color: var(--tag-muted-ink);
-    --tag-glow: transparent;
+    --tag-top: var(--tag-grey-top);
+    --tag-bottom: var(--tag-grey-bottom);
+    --tag-edge: var(--tag-grey-edge);
+    --tag-ink: var(--tag-grey-ink);
   }
 }

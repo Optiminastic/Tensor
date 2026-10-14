@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 
-import { pillClasses, type PillTone } from '@/components/ui/pill-shape'
+import type { PillTone } from '@/components/ui/pill-shape'
+import { Tag } from '@/components/ui/tag'
 
 /**
  * The Green / Yellow / Red design status from the costing spec.
@@ -22,5 +23,9 @@ export interface StatusPillProps {
 
 export function StatusPill({ status, label, className }: StatusPillProps): JSX.Element {
   const config = STATUS_CONFIG[status]
-  return <span className={pillClasses(config.tone, className)}>{label ?? config.label}</span>
+  return (
+    <Tag tone={config.tone} className={className}>
+      {label ?? config.label}
+    </Tag>
+  )
 }

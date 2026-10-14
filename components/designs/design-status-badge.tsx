@@ -1,7 +1,8 @@
 import { Loader2 } from 'lucide-react'
 import type { JSX } from 'react'
 
-import { pillClasses, type PillTone } from '@/components/ui/pill-shape'
+import type { PillTone } from '@/components/ui/pill-shape'
+import { Tag } from '@/components/ui/tag'
 import type { DesignLifecycle } from '@/lib/validators/designs'
 
 interface StatusConfig {
@@ -32,9 +33,12 @@ interface DesignStatusBadgeProps {
 export function DesignStatusBadge({ status, className }: DesignStatusBadgeProps): JSX.Element {
   const config = CONFIG[status]
   return (
-    <span className={pillClasses(config.tone, className)}>
-      {config.spin ? <Loader2 className="size-3 animate-spin" aria-hidden /> : null}
+    <Tag
+      tone={config.tone}
+      className={className}
+      icon={config.spin ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : undefined}
+    >
       {config.label}
-    </span>
+    </Tag>
   )
 }

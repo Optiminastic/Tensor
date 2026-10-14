@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 
-import { pillClasses, type PillTone } from '@/components/ui/pill-shape'
+import type { PillTone } from '@/components/ui/pill-shape'
+import { Tag } from '@/components/ui/tag'
 
 export type { PillTone }
 
@@ -10,7 +11,11 @@ interface TonePillProps {
   className?: string
 }
 
-/** A status tag, in the shared shape (components/ui/pill-shape.ts). */
+/** A status tag with its tone's icon (components/ui/tag.tsx). */
 export function TonePill({ label, tone, className }: TonePillProps): JSX.Element {
-  return <span className={pillClasses(tone, className)}>{label}</span>
+  return (
+    <Tag tone={tone} className={className}>
+      {label}
+    </Tag>
+  )
 }
