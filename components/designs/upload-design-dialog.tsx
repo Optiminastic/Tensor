@@ -1,10 +1,9 @@
 'use client'
 
-import { Plus } from 'lucide-react'
 import { useState, type JSX } from 'react'
 
 import { type BrandChoice, DesignUploadForm } from '@/components/designs/design-upload-form'
-import { Button } from '@/components/ui/button'
+import { PillButton } from '@/components/landing/pill-button'
 import {
   Dialog,
   DialogContent,
@@ -26,10 +25,9 @@ export function UploadDesignDialog({ brand, brandOptions }: UploadDesignDialogPr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus aria-hidden />
+        <PillButton tone="lime" withArrow>
           Upload design
-        </Button>
+        </PillButton>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

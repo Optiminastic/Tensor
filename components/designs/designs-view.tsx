@@ -4,12 +4,11 @@ import { LayoutGrid, List } from 'lucide-react'
 import { useEffect, useState, type JSX } from 'react'
 
 import { isAllBrands } from '@/components/dashboard/nav-config'
-import { Card, CardContent } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
 import type { Design } from '@/lib/validators/designs'
 
 import { DesignGrid } from './design-grid'
 import { DesignList } from './design-list'
+import { ViewToggle } from './view-toggle'
 
 type View = 'grid' | 'table'
 
@@ -41,20 +40,22 @@ export function DesignsView({ brand, designs, emptyMessage }: DesignsViewProps):
 
   if (designs.length === 0) {
     return (
-      <Card>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">
-            {emptyMessage ?? 'No designs yet. Upload one to run the pre-check.'}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="bg-surface ring-border rounded-3xl px-6 py-16 text-center ring-1">
+        <p className="text-muted-foreground mx-auto max-w-md text-sm text-pretty">
+          {emptyMessage ?? 'No designs yet. Upload one to run the pre-check.'}
+        </p>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <div className="border-border bg-surface inline-flex items-center rounded-md border p-0.5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-muted-foreground text-sm">
+          <span className="text-foreground font-medium tabular-nums">{designs.length}</span>{' '}
+          {designs.length === 1 ? 'design' : 'designs'}
+        </p>
+        <div className="bg-surface ring-border inline-flex items-center gap-0.5 rounded-full p-1 ring-1">
           <ViewToggle
             active={view === 'grid'}
             label="Grid view"
@@ -75,29 +76,5 @@ export function DesignsView({ brand, designs, emptyMessage }: DesignsViewProps):
         <DesignList designs={designs} showBrand={showBrand} />
       )}
     </div>
-  )
-}
-
-interface ViewToggleProps {
-  active: boolean
-  label: string
-  onClick: () => void
-  icon: JSX.Element
-}
-
-function ViewToggle({ active, label, onClick, icon }: ViewToggleProps): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      aria-pressed={active}
-      className={cn(
-        'flex items-center rounded px-2 py-1 transition-colors',
-        active ? 'bg-surface-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
-      )}
-    >
-      {icon}
-    </button>
   )
 }

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, type JSX } from 'react'
 
 import { loadShopifyCatalog } from '@/app/dashboard/[brand]/designs/shopify-actions'
 import { DesignUploadForm, type ShopifyImportSource } from '@/components/designs/design-upload-form'
+import { PillButton } from '@/components/landing/pill-button'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -79,10 +80,10 @@ export function ShopifyImportDialog({ brand }: ShopifyImportDialogProps): JSX.El
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary">
-          <ShoppingBag aria-hidden />
+        <PillButton tone="ink" className="dark:bg-surface dark:ring-border gap-2 dark:ring-1">
+          <ShoppingBag className="size-4" aria-hidden />
           Shopify
-        </Button>
+        </PillButton>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
