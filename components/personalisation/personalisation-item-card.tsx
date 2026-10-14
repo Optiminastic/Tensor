@@ -47,10 +47,21 @@ export function PersonalisationItemCard({
   const [error, setError] = useState<string | null>(null)
   const [saves, setSaves] = useState(0)
 
-  const { version: modelVersion, rebuilding, ready } = useModel(token, item, saves)
+  // Some products are never rendered - a Bone Tag, a DUOSNAP, a Couple's Date
+  // Plank. There is nothing to show and nothing to wait for, so the card is
+  // its fields: no picture, no spinner, no "Save picture".
+  const showPicture = item.has_preview
+  // Saves are what start the poll for a rebuilt model; passing none means a
+  // card with no picture never asks for one.
+  const {
+    version: modelVersion,
+    rebuilding,
+    ready,
+  } = useModel(token, item, showPicture ? saves : 0)
   const dirty = colour !== item.colour || item.fields.some(f => values[f.label] !== f.value)
-  // The button owns the whole wait: the request, and the rebuild behind it.
-  const busy = sending || rebuilding
+  // The button owns the whole wait: the request, and the rebuild behind it -
+  // but only where a rebuild is a thing that happens.
+  const busy = sending || (showPicture && rebuilding)
 
   async function save(): Promise<void> {
     setSending(true)
@@ -86,39 +97,42 @@ export function PersonalisationItemCard({
     <section className="border-border/60 bg-surface overflow-hidden rounded-2xl border">
       {/* The picture first and full-bleed. On a phone this is the whole
           screen width, which is the only way a 3D model is worth showing at
-          all. */}
-      <div className="bg-surface-muted relative aspect-square w-full sm:aspect-[4/3]">
-        {ready ? (
-          <JobModelViewer
-            key={modelVersion}
-            modelUrl={`/api/p/${encodeURIComponent(token)}/items/${encodeURIComponent(item.job_id)}/model?v=${modelVersion}`}
-            showPlate={false}
-            captureName={`${item.job_number}.png`}
-          />
-        ) : (
-          <ViewerNote>Building your preview…</ViewerNote>
-        )}
+          all. Absent entirely for a product nobody renders - an empty frame
+          saying "Building your preview…" forever is worse than no frame. */}
+      {showPicture ? (
+        <div className="bg-surface-muted relative aspect-square w-full sm:aspect-[4/3]">
+          {ready ? (
+            <JobModelViewer
+              key={modelVersion}
+              modelUrl={`/api/p/${encodeURIComponent(token)}/items/${encodeURIComponent(item.job_id)}/model?v=${modelVersion}`}
+              showPlate={false}
+              captureName={`${item.job_number}.png`}
+            />
+          ) : (
+            <ViewerNote>Building your preview…</ViewerNote>
+          )}
 
-        {item.unit_count > 1 ? (
-          <span className="bg-surface/90 text-subtle-foreground absolute top-3 left-3 rounded-full px-2.5 py-1 text-xs backdrop-blur">
-            {item.unit_index} of {item.unit_count}
-          </span>
-        ) : null}
+          {item.unit_count > 1 ? (
+            <span className="bg-surface/90 text-subtle-foreground absolute top-3 left-3 rounded-full px-2.5 py-1 text-xs backdrop-blur">
+              {item.unit_index} of {item.unit_count}
+            </span>
+          ) : null}
 
-        {ready ? (
-          <button
-            type="button"
-            onClick={() => {
-              void import('@/components/production/job-model-viewer').then(m =>
-                m.downloadViewerImage(`${item.job_number}.png`),
-              )
-            }}
-            className="bg-surface/90 text-muted-foreground hover:text-foreground absolute right-3 bottom-3 rounded-full px-3 py-1.5 text-xs backdrop-blur"
-          >
-            Save picture
-          </button>
-        ) : null}
-      </div>
+          {ready ? (
+            <button
+              type="button"
+              onClick={() => {
+                void import('@/components/production/job-model-viewer').then(m =>
+                  m.downloadViewerImage(`${item.job_number}.png`),
+                )
+              }}
+              className="bg-surface/90 text-muted-foreground hover:text-foreground absolute right-3 bottom-3 rounded-full px-3 py-1.5 text-xs backdrop-blur"
+            >
+              Save picture
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-5 p-4 sm:p-5">
         <header className="flex flex-col gap-0.5">
@@ -148,7 +162,12 @@ export function PersonalisationItemCard({
           </div>
         ) : null}
 
-        {colours.length > 0 && editable ? (
+        {/* Only where the colour is the customer's to set. On a product
+            Tensor renders it drives the render; on one it does not, the
+            colour came from the Shopify variant they bought - it is in the
+            product name above - and a picker here would offer to change which
+            product that is, at a price nobody agreed. */}
+        {colours.length > 0 && editable && showPicture ? (
           <div className="flex flex-col gap-2">
             <span className="text-subtle-foreground text-xs">
               Colour <span className="text-foreground">· {colour}</span>

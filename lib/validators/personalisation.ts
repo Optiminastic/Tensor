@@ -37,6 +37,22 @@ export const PersonalisationItemSchema = z.object({
     .string()
     .nullish()
     .transform(v => v ?? ''),
+  /**
+   * Whether a picture is coming AT ALL.
+   *
+   * Tensor renders the plank family and the products the registry describes.
+   * It does not render a Bone Tag, a DUOSNAP or a Couple's Date Plank, and
+   * nothing ever will - so the card must not sit on "Building your preview…"
+   * waiting for a model that does not exist. Those items are their fields and
+   * nothing else.
+   *
+   * Defaulted to true for a backend that predates it, which only ever sent
+   * items it renders.
+   */
+  has_preview: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? true),
   model_ready: z.boolean(),
   /**
    * Changes when the model does - it is the print file's id, and a re-render
