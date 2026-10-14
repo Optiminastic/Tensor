@@ -1,12 +1,16 @@
 import { cn } from '@/lib/utils'
 
-export type PillTone = 'lime' | 'glass' | 'ink'
+export type PillTone = 'lime' | 'glass' | 'ink' | 'solid' | 'outline'
 
 const TONES: Record<PillTone, string> = {
   lime: 'bg-landing-lime text-landing-ink hover:bg-landing-lime-deep',
   glass:
     'bg-landing-ink/25 text-white ring-1 ring-white/25 backdrop-blur-sm hover:bg-landing-ink/40',
   ink: 'bg-landing-ink text-white hover:bg-landing-ink/85',
+  // In-app tones: built on the theme tokens, so they flip with dark mode where
+  // the landing tones (fixed sky, lime and ink) do not need to.
+  solid: 'bg-foreground text-background hover:bg-foreground/85',
+  outline: 'bg-surface text-foreground ring-1 ring-border-strong hover:bg-surface-muted',
 }
 
 interface PillStyle {

@@ -15,10 +15,11 @@ import {
 } from '@/lib/validators/designs'
 
 import { DesignDetailTabs } from './design-detail-tabs'
-import { type ReviewCaps, DesignReviewActions } from './design-review-actions'
 import { DesignStatusBadge } from './design-status-badge'
 import { EditShopifyListingDialog } from './edit-shopify-dialog'
 import { PublishShopifyDialog } from './publish-shopify-dialog'
+import { DesignReviewPanel } from './review/design-review-panel'
+import type { ReviewCaps } from './review/review-caps'
 
 const POLL_MS = 2500
 
@@ -177,14 +178,7 @@ export function DesignDetailView({
         </div>
       </div>
 
-      <DesignReviewActions
-        brand={brand}
-        designId={design.id}
-        status={design.status}
-        verdict={design.pricing?.verdict ?? null}
-        caps={caps}
-        onDone={() => void refetch()}
-      />
+      <DesignReviewPanel brand={brand} design={design} caps={caps} onDone={() => void refetch()} />
 
       {design.notes ? (
         <Card>
