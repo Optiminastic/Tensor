@@ -85,7 +85,7 @@ export function ShopifyImportDialog({ brand }: ShopifyImportDialogProps): JSX.El
           Shopify
         </PillButton>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:max-w-3xl sm:p-8">
         <DialogHeader>
           <DialogTitle>
             {selected ? `Import "${selected.title}"` : 'Import a Shopify product'}
