@@ -487,3 +487,70 @@
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Tags.
+ *
+ * Every status tag in the product: a solid, saturated fill with its label in
+ * a deep shade of the same hue, a bevel (a light top edge, a darker bottom
+ * one) and a soft glow of its own colour - small printed tiles rather than
+ * flat tints. Each label/fill pair holds AA (4.5:1) on its own; the word is
+ * the meaning, the colour only echoes it.
+ *
+ * The fills stay saturated in dark mode - they read as light objects on the
+ * dark page - except muted, which is grey and so flips to stay quiet.
+ * --------------------------------------------------------------------------- */
+/* Plain custom properties, not @theme inline: the .tag-* rules below read
+ * them at runtime, and @theme inline bakes values into utilities without
+ * declaring the variables. */
+:root {
+  --tag-success: #63d68b;
+  --tag-success-ink: #0a3a1c;
+  --tag-warning: #ffc93c;
+  --tag-warning-ink: #4a2a00;
+  --tag-danger: #ff9a9a;
+  --tag-danger-ink: #5c0b14;
+  --tag-accent: #5aa2ff;
+  --tag-accent-ink: #0a2a5c;
+  --tag-muted: #e4e5e9;
+  --tag-muted-ink: #3b3e46;
+}
+
+.dark {
+  --tag-muted: #3b3e46;
+  --tag-muted-ink: #e4e5e9;
+}
+
+@layer components {
+  .tag {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.45),
+      inset 0 -1px 0 rgb(0 0 0 / 0.14),
+      0 2px 8px -2px var(--tag-glow, transparent);
+  }
+  .tag-success {
+    background-color: var(--tag-success);
+    color: var(--tag-success-ink);
+    --tag-glow: color-mix(in oklab, var(--tag-success) 60%, transparent);
+  }
+  .tag-warning {
+    background-color: var(--tag-warning);
+    color: var(--tag-warning-ink);
+    --tag-glow: color-mix(in oklab, var(--tag-warning) 60%, transparent);
+  }
+  .tag-danger {
+    background-color: var(--tag-danger);
+    color: var(--tag-danger-ink);
+    --tag-glow: color-mix(in oklab, var(--tag-danger) 60%, transparent);
+  }
+  .tag-accent {
+    background-color: var(--tag-accent);
+    color: var(--tag-accent-ink);
+    --tag-glow: color-mix(in oklab, var(--tag-accent) 60%, transparent);
+  }
+  .tag-muted {
+    background-color: var(--tag-muted);
+    color: var(--tag-muted-ink);
+    --tag-glow: transparent;
+  }
+}

@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 
 import { Card } from '@/components/ui/card'
+import { pillClasses } from '@/components/ui/pill-shape'
 import { cn } from '@/lib/utils'
 import type { FleetMachineLive, FleetMachineLiveTemperature } from '@/lib/validators/machine-fleet'
 
@@ -80,35 +81,18 @@ export function FleetMachineLiveCard({ live }: FleetMachineLiveCardProps): JSX.E
   return (
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium',
-            live.connected ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger',
-          )}
-        >
-          <span className="size-1.5 rounded-full bg-current" aria-hidden />
+        <span className={pillClasses(live.connected ? 'success' : 'danger')}>
           {live.connected ? 'Connected' : 'Disconnected'}
         </span>
         <span className="text-muted-foreground font-mono text-xs tabular-nums">
           {live.wifi_dbm} dBm
         </span>
         <span className="text-muted-foreground font-mono text-xs">v{live.firmware_version}</span>
-        {live.door_open ? (
-          <span className="bg-warning-subtle text-warning rounded-full px-2 py-0.5 text-xs">
-            Door open
-          </span>
-        ) : null}
+        {live.door_open ? <span className={pillClasses('warning')}>Door open</span> : null}
         {/* Bambu raises routine notices here too, so a bare count would read as
             a fault. Severity 1 is the lowest and not worth alarming over. */}
         {live.health_messages > 0 ? (
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 text-xs',
-              live.worst_severity > 1
-                ? 'bg-danger-subtle text-danger'
-                : 'text-muted-foreground bg-surface-muted',
-            )}
-          >
+          <span className={pillClasses(live.worst_severity > 1 ? 'danger' : 'muted')}>
             {live.health_messages} health notice{live.health_messages === 1 ? '' : 's'}
           </span>
         ) : null}
@@ -155,7 +139,7 @@ export function FleetMachineLiveCard({ live }: FleetMachineLiveCardProps): JSX.E
               {unit.humidity_pct}% RH · {unit.temperature_c.toFixed(0)}°
             </span>
             {unit.drying ? (
-              <span className="bg-warning-subtle text-warning rounded-full px-2 py-0.5 text-xs">
+              <span className={pillClasses('warning')}>
                 Drying {unit.dry_filament} · {minutesText(unit.dry_minutes_left)} left
               </span>
             ) : null}

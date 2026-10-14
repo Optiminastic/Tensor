@@ -2,12 +2,11 @@ import type { JSX } from 'react'
 
 import { OverviewTile } from '@/components/dashboard/overview/overview-tile'
 import { TileLabel } from '@/components/dashboard/overview/tile-label'
+import { StatusPill } from '@/components/ui/status-pill'
 import { inr, pct } from '@/lib/format'
 import type { DesignPricing } from '@/lib/validators/designs'
 
 import { ReviewCheck } from '../review/review-check'
-
-import { VerdictChip } from './verdict-chip'
 
 interface PriceTileProps {
   pricing: DesignPricing
@@ -23,7 +22,7 @@ export function PriceTile({ pricing }: PriceTileProps): JSX.Element {
           {pricing.recommended_sp !== null ? inr(pricing.recommended_sp) : '-'}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <VerdictChip verdict={pricing.verdict} />
+          <StatusPill status={pricing.verdict} />
           <span className="font-mono text-xs tabular-nums opacity-75">
             CP {inr(pricing.design_cp, 2)} · {pct(pricing.cp_pct)}
           </span>

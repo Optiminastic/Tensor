@@ -1,7 +1,6 @@
 import type { JSX } from 'react'
 
-import { PILL_DOT, pillClasses, type PillTone } from '@/components/ui/pill-shape'
-import { cn } from '@/lib/utils'
+import { pillClasses, type PillTone } from '@/components/ui/pill-shape'
 
 /**
  * The Green / Yellow / Red design status from the costing spec.
@@ -23,10 +22,5 @@ export interface StatusPillProps {
 
 export function StatusPill({ status, label, className }: StatusPillProps): JSX.Element {
   const config = STATUS_CONFIG[status]
-  return (
-    <span className={pillClasses(config.tone, className)}>
-      <span className={cn('size-1.5 rounded-full', PILL_DOT[config.tone])} aria-hidden />
-      {label ?? config.label}
-    </span>
-  )
+  return <span className={pillClasses(config.tone, className)}>{label ?? config.label}</span>
 }

@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { pillClasses } from '@/components/ui/pill-shape'
 import {
   Table,
   TableBody,
@@ -33,7 +34,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { TabItem } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
 import type { Filament } from '@/lib/validators/production'
 
 interface FilamentInventoryProps {
@@ -207,14 +207,7 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
                           })}
                         </TableCell>
                         <TableCell>
-                          <span
-                            className={cn(
-                              'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
-                              low
-                                ? 'bg-warning-subtle text-warning'
-                                : 'bg-success-subtle text-success',
-                            )}
-                          >
+                          <span className={pillClasses(low ? 'warning' : 'success')}>
                             {low ? 'Low' : 'In stock'}
                           </span>
                         </TableCell>

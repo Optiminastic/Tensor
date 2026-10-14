@@ -3,30 +3,24 @@ import { cn } from '@/lib/utils'
 export type PillTone = 'success' | 'warning' | 'danger' | 'accent' | 'muted'
 
 /**
- * The one shape every status pill in Tensor uses: a soft tint, a hairline ring
- * of the same hue, a dot, and the word in normal case on a single line.
+ * The one shape every status tag in Tensor uses: a solid, saturated tile with
+ * its word in a deep shade of the same hue, a slight bevel and a soft glow of
+ * its own colour. The colours, bevel and glow live in app/globals.css (`.tag`,
+ * `.tag-<tone>`), so every tag changes from one place.
  *
- * Normal case and `whitespace-nowrap` on purpose. The old pills were
- * uppercase, tracked and allowed to wrap, so "Design file required" broke over
- * three lines inside a table cell and every status shouted at the same volume.
+ * Normal case and `whitespace-nowrap` on purpose: "Design file required" stays
+ * one tile in a table cell instead of breaking over three lines. No dot - the
+ * fill is the colour and the word is the meaning.
  */
 const BASE =
-  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ring-1 ring-inset'
+  'tag inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold whitespace-nowrap'
 
 const TONES: Record<PillTone, string> = {
-  success: 'bg-success-subtle text-success ring-success/20',
-  warning: 'bg-warning-subtle text-warning ring-warning/25',
-  danger: 'bg-danger-subtle text-danger ring-danger/20',
-  accent: 'bg-accent-subtle text-accent ring-accent/20',
-  muted: 'bg-surface-muted text-muted-foreground ring-border',
-}
-
-export const PILL_DOT: Record<PillTone, string> = {
-  success: 'bg-success',
-  warning: 'bg-warning',
-  danger: 'bg-danger',
-  accent: 'bg-accent',
-  muted: 'bg-muted-foreground',
+  success: 'tag-success',
+  warning: 'tag-warning',
+  danger: 'tag-danger',
+  accent: 'tag-accent',
+  muted: 'tag-muted',
 }
 
 export function pillClasses(tone: PillTone, className?: string): string {
