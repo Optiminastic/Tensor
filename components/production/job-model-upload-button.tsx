@@ -25,16 +25,6 @@ interface JobModelUploadButtonProps {
   size?: 'sm' | 'md'
   /** Wording for a job that already has a model - the upload replaces it. */
   hasModel?: boolean
-  /**
-   * Which server action carries the file.
-   *
-   * Defaults to the operator's, so every existing call site is unchanged. The
-   * designers' queue passes its own, because it posts to /design-jobs - a
-   * route guarded by design:job_supply rather than production:update, since a
-   * designer holds neither production permission. The button itself is the
-   * same control either way.
-   */
-  action?: (jobId: string, form: FormData) => Promise<{ ok: boolean; error?: string }>
 }
 
 const ACCEPTED = '.stl,.3mf'
@@ -43,7 +33,6 @@ export function JobModelUploadButton({
   jobId,
   size = 'sm',
   hasModel = false,
-  action = uploadJobModelAction,
 }: JobModelUploadButtonProps): JSX.Element {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -66,7 +55,7 @@ export function JobModelUploadButton({
     setError(null)
     const form = new FormData()
     form.set('file', file)
-    const result = await action(jobId, form)
+    const result = await uploadJobModelAction(jobId, form)
     setPending(false)
 
     if (!result.ok) {

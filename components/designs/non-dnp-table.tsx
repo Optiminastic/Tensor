@@ -1,19 +1,12 @@
 'use client'
 
+import { ChevronRight } from 'lucide-react'
 import { type JSX, useMemo, useState } from 'react'
 
-import { supplyDesignJobModelAction } from '@/app/dashboard/[brand]/designs/non-dnp/actions'
+import { DesignUploadDialog } from '@/components/designs/design-upload-dialog'
 import { ChangeList } from '@/components/production/change-list'
-import { JobModelUploadButton } from '@/components/production/job-model-upload-button'
 import { Card } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-} from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 import type { ProductionJob } from '@/lib/validators/production'
 
 interface NonDnpTableProps {
@@ -26,17 +19,14 @@ type Tab = 'needs' | 'changed'
  * The designer's work queue: jobs whose customer's window has closed and that
  * still need a 3MF from a person.
  *
- * EVERY ROW ANSWERS "WHAT DO I BUILD FROM?" WITHOUT A CLICK, because that is
- * the only question here. A job the customer corrected shows what moved; one
- * they left alone says so plainly, and the designer works from the order. Both
- * arrive with the list, so neither costs a request.
- *
- * Its own component rather than a mode of job-queue-table.tsx: that one is
- * already long, carries its own tabs and filters, and shares no column with
- * this but the job number.
+ * THE ROW IS THE PRODUCT, nothing else. A designer scanning this list is
+ * deciding what to draw next, and job numbers, quantities and envelopes are
+ * not how anyone chooses. Opening a row shows the only thing that matters -
+ * what the customer actually asked for.
  */
 export function NonDnpTable({ jobs }: NonDnpTableProps): JSX.Element {
   const [tab, setTab] = useState<Tab>('needs')
+  const [open, setOpen] = useState<string | null>(null)
 
   const { needs, changed } = useMemo(
     () => ({
@@ -71,78 +61,121 @@ export function NonDnpTable({ jobs }: NonDnpTableProps): JSX.Element {
             : 'No customer has changed an item since its file was made.'}
         </Card>
       ) : (
-        <Card className="overflow-x-auto p-0">
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>Job</TableHeaderCell>
-                <TableHeaderCell>Product</TableHeaderCell>
-                <TableHeaderCell>Qty</TableHeaderCell>
-                <TableHeaderCell>Colours</TableHeaderCell>
-                <TableHeaderCell>Envelope</TableHeaderCell>
-                <TableHeaderCell>Build from</TableHeaderCell>
-                <TableHeaderCell />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {shown.map(job => (
-                <TableRow key={job.id}>
-                  <TableCell>
-                    <span className="font-mono text-xs">{job.job_number}</span>
-                    {job.sku ? (
-                      <span className="text-subtle-foreground block text-[11px]">{job.sku}</span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="max-w-[18rem]">{job.product_name ?? '—'}</TableCell>
-                  <TableCell numeric>{job.quantity}</TableCell>
-                  <TableCell>
-                    {job.colour ? (
-                      <span className="text-sm">{job.colour}</span>
-                    ) : (
-                      <span className="text-subtle-foreground text-xs">not recorded</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {/* The dimensional constraint, which the designer needs
-                        before modelling rather than after. */}
-                    <Envelope job={job} />
-                  </TableCell>
-                  <TableCell className="max-w-[22rem]">
-                    {job.personalisation_changes.length > 0 ? (
-                      <ChangeList changes={job.personalisation_changes} />
-                    ) : (
-                      <span className="text-muted-foreground text-xs">
-                        No changes — build from the order.
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <JobModelUploadButton
-                      jobId={job.id}
-                      hasModel={Boolean(job.print_file_id)}
-                      action={supplyDesignJobModelAction}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <Card className="divide-border/60 divide-y p-0">
+          {shown.map(job => (
+            <JobRow
+              key={job.id}
+              job={job}
+              expanded={open === job.id}
+              onToggle={() => setOpen(open === job.id ? null : job.id)}
+            />
+          ))}
         </Card>
       )}
     </div>
   )
 }
 
-function Envelope({ job }: { job: ProductionJob }): JSX.Element {
-  const dims = [job.bbox_x_mm, job.bbox_y_mm, job.bbox_z_mm]
-  if (dims.some(d => d === null || d === undefined)) {
-    return <span className="text-subtle-foreground text-xs">—</span>
-  }
+interface JobRowProps {
+  job: ProductionJob
+  expanded: boolean
+  onToggle: () => void
+}
+
+function JobRow({ job, expanded, onToggle }: JobRowProps): JSX.Element {
+  const fields = customerFields(job)
+
   return (
-    <span className="font-mono text-xs tabular-nums">
-      {dims.map(d => Number(d).toFixed(0)).join(' × ')} mm
-    </span>
+    <div>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <ChevronRight
+            aria-hidden
+            className={cn(
+              'text-subtle-foreground size-4 shrink-0 transition-transform',
+              expanded && 'rotate-90',
+            )}
+          />
+          <span className="truncate text-sm">{job.product_name ?? 'Unnamed product'}</span>
+          {fields.length > 0 ? (
+            <span className="text-subtle-foreground shrink-0 text-xs">
+              {fields.length} {fields.length === 1 ? 'field' : 'fields'}
+            </span>
+          ) : null}
+        </button>
+
+        <DesignUploadDialog
+          jobId={job.id}
+          jobNumber={job.job_number}
+          productName={job.product_name ?? 'this product'}
+          hasModel={Boolean(job.print_file_id)}
+        />
+      </div>
+
+      {expanded ? (
+        <div className="bg-surface-muted/50 flex flex-col gap-4 px-4 pb-4 pl-11">
+          {job.personalisation_changes.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-subtle-foreground text-[11px] font-medium tracking-wide uppercase">
+                The customer changed this after ordering
+              </p>
+              <ChangeList changes={job.personalisation_changes} />
+            </div>
+          ) : null}
+
+          {fields.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              The customer gave no customisation for this item.
+            </p>
+          ) : (
+            <dl className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+              {fields.map(field => (
+                <div key={field.label} className="flex flex-col gap-0.5">
+                  <dt className="text-subtle-foreground text-[11px] tracking-wide uppercase">
+                    {field.label}
+                  </dt>
+                  <dd className="text-foreground text-sm break-words">{field.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      ) : null}
+    </div>
   )
+}
+
+interface CustomerField {
+  label: string
+  value: string
+}
+
+/**
+ * Exactly what the customer filled in at checkout, and nothing else.
+ *
+ * The variant comes first because for several of these products it IS the
+ * customisation - a 3D Name Plank's two colours are "RED / BLUE" in the
+ * variant, not in the properties, so a list of properties alone would leave
+ * the designer without half the brief.
+ *
+ * Shopify's own plumbing is dropped: `_`-prefixed keys are state the
+ * storefront carries for itself, never something a person typed.
+ */
+function customerFields(job: ProductionJob): CustomerField[] {
+  const out: CustomerField[] = []
+  if (job.variant_title) {
+    out.push({ label: 'Variant', value: job.variant_title })
+  }
+  for (const prop of job.personalisation_properties ?? []) {
+    if (prop.name.startsWith('_') || prop.value.trim() === '') continue
+    out.push({ label: prop.name, value: prop.value })
+  }
+  return out
 }
 
 interface TabButtonProps {

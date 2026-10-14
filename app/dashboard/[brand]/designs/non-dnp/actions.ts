@@ -6,7 +6,10 @@ import { resolveBackendToken } from '@/lib/backend-token'
 import { DesignJobsServiceError, supplyDesignJobModel } from '@/services/design-jobs.service'
 
 /**
- * Supplies the 3MF for a production job Tensor cannot build itself.
+ * Supplies the design files for a production job Tensor cannot build itself.
+ *
+ * Several at once: a product a person draws is often more than one model, and
+ * each file becomes a job of its own named after it.
  *
  * The designer's equivalent of job-model-actions.ts, pointed at /design-jobs
  * so it carries design:job_supply rather than production:update - a DESIGNER
@@ -20,16 +23,16 @@ export async function supplyDesignJobModelAction(
   jobId: string,
   form: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  const file = form.get('file')
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: 'Choose a model file to upload.' }
+  const files = form.getAll('files').filter((f): f is File => f instanceof File && f.size > 0)
+  if (files.length === 0) {
+    return { ok: false, error: 'Choose at least one design file.' }
   }
 
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
 
   try {
-    await supplyDesignJobModel(token, jobId, file)
+    await supplyDesignJobModel(token, jobId, form)
     // The row leaves the queue the moment it has a file, so the list is what
     // has to be refetched.
     revalidatePath('/dashboard/[brand]/designs/non-dnp', 'page')

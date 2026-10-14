@@ -46,20 +46,20 @@ export async function listDesignJobs(token: string): Promise<ProductionJob[]> {
 }
 
 /**
- * Attaches a designer's 3MF to a job, and returns the job as it now stands.
+ * Attaches a designer's files to a job, and returns every job they produced.
  *
- * The backend reads the file's own colours and refuses a product it renders
+ * The FormData is passed through rather than built here, because the caller is
+ * a server action holding files that cannot cross that boundary any other way.
+ *
+ * The backend reads each file's own colours and refuses a product it renders
  * itself, so a 422 here is a real answer rather than a failure to report: it
  * means the job belongs to the render path, not to a designer.
  */
 export async function supplyDesignJobModel(
   token: string,
   jobId: string,
-  file: File,
-): Promise<ProductionJob> {
-  const body = new FormData()
-  body.set('file', file)
-
+  body: FormData,
+): Promise<ProductionJob[]> {
   let response: Response
   try {
     response = await fetch(
@@ -88,5 +88,7 @@ export async function supplyDesignJobModel(
     throw new DesignJobsServiceError(detail ?? `Upload failed (${response.status})`)
   }
 
-  return ProductionJobSchema.parse(await response.json())
+  // An array: one job per file. A product that takes a body and a clip comes
+  // back as two, the second created by this upload.
+  return ProductionJobSchema.array().parse(await response.json())
 }
