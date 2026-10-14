@@ -4,7 +4,6 @@ import type {
   BatchStage,
   BatchStatus,
   JobStatus,
-  MachineStatus,
   ModelStatus,
   OrderStatus,
   PackagingStatus,
@@ -20,12 +19,6 @@ export const JOB_STATUS_CONFIG: Record<JobStatus, { label: string; tone: PillTon
   printing: { label: 'Printing', tone: 'accent' },
   queued: { label: 'Queued', tone: 'muted' },
   failed: { label: 'Failed', tone: 'danger' },
-}
-
-export const MACHINE_STATUS_CONFIG: Record<MachineStatus, { label: string; tone: PillTone }> = {
-  printing: { label: 'Printing', tone: 'accent' },
-  idle: { label: 'Idle', tone: 'success' },
-  offline: { label: 'Offline', tone: 'danger' },
 }
 
 export const QUEUE_STATUS_CONFIG: Record<QueueStatus, { label: string; tone: PillTone }> = {
