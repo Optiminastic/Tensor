@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { JSX } from 'react'
 
-import { Button } from '@/components/ui/button'
+import { PillButton } from '@/components/landing/pill-button'
 import { signOutCurrentUser } from '@/services/auth.service'
 
 /**
@@ -25,8 +25,13 @@ export function SignOutButton(): JSX.Element {
   }
 
   return (
-    <Button variant="secondary" size="sm" onClick={onSignOut} disabled={pending}>
+    <PillButton
+      tone="ink"
+      onClick={onSignOut}
+      disabled={pending}
+      className="dark:bg-surface dark:ring-border h-9 w-full justify-center dark:ring-1"
+    >
       {pending ? 'Signing out…' : 'Sign out'}
-    </Button>
+    </PillButton>
   )
 }

@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { railTileClass } from '@/components/dashboard/nav-styles'
 import { Logo } from '@/components/logo'
-import { cn } from '@/lib/utils'
 
 import {
   primarySegment,
@@ -20,25 +20,6 @@ interface NavRailProps {
 }
 
 /**
- * An area tile. Monochrome: the selected one INVERTS.
- *
- * Ink tile, white glyph, against plain ink glyphs on no ground. One tile is
- * filled and nine are not, which is the loudest signal available without
- * spending any colour at all - and colour in this product means state, so
- * spending it on "which area" is spending it twice.
- *
- * --foreground, not black, so dark mode inverts correctly on its own: the
- * selected tile becomes near-white with a dark glyph, which is the same
- * relationship the other way up.
- */
-function railClass(active: boolean): string {
-  return cn(
-    'flex size-10 items-center justify-center rounded-xl transition-colors',
-    active ? 'bg-foreground text-background' : 'text-foreground hover:bg-surface-muted',
-  )
-}
-
-/**
  * Column 1 of the double sidebar: a compact icon rail of the top-level areas.
  * Selecting an area navigates to it; the panel (column 2) then shows its
  * sub-items. Workspace areas sit at the foot.
@@ -50,7 +31,7 @@ export function NavRail({ base, permissions }: NavRailProps): JSX.Element {
   const workspace = visibleWorkspaceSections(permissions)
 
   return (
-    <aside className="border-border/70 bg-surface-muted/40 sticky top-0 hidden h-dvh w-[4.25rem] shrink-0 flex-col items-center gap-1 border-r py-4 lg:flex">
+    <aside className="border-border/70 bg-surface sticky top-0 hidden h-dvh w-[4.5rem] shrink-0 flex-col items-center gap-1.5 border-r py-4 lg:flex">
       <Link
         href="/dashboard"
         aria-label="Tensor"
@@ -69,9 +50,13 @@ export function NavRail({ base, permissions }: NavRailProps): JSX.Element {
             href={href}
             title={section.label}
             aria-label={section.label}
-            className={railClass(active)}
+            aria-current={active ? 'page' : undefined}
+            className={railTileClass(active)}
           >
             <Icon className="size-5" aria-hidden />
+            {active ? (
+              <span aria-hidden className="bg-foreground absolute -left-2.5 h-5 w-1 rounded-full" />
+            ) : null}
           </Link>
         )
       })}
@@ -95,7 +80,8 @@ export function NavRail({ base, permissions }: NavRailProps): JSX.Element {
             href={section.href}
             title={section.label}
             aria-label={section.label}
-            className={railClass(active)}
+            aria-current={active ? 'page' : undefined}
+            className={railTileClass(active)}
           >
             <Icon className="size-5" aria-hidden />
           </Link>

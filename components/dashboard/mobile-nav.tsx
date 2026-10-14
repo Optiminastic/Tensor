@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useState, type JSX } from 'react'
 
-import { SignOutButton } from '@/components/dashboard/sign-out-button'
+import { NAV_GROUP_LABEL, navItemClass } from '@/components/dashboard/nav-styles'
+import { UserCard } from '@/components/dashboard/user-card'
 import { Logo } from '@/components/logo'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { cn } from '@/lib/utils'
 
 import { type BrandOption, BrandSwitcher } from './brand-switcher'
 import {
@@ -126,11 +126,8 @@ export function MobileNav({
             </div>
           </nav>
 
-          <div className="border-border flex shrink-0 flex-col gap-2 border-t px-4 py-3">
-            <span className="text-subtle-foreground truncate text-xs" title={email}>
-              {email}
-            </span>
-            <SignOutButton />
+          <div className="shrink-0 p-3">
+            <UserCard email={email} />
           </div>
         </SheetContent>
       </Sheet>
@@ -174,9 +171,7 @@ function NavGroup({
 
   return (
     <div className="flex flex-col gap-0.5">
-      <p className="text-subtle-foreground px-3 pb-1 text-xs font-medium tracking-wide uppercase">
-        {section.label}
-      </p>
+      <p className={`${NAV_GROUP_LABEL} pb-1`}>{section.label}</p>
       {items.map(item => (
         <DrawerLink
           key={item.href}
@@ -204,12 +199,8 @@ function DrawerLink({ href, label, active, onNavigate }: DrawerLinkProps): JSX.E
     <Link
       href={href}
       onClick={onNavigate}
-      className={cn(
-        'flex min-h-10 items-center rounded-md px-3 text-sm transition-colors',
-        active
-          ? 'bg-accent-subtle text-foreground font-medium'
-          : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
-      )}
+      aria-current={active ? 'page' : undefined}
+      className={navItemClass(active)}
     >
       {label}
     </Link>

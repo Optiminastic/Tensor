@@ -5,7 +5,6 @@ import { isAllBrands } from '@/components/dashboard/nav-config'
 import { FloorCard } from '@/components/dashboard/overview/floor-card'
 import { OverviewBento } from '@/components/dashboard/overview/overview-bento'
 import { OverviewHeader } from '@/components/dashboard/overview/overview-header'
-import { interTight } from '@/components/landing/landing-font'
 import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import { overviewModel } from '@/lib/dashboard/overview-model'
 import type { Machine } from '@/lib/validators/machines'
@@ -59,9 +58,7 @@ export default async function BrandOverviewPage({
   const firstName = session?.user.name?.split(' ')[0] ?? null
 
   return (
-    <main
-      className={`${interTight.variable} font-landing flex w-full flex-col gap-4 px-4 py-8 sm:px-6 lg:px-10`}
-    >
+    <main className="flex w-full flex-col gap-4 px-4 py-8 sm:px-6 lg:px-10">
       <OverviewHeader
         brandLabel={isAllBrands(brand) ? 'All brands' : brand.replace(/-/g, ' ')}
         brandHref={brandHref}

@@ -172,6 +172,15 @@ The design language is "Editorial Ink" (tokens in `app/globals.css`). Its premiu
 - **De-emphasis comes from size, weight and tracking — never from lowering contrast.** Every text token in the palette meets WCAG AA (4.5:1) on the worst surface it renders on, including `--subtle-foreground`. Do not introduce a lighter grey to make something look quieter.
 - **Use `.text-display`, not `font-serif` plus ad-hoc tracking.** The leading and optical tracking are part of the treatment and ship with the utility.
 
+### The landing UI (2026-10): landing page, auth pages and the dashboard
+
+The public landing page, the auth pages and the dashboard (layout and navigation) use the newer landing UI, chosen by the product owner after the rules above were written:
+
+- **Inter Tight** (`font-landing`, loaded by `next/font` in `components/landing/landing-font.ts`, OFL) is the interface face there, set once on the landing page, `AuthSplit` and `app/dashboard/layout.tsx`. It replaces Geist Sans in those areas; Geist Mono still carries figures and mono labels, and `.text-display` keeps Mona Sans for page titles.
+- **Landing tokens** in `app/globals.css` (`--color-landing-*`: sky, lime, ink, paper, and two chart series validated with the dataviz checks) are the only additions. They are tokens, not raw hex in components.
+- Lime is a fill (selected nav item, pills, tiles), never a line or text colour on white: it fails contrast there. Selection never relies on lime alone - weight, a dot or a marker and `aria-current` carry it too.
+- Pages inside the dashboard keep their Editorial Ink components until they are restyled one by one.
+
 ---
 
 ## Data visualization — must be distinctive, never generic
