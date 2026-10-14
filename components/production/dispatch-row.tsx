@@ -59,7 +59,7 @@ export function DispatchRow({ brand, dispatch, orderNumber }: DispatchRowProps):
         <div className="flex flex-col items-end gap-1">
           {dispatch.status === 'pending' ? (
             <Button
-              variant="secondary"
+              variant="soft-success"
               size="sm"
               disabled={pending}
               onClick={() => void dispatchNow()}

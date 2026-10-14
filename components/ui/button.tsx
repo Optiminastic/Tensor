@@ -14,6 +14,14 @@ const buttonVariants = cva(
         ghost: 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
         danger: 'bg-danger text-white hover:opacity-90',
         link: 'text-foreground underline underline-offset-4 hover:opacity-80',
+        // Soft actions in the tag palette (app/globals.css), for a row of
+        // actions that would otherwise be four identical outlines: the colour
+        // says what each does - green moves the job on, amber redoes it, red
+        // reports a problem, grey steps past it. The label always says it too.
+        'soft-success': 'tag tag-success hover:brightness-[0.97] dark:hover:brightness-125',
+        'soft-warning': 'tag tag-warning hover:brightness-[0.97] dark:hover:brightness-125',
+        'soft-danger': 'tag tag-danger hover:brightness-[0.97] dark:hover:brightness-125',
+        'soft-muted': 'tag tag-muted hover:brightness-[0.97] dark:hover:brightness-125',
       },
       size: {
         sm: 'h-8 px-3 text-[0.8125rem]',

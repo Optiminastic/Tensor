@@ -107,7 +107,7 @@ function FinishingQueueRow({ brand, job, batchNumber }: FinishingQueueRowProps):
       <TableCell className="text-right">
         <div className="flex flex-col items-end gap-1">
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="sm" disabled={pending} onClick={() => void skip()}>
+            <Button variant="soft-muted" size="sm" disabled={pending} onClick={() => void skip()}>
               Skip
             </Button>
             <StationIssueDialog

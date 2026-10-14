@@ -94,7 +94,7 @@ export function FinishingCheckDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="soft-success" size="sm">
           <Sparkles className="size-3.5" aria-hidden />
           Record finishing
         </Button>

@@ -84,7 +84,7 @@ export function PackagingFormDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="soft-success" size="sm">
           <Box className="size-3.5" aria-hidden />
           Record packaging
         </Button>

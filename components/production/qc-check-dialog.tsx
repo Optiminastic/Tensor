@@ -112,7 +112,7 @@ export function QcCheckDialog({ brand, jobId, jobNumber }: QcCheckDialogProps): 
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="soft-success" size="sm">
           <ClipboardCheck className="size-3.5" aria-hidden />
           Run QC
         </Button>
