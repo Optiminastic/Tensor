@@ -46,6 +46,11 @@ export function JobModelViewer({
   // in the customer's colour. Showing it in flat grey would hide the one
   // choice the customer made that cannot be corrected after printing.
   const [coloured, setColoured] = useState(false)
+  // The colour to paint the whole model when it declares exactly one. A model
+  // that IS one colour is not a model of unknown colour, and painting it grey
+  // said the opposite: every WHITE order - plank, rose and heart keychain
+  // alike - looked like a render that had lost its colours.
+  const [solidColour, setSolidColour] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -72,7 +77,11 @@ export function JobModelViewer({
         if (colours.length > 0 && baked) {
           geo.setAttribute('color', baked)
         }
-        setColoured(colours.length > 0 && Boolean(baked))
+        const multi = colours.length > 0 && Boolean(baked)
+        setColoured(multi)
+        // Only when there is nothing baked to read: a single declared colour
+        // is painted solid, which needs no per-vertex attribute at all.
+        setSolidColour(!multi && colours.length === 1 ? colours[0] : null)
         setGeometry(geo)
       })
       .catch(() => {
@@ -112,10 +121,11 @@ export function JobModelViewer({
           size plate looking mis-scaled or clipped relative to it. */}
       <Bounds fit observe margin={1.2}>
         <mesh geometry={geometry} scale={fitScale}>
-          {/* Grey only when the model carries no colours of its own - an
-              uploaded STL, or a plank whose colour could not be resolved. */}
+          {/* Grey ONLY when the file declares no colour at all - an uploaded
+              STL, or a plank whose colour could not be resolved. A model that
+              declares one colour is painted in it. */}
           <meshStandardMaterial
-            color={coloured ? '#ffffff' : '#9aa4b2'}
+            color={coloured ? '#ffffff' : (solidColour ?? '#9aa4b2')}
             vertexColors={coloured}
             flatShading
             roughness={0.72}

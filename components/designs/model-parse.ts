@@ -19,9 +19,18 @@ const PREVIEW_DECIMATE_GRID = 90
 // paints), so the viewer can switch between the two without re-parsing.
 export const FILAMENT_COLOR_ATTR = 'filamentColor'
 
-// A 3MF is treated as multi-colour (and its colours baked for rendering) only
-// when its parts carry at least this many distinct material colours. One colour
-// is just a plain model and keeps the current single-colour/analysis rendering.
+// A 3MF's colours are BAKED INTO THE GEOMETRY only when its parts carry at
+// least this many distinct material colours. One colour needs no per-vertex
+// attribute - a solid material says it in one line - and baking it would also
+// cost the decimation that a plain model still gets.
+//
+// The colour itself is still REPORTED either way. It used to be dropped, and a
+// model that is genuinely one colour came back indistinguishable from an STL
+// that declares none - so a white plank, a white rose and a white keychain all
+// rendered in the grey reserved for "we do not know what colour this is".
+// Every Soulmate COMBO - WHITE looked uncoloured for that reason: its lettering
+// takes the customer's colour, the customer chose white, and the backing plate
+// is white too, so the file truthfully declares exactly one colour.
 const MULTI_COLOUR_MIN = 2
 
 export interface ParsedModel {
@@ -49,8 +58,11 @@ export function parseModelWithColours(buf: ArrayBuffer): ParsedModel {
   }
   const { geometry, colours } = merge3MF(new ThreeMFLoader().parse(buf))
   if (colours.length < MULTI_COLOUR_MIN) {
-    // Plain (single-colour) 3MF: behave exactly as before - decimate if heavy.
-    return { geometry: finishGeometry(geometry), colours: [] }
+    // Plain 3MF: decimate if heavy, exactly as before. The colours it DID
+    // declare are passed on rather than thrown away - one colour is one
+    // colour, not the absence of one, and the caller can paint a solid
+    // material with it.
+    return { geometry: finishGeometry(geometry), colours }
   }
   // A coloured 3MF keeps full resolution: decimation rebuilds positions and would
   // drop the baked colour attribute. Colour fidelity beats the preview perf here.
