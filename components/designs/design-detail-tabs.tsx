@@ -7,17 +7,14 @@ import { Stat } from '@/components/ui/stat'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import type { DesignDetail, DesignMachineSpec, DesignSpecs } from '@/lib/validators/designs'
 
-import { DesignFailureRisk } from './design-failure-risk'
 import { DesignMachineForm } from './design-machine-form'
-import { DesignMetricsPanel } from './design-metrics'
 import { DesignModelPreview } from './design-model-preview'
-import { DesignOrientation } from './design-orientation'
-import { DesignOverview } from './design-overview'
 import { DesignPerformancePanel } from './design-performance'
 import { DesignResubmitForm } from './design-resubmit-form'
 import { type DesignSettingsCaps, DesignSettings } from './design-settings'
 import { DesignTimeline } from './design-timeline'
 import { DesignVerdict } from './design-verdict'
+import { DesignOverviewBento } from './overview/design-overview-bento'
 import { ShopifyComparison } from './shopify-comparison'
 import { SliceSettingsForm } from './slice-settings-form'
 
@@ -67,6 +64,7 @@ export function DesignDetailTabs({
         value={tab}
         onValueChange={value => setTab(value as TabValue)}
         label="Design sections"
+        variant="pill"
       />
       <div
         role="tabpanel"
@@ -113,16 +111,7 @@ function OverviewPanel({ design, onSeePricing }: OverviewPanelProps): JSX.Elemen
       {!design.metrics && !design.pricing ? (
         <EmptyPanel message="Nothing to show yet - this design has not been costed." />
       ) : (
-        <>
-          {design.pricing ? (
-            <DesignOverview pricing={design.pricing} onSeePricing={onSeePricing} />
-          ) : null}
-          {design.metrics ? <DesignMetricsPanel metrics={design.metrics} /> : null}
-          {design.failure_risk ? <DesignFailureRisk risk={design.failure_risk} /> : null}
-          {design.metrics?.orientation ? (
-            <DesignOrientation orientation={design.metrics.orientation} />
-          ) : null}
-        </>
+        <DesignOverviewBento design={design} onSeePricing={onSeePricing} />
       )}
     </>
   )

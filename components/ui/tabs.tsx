@@ -21,7 +21,31 @@ interface TabsProps {
   onValueChange: (value: string) => void
   // Names the tablist for screen readers.
   label: string
+  // 'segmented' (default) is the muted track used across the product; 'pill'
+  // is the landing UI's row of rounded pills, used on the redesigned pages.
+  variant?: TabsVariant
   className?: string
+}
+
+type TabsVariant = 'segmented' | 'pill'
+
+const LIST_CLASSES: Record<TabsVariant, string> = {
+  segmented:
+    'border-border/70 bg-surface-muted inline-flex h-9 items-center gap-1 rounded-lg border p-1',
+  pill: 'flex max-w-full items-center gap-1 overflow-x-auto',
+}
+
+const TAB_CLASSES: Record<TabsVariant, { base: string; active: string; idle: string }> = {
+  segmented: {
+    base: 'h-7 rounded-md px-3',
+    active: 'bg-surface text-foreground shadow-xs',
+    idle: 'text-muted-foreground hover:text-foreground',
+  },
+  pill: {
+    base: 'h-9 shrink-0 rounded-full px-4 whitespace-nowrap',
+    active: 'bg-landing-ink text-white dark:bg-foreground dark:text-background',
+    idle: 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
+  },
 }
 
 /**
@@ -30,7 +54,15 @@ interface TabsProps {
  * with role="tabpanel" and aria-labelledby={`tab-${value}`}. Arrow / Home / End
  * move between tabs per the WAI-ARIA tabs pattern.
  */
-export function Tabs({ tabs, value, onValueChange, label, className }: TabsProps): JSX.Element {
+export function Tabs({
+  tabs,
+  value,
+  onValueChange,
+  label,
+  variant = 'segmented',
+  className,
+}: TabsProps): JSX.Element {
+  const look = TAB_CLASSES[variant]
   const refs = useRef<(HTMLButtonElement | null)[]>([])
 
   function move(event: KeyboardEvent<HTMLButtonElement>, index: number): void {
@@ -49,14 +81,7 @@ export function Tabs({ tabs, value, onValueChange, label, className }: TabsProps
   }
 
   return (
-    <div
-      role="tablist"
-      aria-label={label}
-      className={cn(
-        'border-border/70 bg-surface-muted inline-flex h-9 items-center gap-1 rounded-lg border p-1',
-        className,
-      )}
-    >
+    <div role="tablist" aria-label={label} className={cn(LIST_CLASSES[variant], className)}>
       {tabs.map((tab, index) => {
         const active = tab.value === value
         return (
@@ -74,10 +99,9 @@ export function Tabs({ tabs, value, onValueChange, label, className }: TabsProps
             onClick={() => onValueChange(tab.value)}
             onKeyDown={event => move(event, index)}
             className={cn(
-              'inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors',
-              active
-                ? 'bg-surface text-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground',
+              'inline-flex items-center gap-1.5 text-sm font-medium transition-colors',
+              look.base,
+              active ? look.active : look.idle,
             )}
           >
             {tab.label}

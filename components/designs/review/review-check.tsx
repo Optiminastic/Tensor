@@ -6,10 +6,12 @@ import { cn } from '@/lib/utils'
 interface ReviewCheckProps {
   passed: boolean
   label: string
+  /** On a lime tile: ink circles, since the theme tints wash out there in dark mode. */
+  onLime?: boolean
 }
 
 /** One pass/fail check. The icon and the word carry it; colour only echoes. */
-export function ReviewCheck({ passed, label }: ReviewCheckProps): JSX.Element {
+export function ReviewCheck({ passed, label, onLime = false }: ReviewCheckProps): JSX.Element {
   const Icon = passed ? Check : X
   return (
     <span className="inline-flex items-center gap-1.5 text-sm">
@@ -17,7 +19,9 @@ export function ReviewCheck({ passed, label }: ReviewCheckProps): JSX.Element {
         aria-hidden
         className={cn(
           'grid size-5 place-items-center rounded-full',
-          passed ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger',
+          onLime && 'bg-landing-ink',
+          onLime && (passed ? 'text-landing-lime' : 'text-white'),
+          !onLime && (passed ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'),
         )}
       >
         <Icon className="size-3" strokeWidth={3} />

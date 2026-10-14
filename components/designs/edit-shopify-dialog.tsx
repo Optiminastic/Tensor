@@ -10,6 +10,7 @@ import {
   loadShopifyListing,
   updateShopifyListing,
 } from '@/app/dashboard/[brand]/designs/shopify-actions'
+import { PillButton } from '@/components/landing/pill-button'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -89,10 +90,10 @@ export function EditShopifyListingDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
-          <Pencil aria-hidden />
+        <PillButton tone="outline" className="h-10 gap-2">
+          <Pencil className="size-4" aria-hidden />
           Edit listing
-        </Button>
+        </PillButton>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
