@@ -96,10 +96,7 @@ export default async function AgentOverviewPage({
   return (
     <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <ProductionPageHeader
-          title="Agent Overview"
-          description="What the win-back agent did about abandoned checkouts, what it cost, and what came back."
-        />
+        <ProductionPageHeader title="Agent Overview" />
         <AgentPeriodPicker value={period} />
       </div>
 
@@ -114,8 +111,6 @@ export default async function AgentOverviewPage({
           {problem}
         </p>
       ))}
-      {/* Said whenever it applies, so a small number is read as "the agent is
-          new" rather than "the agent is doing nothing". */}
       {beforeLive ? (
         <p className="bg-warning-subtle text-warning rounded-md px-3 py-2 text-sm">
           This period ends before the agent went live on {liveSinceLabel()}, so there is nothing to
@@ -126,12 +121,6 @@ export default async function AgentOverviewPage({
         <p className="bg-warning-subtle text-warning rounded-md px-3 py-2 text-sm">
           Only the last {READ_WINDOW_DAYS} days of checkouts and calls are read, and this period
           starts earlier - its figures are lower than the real ones.
-        </p>
-      ) : null}
-      {clipped && !beforeLive ? (
-        <p className="text-muted-foreground text-sm">
-          Counting from {liveSinceLabel()}, when the agent went live with checkout #66900099137749.
-          Calls and messages before that were tests and are left out.
         </p>
       ) : null}
       {agent.calls.length >= CALL_LIST_CAP ? (
