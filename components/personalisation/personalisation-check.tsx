@@ -5,7 +5,11 @@ import { type JSX, useEffect, useState } from 'react'
 import { PersonalisationItemCard } from '@/components/personalisation/personalisation-item-card'
 import { Button } from '@/components/ui/button'
 import { Tag } from '@/components/ui/tag'
+import { cn } from '@/lib/utils'
 import type { PersonalisationLink } from '@/lib/validators/personalisation'
+
+/** The window the shop gives a customer, in seconds - PERSONALISATION_LINK_MINUTES. */
+const WINDOW_SECONDS = 30 * 60
 
 interface PersonalisationCheckProps {
   token: string
@@ -144,14 +148,48 @@ function Status({ secondsLeft, confirmed }: StatusProps): JSX.Element {
   // Under two minutes it stops being background information and becomes the
   // thing to act on.
   const urgent = secondsLeft < 120
-  const clock = `${minutes}:${String(seconds).padStart(2, '0')}`
+  // The bar is the window, not the session: a customer opening the link
+  // twenty minutes in should see a bar that is already two thirds gone,
+  // because it is. Guarded against a longer window than the usual thirty
+  // minutes so the bar can never start over-full.
+  const total = Math.max(WINDOW_SECONDS, secondsLeft)
+  const remaining = Math.max(0, Math.min(100, (secondsLeft / total) * 100))
 
   return (
-    <div className="flex items-center gap-2">
-      <Tag tone={urgent ? 'warning' : 'accent'}>
-        <span className="font-mono tabular-nums">{clock}</span>
-      </Tag>
-      <p className="text-muted-foreground text-sm">left to make changes</p>
+    <div
+      className={cn(
+        'flex flex-col gap-2.5 rounded-2xl border px-4 py-3.5',
+        urgent ? 'border-warning/40 bg-warning-subtle' : 'border-border/70 bg-surface',
+      )}
+      // Announced on the minute rather than every tick: a screen reader
+      // reciting a new number each second is unusable.
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <span
+          className={cn(
+            'font-mono text-[32px] leading-none font-semibold tabular-nums',
+            urgent ? 'text-warning' : 'text-foreground',
+          )}
+        >
+          {minutes}:{String(seconds).padStart(2, '0')}
+        </span>
+        <span className="text-muted-foreground text-sm">
+          {urgent ? 'left — changes close soon' : 'left to make changes'}
+        </span>
+      </div>
+      {/* The clock as a shape as well as a number. Somebody glancing at the
+          page should know roughly how long they have without reading it. */}
+      <div className="bg-surface-muted h-1.5 w-full overflow-hidden rounded-full">
+        <div
+          className={cn(
+            'h-full rounded-full transition-[width] duration-1000 ease-linear',
+            urgent ? 'bg-warning' : 'bg-accent',
+          )}
+          style={{ width: `${remaining}%` }}
+        />
+      </div>
     </div>
   )
 }
