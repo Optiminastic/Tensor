@@ -83,7 +83,7 @@ export function ReprintDialog({ brand, job }: ReprintDialogProps): JSX.Element {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="soft-warning" size="sm">
           <RotateCcw className="size-3.5" aria-hidden />
           Reprint
         </Button>

@@ -7,8 +7,7 @@ import { useForm } from 'react-hook-form'
 
 import { acceptInviteAndSetPassword } from '@/app/admin/actions'
 import { SetPasswordFields } from '@/components/admin/set-password-fields'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { PillButton } from '@/components/landing/pill-button'
 import { SetPasswordSchema, type SetPasswordInput } from '@/lib/validators/auth'
 import { signInWithEmail } from '@/services/auth.service'
 
@@ -52,22 +51,24 @@ export function AcceptInviteForm({ token, email }: AcceptInviteFormProps): JSX.E
   }
 
   return (
-    <Card>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-          {formError ? (
-            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
-              {formError}
-            </p>
-          ) : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+      {formError ? (
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
+          {formError}
+        </p>
+      ) : null}
 
-          <SetPasswordFields register={register} errors={errors} emailReadOnly emailValue={email} />
+      <SetPasswordFields register={register} errors={errors} emailReadOnly emailValue={email} />
 
-          <Button type="submit" disabled={isSubmitting} className="mt-1 w-full">
-            {isSubmitting ? 'Setting up…' : 'Set password and continue'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <PillButton
+        type="submit"
+        tone="lime"
+        withArrow
+        disabled={isSubmitting}
+        className="mt-2 w-full justify-between"
+      >
+        {isSubmitting ? 'Setting up…' : 'Set password and continue'}
+      </PillButton>
+    </form>
   )
 }

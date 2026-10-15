@@ -5,6 +5,7 @@ import localFont from 'next/font/local'
 import type React from 'react'
 import type { JSX } from 'react'
 
+import { interTight } from '@/components/landing/landing-font'
 import { QueryProvider } from '@/components/providers/query-provider'
 
 import './globals.css'
@@ -47,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
   return (
     <html
       lang="en"
-      className={`${GeistSans.variable} ${GeistMono.variable} ${monaSans.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${monaSans.variable} ${interTight.variable}`}
       suppressHydrationWarning
     >
       <body>

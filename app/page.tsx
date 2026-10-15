@@ -1,25 +1,20 @@
 import type { JSX } from 'react'
 
-import { Capabilities } from '@/components/landing/capabilities'
+import { About } from '@/components/landing/about'
 import { Hero } from '@/components/landing/hero'
-import { HeroVisual } from '@/components/landing/hero-visual'
-import { Pipeline } from '@/components/landing/pipeline'
-import { ProductCallout } from '@/components/landing/product-callout'
-import { RolesStrip } from '@/components/landing/roles-strip'
+import { interTight } from '@/components/landing/landing-font'
 import { SiteFooter } from '@/components/landing/site-footer'
-import { SiteHeader } from '@/components/landing/site-header'
+import { WorksWithMarquee } from '@/components/landing/works-with-marquee'
 
 export default function LandingPage(): JSX.Element {
   return (
-    <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+    <div
+      className={`${interTight.variable} font-landing text-landing-ink flex min-h-screen flex-col bg-white`}
+    >
       <main className="flex-1">
         <Hero />
-        <HeroVisual />
-        <RolesStrip />
-        <ProductCallout />
-        <Pipeline />
-        <Capabilities />
+        <WorksWithMarquee />
+        <About />
       </main>
       <SiteFooter />
     </div>

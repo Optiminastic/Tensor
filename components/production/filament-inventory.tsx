@@ -33,7 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { TabItem } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
+import { Tag } from '@/components/ui/tag'
 import type { Filament } from '@/lib/validators/production'
 
 interface FilamentInventoryProps {
@@ -207,16 +207,7 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
                           })}
                         </TableCell>
                         <TableCell>
-                          <span
-                            className={cn(
-                              'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
-                              low
-                                ? 'bg-warning-subtle text-warning'
-                                : 'bg-success-subtle text-success',
-                            )}
-                          >
-                            {low ? 'Low' : 'In stock'}
-                          </span>
+                          <Tag tone={low ? 'warning' : 'success'}>{low ? 'Low' : 'In stock'}</Tag>
                         </TableCell>
                       </TableRow>
                     )
@@ -304,7 +295,7 @@ function AddFilamentDialog({ brand }: { brand: string }): JSX.Element {
             </Field>
           </div>
           {error ? (
-            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+            <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
               {error}
             </p>
           ) : null}

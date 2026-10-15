@@ -38,15 +38,15 @@ function SwitcherRow({ label, selected, onSelect, icon }: SwitcherRowProps): JSX
       aria-selected={selected}
       onClick={onSelect}
       className={cn(
-        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+        'flex w-full items-center gap-2 rounded-full px-3 py-2 text-left text-sm transition-colors',
         selected
-          ? 'bg-accent-subtle text-foreground font-medium'
+          ? 'bg-landing-lime text-landing-ink font-medium'
           : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
       )}
     >
       {icon ? <span className="shrink-0">{icon}</span> : null}
       <span className="flex-1 truncate">{label}</span>
-      {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
+      {selected ? <Check className="size-4 shrink-0" aria-hidden /> : null}
     </button>
   )
 }
@@ -87,7 +87,7 @@ export function BrandSwitcher({
         onClick={() => setOpen(value => !value)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="border-border hover:bg-surface-muted flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors"
+        className="bg-surface-muted hover:bg-border/60 flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left text-sm transition-colors"
       >
         {isAll ? <Globe className="text-subtle-foreground size-4 shrink-0" aria-hidden /> : null}
         <span className="flex-1 truncate font-medium">{activeName}</span>
@@ -102,7 +102,7 @@ export function BrandSwitcher({
             className="fixed inset-0 z-10 cursor-default"
             onClick={() => setOpen(false)}
           />
-          <div className="border-border bg-surface absolute top-full left-0 z-20 mt-1 flex w-full flex-col rounded-md border p-1 shadow-md">
+          <div className="border-border bg-surface absolute top-full left-0 z-20 mt-1.5 flex w-full flex-col rounded-2xl border p-1.5 shadow-lg">
             <ul role="listbox" className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
               <li>
                 <SwitcherRow

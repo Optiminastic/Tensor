@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { PageHeading } from '@/components/dashboard/page-heading'
 import { toBatchRecord, toJobDetail } from '@/components/production/adapters'
 import { JobDetailView } from '@/components/production/job-detail-view'
 import type { BatchRecord, ProductionJobDetail } from '@/components/production/types'
@@ -52,12 +53,11 @@ export default async function ProductionJobPage({
           <ArrowLeft className="size-4" aria-hidden />
           Back to Production Jobs
         </Link>
-        <div className="flex flex-col gap-2">
-          {/* The number, not the uuid: it is what is written on the plank,
-              quoted to the customer, and now what the URL carries. */}
-          <h1 className="text-display text-3xl">{job.jobNumber}</h1>
-          <p className="text-muted-foreground text-sm">Full production job detail.</p>
-        </div>
+        <PageHeading
+          eyebrow="Production job"
+          title={job.jobNumber}
+          description={<>Full production job detail.</>}
+        />
       </div>
       <JobDetailView brand={brand} job={job} batches={batches} roles={roles} />
     </main>

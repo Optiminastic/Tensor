@@ -83,7 +83,7 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
         description="Assembly, quality check, packaging and dispatch queues for printed jobs."
       />
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : (

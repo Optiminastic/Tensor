@@ -112,7 +112,7 @@ export function QcCheckDialog({ brand, jobId, jobNumber }: QcCheckDialogProps): 
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="soft-success" size="sm">
           <ClipboardCheck className="size-3.5" aria-hidden />
           Run QC
         </Button>
@@ -126,7 +126,10 @@ export function QcCheckDialog({ brand, jobId, jobNumber }: QcCheckDialogProps): 
         </DialogHeader>
         {reprintNotice ? (
           <div className="flex flex-col gap-4">
-            <p role="alert" className="bg-warning-subtle text-warning rounded-md px-3 py-2 text-sm">
+            <p
+              role="alert"
+              className="bg-warning-subtle text-warning rounded-2xl px-4 py-3 text-sm"
+            >
               {reprintNotice}
             </p>
             <div className="flex justify-end">

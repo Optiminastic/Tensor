@@ -300,16 +300,19 @@ export function resolveActiveHref(
   hrefs: string[],
 ): string | null {
   let best: string | null = null
-  let bestPathLength = -1
+  let bestScore = -1
   for (const href of hrefs) {
     const { path, view } = parseNavHref(href)
     const matches =
       view !== null
         ? pathname === path && currentView === view
         : pathname === path || pathname.startsWith(`${path}/`)
-    if (matches && path.length > bestPathLength) {
+    // Longer paths win; on the same path, an item whose view also matched beats
+    // the plain one, or "All Designs" would shadow "Submitted" on ?view=submitted.
+    const score = path.length * 2 + (view !== null ? 1 : 0)
+    if (matches && score > bestScore) {
       best = href
-      bestPathLength = path.length
+      bestScore = score
     }
   }
   return best

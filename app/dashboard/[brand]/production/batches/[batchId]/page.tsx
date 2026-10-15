@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { PageHeading } from '@/components/dashboard/page-heading'
 import { toBatchRecord } from '@/components/production/adapters'
 import { BatchApproveDialog } from '@/components/production/batch-approve-dialog'
 import { BatchDetailView } from '@/components/production/batch-detail-view'
@@ -53,10 +54,11 @@ export default async function BatchPage({ params }: BatchPageProps): Promise<JSX
             <ArrowLeft className="size-4" aria-hidden />
             Back to Batch Management
           </Link>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-display text-3xl">Batch {batch.batchNumber}</h1>
-            <p className="text-muted-foreground text-sm">Full batch detail.</p>
-          </div>
+          <PageHeading
+            eyebrow="Batch"
+            title={`Batch ${batch.batchNumber}`}
+            description={<>Full batch detail.</>}
+          />
         </div>
         <div className="flex flex-col items-end gap-3">
           {batch.status === 'pending_approval' ? (

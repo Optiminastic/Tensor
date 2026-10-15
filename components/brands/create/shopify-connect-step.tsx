@@ -65,7 +65,7 @@ export function ShopifyConnectStep({ enabled, onSkip }: ShopifyConnectStepProps)
         </>
       ) : (
         <div className="flex flex-col gap-4">
-          <p className="bg-surface-muted text-subtle-foreground rounded-md px-3 py-2 text-sm">
+          <p className="bg-surface-muted text-subtle-foreground rounded-2xl px-4 py-3 text-sm">
             Shopify connect is not configured yet. You can enter the brand&apos;s details by hand
             and connect Shopify later from the brand&apos;s page.
           </p>

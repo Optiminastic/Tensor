@@ -60,20 +60,20 @@ export function OverviewDateRange({ value, onChange }: OverviewDateRangeProps): 
           so `align="end"` lines the panel up with the edge the eye reads as the
           control's edge. */}
       <PopoverAnchor asChild>
-        <div className="border-border bg-surface inline-flex items-center rounded-md border shadow-xs">
+        <div className="border-border bg-surface inline-flex h-11 items-center rounded-full border px-1">
           <button
             type="button"
             onClick={() => onChange(stepPeriod(value, now, -1))}
             disabled={!steppable}
             aria-label="Previous period"
-            className="text-muted-foreground hover:text-foreground hover:bg-surface-muted flex h-9 w-8 items-center justify-center rounded-l-md disabled:opacity-40"
+            className="text-muted-foreground hover:text-foreground hover:bg-surface-muted flex size-9 items-center justify-center rounded-full disabled:opacity-40"
           >
             <ChevronLeft className="size-4" aria-hidden />
           </button>
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="text-foreground hover:bg-surface-muted flex h-9 items-center gap-1.5 px-2 text-sm font-medium"
+              className="text-foreground hover:bg-surface-muted flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium"
             >
               <CalendarDays className="size-3.5" aria-hidden />
               {label}
@@ -84,7 +84,7 @@ export function OverviewDateRange({ value, onChange }: OverviewDateRangeProps): 
             onClick={() => onChange(stepPeriod(value, now, 1))}
             disabled={!steppable}
             aria-label="Next period"
-            className="text-muted-foreground hover:text-foreground hover:bg-surface-muted flex h-9 w-8 items-center justify-center rounded-r-md disabled:opacity-40"
+            className="text-muted-foreground hover:text-foreground hover:bg-surface-muted flex size-9 items-center justify-center rounded-full disabled:opacity-40"
           >
             <ChevronRight className="size-4" aria-hidden />
           </button>

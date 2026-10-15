@@ -32,7 +32,7 @@ export function NavSearch({ value, onChange, label }: NavSearchProps): JSX.Eleme
         onChange={event => onChange(event.target.value)}
         aria-label={label}
         placeholder="Search"
-        className="border-border bg-surface text-foreground placeholder:text-subtle-foreground focus-visible:border-accent focus-visible:ring-accent/30 h-9 w-full rounded-xl border pr-3 pl-9 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        className="border-border bg-surface text-foreground placeholder:text-subtle-foreground focus-visible:border-accent focus-visible:ring-accent/30 h-10 w-full rounded-full border pr-4 pl-9 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
       />
     </div>
   )

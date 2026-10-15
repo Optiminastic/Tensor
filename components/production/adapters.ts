@@ -3,7 +3,6 @@
 // overview pages share it and keeps the components unaware of the wire format.
 
 import type { Batch } from '@/lib/validators/batches'
-import type { Machine } from '@/lib/validators/machines'
 import type {
   Order,
   OrderAddress as OrderAddressResponse,
@@ -17,8 +16,6 @@ import type {
   BatchRecord,
   BatchStatus,
   JobStatus,
-  MachineStatus,
-  MachineSummary,
   OrderAddress,
   OrderJobPersonalisation,
   OrderRecord,
@@ -175,23 +172,6 @@ export function toRecentJob(job: ProductionJob): RecentJob {
     startedAt: job.created_at,
     durationHours: (job.estimated_print_time_minutes ?? 0) / 60,
     status: toJobStatus(job),
-  }
-}
-
-function toMachineSummaryStatus(status: string): MachineStatus {
-  if (status === 'busy') return 'printing'
-  if (status === 'online') return 'idle'
-  return 'offline'
-}
-
-// toMachineSummary shapes a machine for the Overview's machine carousel. Per-machine
-// job counts are not exposed yet, so jobsToday is 0.
-export function toMachineSummary(machine: Machine): MachineSummary {
-  return {
-    id: machine.id,
-    name: machine.name,
-    status: toMachineSummaryStatus(machine.status),
-    jobsToday: 0,
   }
 }
 

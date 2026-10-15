@@ -96,7 +96,7 @@ export default async function AgentOverviewPage({
   return (
     <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <ProductionPageHeader title="Agent Overview" />
+        <ProductionPageHeader eyebrow="Agent" title="Agent Overview" />
         <AgentPeriodPicker value={period} />
       </div>
 

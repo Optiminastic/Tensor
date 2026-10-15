@@ -61,6 +61,12 @@ lighter grey.
 | Geist Sans, default                  | the whole interface            | figures                           |
 | Geist Mono, `font-mono tabular-nums` | every figure - ₹, g, h, %, ids | prose                             |
 
+**Exception - the landing UI.** The landing page, the auth pages and the
+dashboard layout and navigation use Inter Tight (`font-landing`) and the
+`--color-landing-*` tokens, by the product owner's decision. See "The landing
+UI" in `CLAUDE.md`. Lime is only ever a fill; selection also shows by weight, a
+dot or marker, and `aria-current`.
+
 At most **one** `.text-display` per screen. A second one means the hierarchy is
 wrong. Never set it below ~28px: both faces are grotesques, and below display
 sizes it stops reading as a signal and just looks heavy.
@@ -124,7 +130,8 @@ act on that - "Request failed (422)" helps nobody.
 
 ## Hard no
 
-- No raw hex, no inline styles, no new font, no new colour outside the tokens.
+- No raw hex, no inline styles, no new font, no new colour outside the tokens
+  (the landing UI's Inter Tight and `--color-landing-*` tokens are the agreed exception).
 - No gradient fills for their own sake, no glassmorphism, no rainbow
   categorical palettes, no decorative motion. Restrained, precise,
   instrument-grade.

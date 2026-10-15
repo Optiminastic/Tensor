@@ -94,7 +94,7 @@ export function AssemblyCheckDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="soft-success" size="sm">
           <PackageCheck className="size-3.5" aria-hidden />
           Record assembly
         </Button>

@@ -17,7 +17,7 @@ export function TranscriptView({ loading, error, turns }: TranscriptViewProps): 
   if (loading) return <p className="text-muted-foreground text-sm">Reading the transcript…</p>
   if (error) {
     return (
-      <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+      <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
         {error}
       </p>
     )

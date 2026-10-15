@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { approveAndPublish } from '@/app/dashboard/[brand]/designs/actions'
+import { PillButton } from '@/components/landing/pill-button'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -147,10 +148,10 @@ export function PublishShopifyDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="primary" size="sm">
-          <ShoppingBag aria-hidden />
+        <PillButton tone="lime" className="h-10 gap-2">
+          <ShoppingBag className="size-4" aria-hidden />
           {isApproved ? 'Push to Shopify' : 'Approve & push to Shopify'}
-        </Button>
+        </PillButton>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
@@ -267,7 +268,7 @@ export function PublishShopifyDialog({
           </p>
 
           {error ? (
-            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+            <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
               {error}
             </p>
           ) : null}

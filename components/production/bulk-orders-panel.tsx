@@ -10,6 +10,7 @@ import {
   rejectBulkOrderAction,
   updateBulkOrderAction,
 } from '@/app/dashboard/[brand]/production/bulk-orders/actions'
+import { PageHeading } from '@/components/dashboard/page-heading'
 import { BulkOrderApproveDialog } from '@/components/production/bulk-order-approve-dialog'
 import { BulkOrderForm } from '@/components/production/bulk-order-form'
 import { Badge } from '@/components/ui/badge'
@@ -127,13 +128,16 @@ export function BulkOrdersPanel({
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-display text-4xl">Bulk Orders</h1>
-          <p className="text-muted-foreground max-w-prose text-sm text-pretty">
-            Quotations for businesses ordering at volume. Prices come from this brand&apos;s Shopify
-            and are fixed into the quotation when you save it.
-          </p>
-        </div>
+        <PageHeading
+          eyebrow="Production"
+          title="Bulk Orders"
+          description={
+            <>
+              Quotations for businesses ordering at volume. Prices come from this brand&apos;s
+              Shopify and are fixed into the quotation when you save it.
+            </>
+          }
+        />
         <Button onClick={openCreate}>
           <Plus className="size-4" aria-hidden /> Add Bulk Order
         </Button>
