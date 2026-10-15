@@ -26,6 +26,34 @@ const JobModelViewer = dynamic(
   { ssr: false, loading: () => <ViewerNote>Loading the 3D view…</ViewerNote> },
 )
 
+/**
+ * Whether this field holds a person's name.
+ *
+ * The same test the backend makes (isNameField). It has to be the same, or
+ * the page strips a character the server would have accepted, or lets through
+ * one it will refuse - and the second of those is a Save button that fails
+ * for a reason the customer cannot see.
+ */
+function isNameLabel(label: string): boolean {
+  return label.toLowerCase().includes('name')
+}
+
+/**
+ * Keeps the letters and the spaces, drops everything else as it is typed.
+ *
+ * STRIPPED RATHER THAN REFUSED. The alternative is letting the character
+ * appear and rejecting the whole field on Save, which tells somebody their
+ * name is wrong after they have finished typing it. Here the emoji simply
+ * never lands.
+ *
+ * \p{L} rather than A-Z: the shop prints names in other scripts too, and the
+ * thing being excluded is digits, punctuation and emoji - in every script,
+ * not only in this one. It matches what the server enforces.
+ */
+function lettersOnly(value: string): string {
+  return value.replace(/[^\p{L} ]/gu, '')
+}
+
 interface PersonalisationItemCardProps {
   token: string
   item: PersonalisationItem
@@ -104,8 +132,14 @@ export function PersonalisationItemCard({
     }
   }
 
-  const editableFields = item.fields.filter(field => editable && field.editable)
-  const readOnlyFields = item.fields.filter(field => !editable || !field.editable)
+  // Both have to hold: the window has to be open, and this job has to be one
+  // the backend will still accept a write for. An order already on a printer
+  // keeps its clock but cannot change, and offering a field whose Save
+  // answers "this link is no longer available" reads as a broken page rather
+  // than as an order being made.
+  const canWrite = editable && item.editable
+  const editableFields = item.fields.filter(field => canWrite && field.editable)
+  const readOnlyFields = item.fields.filter(field => !canWrite || !field.editable)
 
   return (
     <section className="border-border/70 bg-surface overflow-hidden rounded-3xl border">
@@ -175,7 +209,21 @@ export function PersonalisationItemCard({
                   // the customer loses the layout mid-edit. Capitals because
                   // that is how it is engraved.
                   className="h-12 text-base uppercase"
-                  onChange={event => setValues(v => ({ ...v, [field.label]: event.target.value }))}
+                  // A phone keyboard that opens on letters rather than on
+                  // the numeric pad. autoCapitalize because the engraving is
+                  // in capitals and the field shows them that way.
+                  inputMode={isNameLabel(field.label) ? 'text' : undefined}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  onChange={event =>
+                    setValues(v => ({
+                      ...v,
+                      [field.label]: isNameLabel(field.label)
+                        ? lettersOnly(event.target.value)
+                        : event.target.value,
+                    }))
+                  }
                 />
               </div>
             ))}
@@ -232,7 +280,14 @@ export function PersonalisationItemCard({
           </p>
         ) : null}
 
-        {editable ? (
+        {editable && !item.editable ? (
+          <p className="bg-surface-muted text-muted-foreground rounded-xl px-3 py-2.5 text-sm text-pretty">
+            This one has already gone to a printer, so it can no longer be changed. Everything above
+            is what is being made — message the shop if something is wrong.
+          </p>
+        ) : null}
+
+        {canWrite ? (
           <Button
             onClick={() => void save()}
             disabled={!dirty || busy}
