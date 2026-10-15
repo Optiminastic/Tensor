@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react'
 import { type JSX, useMemo, useState } from 'react'
 
 import { DesignUploadDialog } from '@/components/designs/design-upload-dialog'
+import { WindowCountdown } from '@/components/designs/window-countdown'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { ProductionJob } from '@/lib/validators/production'
@@ -14,7 +15,7 @@ interface NonDnpTableProps {
   colours: string[]
 }
 
-type Tab = 'needs' | 'changed'
+type Tab = 'waiting' | 'needs' | 'changed'
 
 /**
  * The designer's work queue: jobs whose customer's window has closed and that
@@ -29,18 +30,31 @@ export function NonDnpTable({ jobs, colours }: NonDnpTableProps): JSX.Element {
   const [tab, setTab] = useState<Tab>('needs')
   const [open, setOpen] = useState<string | null>(null)
 
-  const { needs, changed } = useMemo(
-    () => ({
-      needs: jobs.filter(job => !job.print_file_id),
-      changed: jobs.filter(job => job.issue_reason === 'design_file_stale'),
-    }),
-    [jobs],
-  )
-  const shown = tab === 'needs' ? needs : changed
+  // THE OPEN WINDOW COMES FIRST, and it is a tab of its own rather than a
+  // badge on a row. While it is open the customer can still rename the thing,
+  // so a designer who starts now may draw the wrong name - but they should
+  // still see the work coming, which is why these jobs are listed at all.
+  const { waiting, needs, changed } = useMemo(() => {
+    const open = jobs.filter(job => job.personalisation_window_ends_at)
+    const settled = jobs.filter(job => !job.personalisation_window_ends_at)
+    return {
+      waiting: open,
+      needs: settled.filter(job => !job.print_file_id),
+      changed: settled.filter(job => job.issue_reason === 'design_file_stale'),
+    }
+  }, [jobs])
+  const shown = tab === 'waiting' ? waiting : tab === 'needs' ? needs : changed
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2">
+        <TabButton
+          active={tab === 'waiting'}
+          count={waiting.length}
+          onClick={() => setTab('waiting')}
+        >
+          Waiting for the customer
+        </TabButton>
         <TabButton active={tab === 'needs'} count={needs.length} onClick={() => setTab('needs')}>
           Needs a file
         </TabButton>
@@ -57,9 +71,11 @@ export function NonDnpTable({ jobs, colours }: NonDnpTableProps): JSX.Element {
         <Card className="text-muted-foreground px-4 py-10 text-center text-sm">
           {/* The list emptying IS the signal that the work is done, so it says
               that rather than "no results". */}
-          {tab === 'needs'
-            ? 'Nothing is waiting for a design file.'
-            : 'No customer has changed an item since its file was made.'}
+          {tab === 'waiting'
+            ? 'No customer is still deciding.'
+            : tab === 'needs'
+              ? 'Nothing is waiting for a design file.'
+              : 'No customer has changed an item since its file was made.'}
         </Card>
       ) : (
         <Card className="divide-border/60 divide-y p-0">
@@ -88,6 +104,7 @@ interface JobRowProps {
 function JobRow({ job, colours, expanded, onToggle }: JobRowProps): JSX.Element {
   const changed = job.personalisation_changes
   const fields = customerFields(job)
+  const windowEndsAt = job.personalisation_window_ends_at ?? null
 
   return (
     <div>
@@ -121,15 +138,23 @@ function JobRow({ job, colours, expanded, onToggle }: JobRowProps): JSX.Element 
               {changed.length} changed
             </span>
           ) : null}
+          {windowEndsAt ? <WindowCountdown endsAt={windowEndsAt} /> : null}
         </button>
 
-        <DesignUploadDialog
-          jobId={job.id}
-          jobNumber={job.job_number}
-          productName={job.product_name ?? 'this product'}
-          hasModel={Boolean(job.print_file_id)}
-          colours={colours}
-        />
+        {windowEndsAt ? (
+          // NO UPLOAD WHILE THE WINDOW IS OPEN. A file made now could be
+          // obsolete before the customer's timer runs out, and the upload is
+          // the approval - there is no second review to catch it.
+          <span className="text-subtle-foreground shrink-0 text-xs">Values can still change</span>
+        ) : (
+          <DesignUploadDialog
+            jobId={job.id}
+            jobNumber={job.job_number}
+            productName={job.product_name ?? 'this product'}
+            hasModel={Boolean(job.print_file_id)}
+            colours={colours}
+          />
+        )}
       </div>
 
       {expanded ? (
@@ -139,6 +164,12 @@ function JobRow({ job, colours, expanded, onToggle }: JobRowProps): JSX.Element 
               ? 'What the customer ordered'
               : 'What the customer ordered, and what they corrected in their 30 minutes'}
           </p>
+          {windowEndsAt ? (
+            <p className="text-warning text-xs">
+              The customer&rsquo;s 30 minutes are still running. These values can move; upload opens
+              when the window closes.
+            </p>
+          ) : null}
 
           {fields.length === 0 ? (
             <p className="text-muted-foreground text-sm">
@@ -173,7 +204,7 @@ function JobRow({ job, colours, expanded, onToggle }: JobRowProps): JSX.Element 
             </dl>
           )}
 
-          {changed.length === 0 ? (
+          {changed.length === 0 && !windowEndsAt ? (
             <p className="text-subtle-foreground text-xs">
               Nothing was changed after the order — build from these values.
             </p>

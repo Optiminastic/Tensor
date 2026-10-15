@@ -128,6 +128,14 @@ export const ProductionJobSchema = z.object({
     .nullish()
     .transform(v => v ?? []),
   /**
+   * When this job's customer stops being able to change it, ISO-8601.
+   *
+   * Sent only by the design queue. Null once the window has closed, which is
+   * the designer's signal that the values are settled and the piece can be
+   * drawn - so absence means "go ahead", not "unknown".
+   */
+  personalisation_window_ends_at: z.string().nullish(),
+  /**
    * Hexes an uploaded 3MF asked for that the shop has never recorded as a
    * filament. Present only on an upload response, and only when the file named
    * a colour nothing could be matched to - the job then keeps whatever colour
