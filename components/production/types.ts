@@ -228,6 +228,13 @@ export interface OrderRecord {
   /** When the window closes, ISO-8601. Set only while it is open. */
   personalisationWindowEndsAt: string | null
   /**
+   * Why nobody was asked, in the sender's own words, for a row with no window
+   * at all. A dash in that column means six different things - the feature
+   * off, no phone, before the watermark, nothing personalised, WhatsApp not
+   * connected, models still rendering - and this is which one.
+   */
+  personalisationSkipReason: string | null
+  /**
    * Money as the store stated it, in decimal strings. Null means Shopify never
    * stated the figure, which renders differently from a stated zero.
    *

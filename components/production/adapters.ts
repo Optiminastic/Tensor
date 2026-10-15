@@ -138,6 +138,7 @@ export function toOrderRecord(order: Order): OrderRecord {
     sourceName: order.source_name ?? null,
     personalisation: toWindowState(order.personalisation),
     personalisationWindowEndsAt: order.personalisation_window_ends_at ?? null,
+    personalisationSkipReason: order.personalisation_skip_reason ?? null,
     subtotal: order.subtotal_price ?? null,
     totalDiscounts: order.total_discounts ?? null,
     totalShipping: order.total_shipping ?? null,
