@@ -32,7 +32,7 @@ export async function Hero(): Promise<JSX.Element> {
             each order to the customer&apos;s door.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <PillLink href="#about" tone="glass">
+            <PillLink href="/product" tone="glass">
               View pipeline
             </PillLink>
             <PillLink href={start} tone="lime" withArrow>

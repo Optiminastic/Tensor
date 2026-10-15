@@ -3,6 +3,13 @@ import type { JSX } from 'react'
 
 import { Logo } from '@/components/logo'
 
+const FOOTER_LINKS = [
+  { href: '/product', label: 'Product' },
+  { href: '/about', label: 'About' },
+  { href: '/integrations', label: 'Integrations' },
+  { href: '/style-guide', label: 'Design system' },
+]
+
 /** A quiet ink footer, closing the page in the bento's darkest tone. */
 export function SiteFooter(): JSX.Element {
   return (
@@ -13,9 +20,15 @@ export function SiteFooter(): JSX.Element {
           aria-label="Footer"
           className="flex flex-wrap items-center gap-x-7 gap-y-3 font-mono text-xs tracking-[0.18em] whitespace-nowrap uppercase"
         >
-          <Link href="/style-guide" className="text-white/75 transition-colors hover:text-white">
-            Design system
-          </Link>
+          {FOOTER_LINKS.map(link => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-white/75 transition-colors hover:text-white"
+            >
+              {link.label}
+            </Link>
+          ))}
           <Link href="/login" className="text-white/75 transition-colors hover:text-white">
             Sign in
           </Link>

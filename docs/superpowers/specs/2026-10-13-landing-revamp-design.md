@@ -20,6 +20,19 @@ Not a copy: the structure and type treatment carry over, the imagery and copy do
 4. **Bento**: product-photo card with a Design CP figure, light "5 stages" card, lime "0 guesses" card, ink "6 integrations" card.
 5. Footer (existing, restyled to match).
 
+## Pages (added 2026-10-14)
+
+The nav links are pages, not anchors on the homepage:
+
+- `/product` - every area of the dashboard and every page inside it, with what each does, under a strip of the eleven steps one design takes.
+- `/about` - the rules Tensor is built around, the roles that use it, and the bento.
+- `/integrations` - the six systems Tensor works with, and what it does with each.
+- `/style-guide` - the design system, as before.
+
+The homepage gains "Inside Tensor": one card per dashboard area, each linking to its section on `/product`.
+The copy for all of them lives in `lib/marketing/` (areas, integrations, about), so the homepage and the pages cannot disagree.
+The nav marks the current page with `aria-current`, and on a phone the links sit in a row under the logo instead of being hidden.
+
 ## 3D-printing identity
 
 - The sky keeps the inspiration's blue, but its texture is fine horizontal layer lines and a fading build-plate grid instead of clouds.
