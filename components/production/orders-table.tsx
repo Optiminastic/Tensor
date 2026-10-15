@@ -91,12 +91,16 @@ const UNFULFILLED_TAB = 'unfulfilled'
 // Wider than the viewport, which is why the Table primitive scrolls
 // horizontally rather than wrapping.
 //
-// THREE COLUMNS WERE REMOVED and one added. Tags and Channel were Shopify's
+// FOUR COLUMNS WERE REMOVED and one added. Tags and Channel were Shopify's
 // own, carried over for parity, and neither changed what anybody on this
 // floor does next: every order arrives on the same channel and the tags are
 // free text nobody here writes. Actions held a Create Job button that only
 // ever did anything on the handful of orders whose import failed - those rows
-// already carry the warning and the retry lives on the order itself.
+// already carry the warning and the retry lives on the order itself. Payment
+// went the same way: every order the store imports is already paid, so the
+// pill said "Paid" on all of them. It still reads correctly where it matters
+// - the drawer's header, and the tab strip above, which can still single out
+// a refunded one.
 //
 // Personalisation took their place because it is the one column that is
 // about the customer RIGHT NOW: for thirty minutes they are looking at a page
@@ -112,7 +116,6 @@ const COLUMNS = [
   'Personalisation',
   'Fulfillment',
   'Delivery method',
-  'Payment',
   'Delivery status',
   'Return',
 ]

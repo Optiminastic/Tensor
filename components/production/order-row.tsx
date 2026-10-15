@@ -7,7 +7,7 @@ import type { JSX, KeyboardEvent, MouseEvent } from 'react'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
 import { OrderItemsHoverCard } from '@/components/production/order-items-hover-card'
 import { isPriorityShipping } from '@/components/production/priority'
-import { ORDER_STATUS_CONFIG, shopifyStatusConfig } from '@/components/production/status-config'
+import { shopifyStatusConfig } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { OrderRecord } from '@/components/production/types'
 import { TableCell, TableRow } from '@/components/ui/table'
@@ -80,7 +80,6 @@ function PersonalisationCell({ order }: { order: OrderRecord }): JSX.Element {
 }
 
 export function OrderRow({ brand, order, onOpen }: OrderRowProps): JSX.Element {
-  const status = ORDER_STATUS_CONFIG[order.status]
   // From the backend: the list response carries a count rather than the line
   // items themselves, so counting them here would give zero on every row.
   const itemCount = order.itemCount
@@ -212,9 +211,6 @@ export function OrderRow({ brand, order, onOpen }: OrderRowProps): JSX.Element {
         ) : (
           <span className="text-muted-foreground block truncate">{order.shippingTitle ?? '—'}</span>
         )}
-      </TableCell>
-      <TableCell className="py-2">
-        <TonePill label={status.label} tone={status.tone} />
       </TableCell>
       <TableCell className="py-2">
         <StatusCell value={order.deliveryStatus} />
