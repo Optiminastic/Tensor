@@ -1,6 +1,6 @@
 'use client'
 
-import { type JSX, useEffect, useState } from 'react'
+import { type JSX, useEffect, useRef, useState } from 'react'
 
 import { PersonalisationItemCard } from '@/components/personalisation/personalisation-item-card'
 import { Button } from '@/components/ui/button'
@@ -26,15 +26,30 @@ interface PersonalisationCheckProps {
  * one should not have to scroll past the rest to say yes.
  */
 export function PersonalisationCheck({ token, link }: PersonalisationCheckProps): JSX.Element {
+  // THE DEADLINE, NOT A TALLY. Subtracting one every thousand milliseconds
+  // assumes the thousand milliseconds actually elapsed, and on a phone they
+  // routinely do not: a background tab is throttled to once a minute, and a
+  // busy main thread delays the timer behind whatever it is doing. The clock
+  // then drifts behind real time and only looks right again after a refresh,
+  // which re-reads it from the server.
+  //
+  // Anchored to the moment the page loaded rather than to the server's
+  // expires_at, so a phone whose own clock is wrong still counts down the
+  // right length of time.
+  const deadline = useRef(Date.now() + link.seconds_left * 1000)
   const [secondsLeft, setSecondsLeft] = useState(link.seconds_left)
   const [confirmed, setConfirmed] = useState(link.confirmed)
   const [sending, setSending] = useState(false)
 
   useEffect(() => {
-    if (secondsLeft <= 0) return
-    const tick = setInterval(() => setSecondsLeft(s => Math.max(0, s - 1)), 1000)
+    const read = (): number => Math.max(0, Math.round((deadline.current - Date.now()) / 1000))
+    setSecondsLeft(read())
+    // Four times a second: the displayed second then changes within 250ms of
+    // the real one rather than lagging it by up to a whole second, and a
+    // tick that arrives late corrects itself instead of accumulating.
+    const tick = setInterval(() => setSecondsLeft(read()), 250)
     return () => clearInterval(tick)
-  }, [secondsLeft])
+  }, [])
 
   async function confirm(): Promise<void> {
     setSending(true)

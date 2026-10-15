@@ -3,17 +3,27 @@
 import dynamic from 'next/dynamic'
 import { type JSX, type ReactNode, useEffect, useState } from 'react'
 
+import { ItemPicture } from '@/components/personalisation/item-picture'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import type { PersonalisationColour, PersonalisationItem } from '@/lib/validators/personalisation'
 
-// Lazy and client-only, like every other viewer here: three.js is a large
-// bundle and this page is opened on a phone, often on mobile data.
+// THE PICTURE IS NOT THE VIEWER ANY MORE.
+//
+// The 3D viewer needs three.js - about 700KB before @react-three/fiber and
+// drei, five times the weight of the model it draws - and on a phone it
+// routinely never finished loading: the card sat on "Loading preview…"
+// indefinitely while the bundle compiled. The server draws a 12KB picture
+// instead, which arrives with the rest of the page.
+//
+// The viewer stays, one tap away, for the customer who wants to turn it over
+// themselves. Lazy and client-only, so nobody who does not ask for it pays
+// for it.
 const JobModelViewer = dynamic(
   () => import('@/components/production/job-model-viewer').then(m => m.JobModelViewer),
-  { ssr: false, loading: () => <ViewerNote>Loading preview…</ViewerNote> },
+  { ssr: false, loading: () => <ViewerNote>Loading the 3D view…</ViewerNote> },
 )
 
 interface PersonalisationItemCardProps {
@@ -46,6 +56,10 @@ export function PersonalisationItemCard({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saves, setSaves] = useState(0)
+  // The 3D view is opt-in, and stays open once asked for: somebody who turned
+  // one item over is checking the shape, and making them ask again after
+  // every save would be the page arguing with them.
+  const [in3D, setIn3D] = useState(false)
 
   // Some products are never rendered - a Bone Tag, a DUOSNAP, a Couple's Date
   // Plank. There is nothing to show and nothing to wait for, so the card is
@@ -101,7 +115,9 @@ export function PersonalisationItemCard({
           saying "Building your preview…" forever is worse than no frame. */}
       {showPicture ? (
         <div className="bg-surface-muted relative aspect-square w-full sm:aspect-[4/3]">
-          {ready ? (
+          {!ready ? (
+            <ViewerNote>Building your preview…</ViewerNote>
+          ) : in3D ? (
             <JobModelViewer
               key={modelVersion}
               modelUrl={`/api/p/${encodeURIComponent(token)}/items/${encodeURIComponent(item.job_id)}/model?v=${modelVersion}`}
@@ -109,7 +125,13 @@ export function PersonalisationItemCard({
               captureName={`${item.job_number}.png`}
             />
           ) : (
-            <ViewerNote>Building your preview…</ViewerNote>
+            <ItemPicture
+              token={token}
+              jobId={item.job_id}
+              jobNumber={item.job_number}
+              productName={item.product_name}
+              modelVersion={modelVersion}
+            />
           )}
 
           {item.unit_count > 1 ? (
@@ -118,17 +140,13 @@ export function PersonalisationItemCard({
             </span>
           ) : null}
 
-          {ready ? (
+          {ready && !in3D ? (
             <button
               type="button"
-              onClick={() => {
-                void import('@/components/production/job-model-viewer').then(m =>
-                  m.downloadViewerImage(`${item.job_number}.png`),
-                )
-              }}
-              className="bg-surface/90 text-muted-foreground hover:text-foreground absolute right-3 bottom-3 rounded-full px-3 py-1.5 text-xs backdrop-blur"
+              onClick={() => setIn3D(true)}
+              className="bg-surface/90 text-muted-foreground hover:text-foreground absolute top-3 right-3 rounded-full px-3 py-1.5 text-xs backdrop-blur"
             >
-              Save picture
+              View in 3D
             </button>
           ) : null}
         </div>
