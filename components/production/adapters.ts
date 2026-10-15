@@ -102,6 +102,18 @@ function toOrderStatus(financial: string): OrderStatus {
   return 'pending'
 }
 
+/**
+ * The backend's window state, narrowed to the three the table can draw.
+ *
+ * Anything else - including the empty string the backend sends for an order
+ * nobody asked, and any state added later - reads as "no window", which the
+ * row renders as a dash. A column that invents a pill for a word it does not
+ * know is worse than one that says nothing.
+ */
+function toWindowState(value: string | null | undefined): OrderRecord['personalisation'] {
+  return value === 'open' || value === 'done' || value === 'not_sent' ? value : null
+}
+
 export function toOrderRecord(order: Order): OrderRecord {
   return {
     id: order.id,
@@ -127,6 +139,8 @@ export function toOrderRecord(order: Order): OrderRecord {
     skus: order.skus ?? [],
     personalisationNames: order.personalisation_names ?? [],
     sourceName: order.source_name ?? null,
+    personalisation: toWindowState(order.personalisation),
+    personalisationWindowEndsAt: order.personalisation_window_ends_at ?? null,
     subtotal: order.subtotal_price ?? null,
     totalDiscounts: order.total_discounts ?? null,
     totalShipping: order.total_shipping ?? null,

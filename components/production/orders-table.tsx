@@ -87,8 +87,20 @@ const UNFULFILLED_TAB = 'unfulfilled'
 // every figure. The presentation is Tensor's throughout - its pills, its
 // typography, its mono figures - only the columns are borrowed.
 //
-// Fourteen columns is wider than the viewport, which is why the Table
-// primitive scrolls horizontally rather than wrapping.
+// Wider than the viewport, which is why the Table primitive scrolls
+// horizontally rather than wrapping.
+//
+// THREE COLUMNS WERE REMOVED and one added. Tags and Channel were Shopify's
+// own, carried over for parity, and neither changed what anybody on this
+// floor does next: every order arrives on the same channel and the tags are
+// free text nobody here writes. Actions held a Create Job button that only
+// ever did anything on the handful of orders whose import failed - those rows
+// already carry the warning and the retry lives on the order itself.
+//
+// Personalisation took their place because it is the one column that is
+// about the customer RIGHT NOW: for thirty minutes they are looking at a page
+// and can still change what gets printed, and whoever takes that phone call
+// needs the same link they are holding.
 const COLUMNS = [
   'Order',
   'SKU',
@@ -96,12 +108,11 @@ const COLUMNS = [
   'Customer',
   'Total',
   'Items',
+  'Personalisation',
   'Fulfillment',
   'Delivery method',
   'Payment',
   'Delivery status',
-  'Tags',
-  'Channel',
   'Return',
 ]
 // No payment status has a tab any more.
@@ -236,16 +247,13 @@ export function OrdersTable({
                   {column}
                 </TableHeaderCell>
               ))}
-              <TableHeaderCell className="py-2 text-right whitespace-nowrap">
-                Actions
-              </TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={COLUMNS.length + 1}
+                  colSpan={COLUMNS.length}
                   className="text-muted-foreground text-center text-sm"
                 >
                   No orders match these filters.

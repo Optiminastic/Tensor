@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 
 import { OrderDetailAside } from '@/components/production/order-detail-aside'
 import { OrderFulfillmentCard } from '@/components/production/order-fulfillment-card'
+import { OrderJobRetry } from '@/components/production/order-job-retry'
 import { OrderPaymentCard } from '@/components/production/order-payment-card'
 import { OrderPersonalisationLog } from '@/components/production/order-personalisation-log'
 import type { OrderJobPersonalisation, OrderRecord } from '@/components/production/types'
@@ -24,6 +25,10 @@ interface OrderDetailViewProps {
 export function OrderDetailView({ brand, order, jobs }: OrderDetailViewProps): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
+      {/* Above everything, because an order with no jobs is not a detail of
+          this page - it is the only thing about it that needs doing. Renders
+          nothing on a healthy order. */}
+      <OrderJobRetry brand={brand} orderId={order.id} jobCreationError={order.jobCreationError} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
         <div className="flex flex-col gap-4">
           <OrderFulfillmentCard order={order} />

@@ -1,18 +1,16 @@
 'use client'
 
-import { AlertTriangle, Plus } from 'lucide-react'
+import { AlertTriangle, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
+import type { JSX, KeyboardEvent, MouseEvent } from 'react'
 
-import { createJobsFromOrder } from '@/app/dashboard/[brand]/production/actions'
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
 import { OrderItemsHoverCard } from '@/components/production/order-items-hover-card'
 import { isPriorityShipping } from '@/components/production/priority'
 import { ORDER_STATUS_CONFIG, shopifyStatusConfig } from '@/components/production/status-config'
 import { TonePill } from '@/components/production/tone-pill'
 import type { OrderRecord } from '@/components/production/types'
-import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { dateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -42,10 +40,46 @@ function StatusCell({ value }: { value: string | null }): JSX.Element {
   return <TonePill label={config.label} tone={config.tone} />
 }
 
+/**
+ * The customer's thirty minutes, as one cell.
+ *
+ * A LINK WHILE IT IS OPEN, a tag once it is not. The link is a real anchor to
+ * a route that redirects, not a button that fetches and then opens: a tab
+ * opened after an await is a popup as far as the browser is concerned and
+ * gets blocked. It also means ctrl-click and "open in new tab" behave.
+ *
+ * The href is the ORDER, never the token. The token is unsealed server-side
+ * for the one order somebody actually clicks, so a page of fifty orders does
+ * not put fifty live customer links into a response and a browser cache.
+ */
+function PersonalisationCell({ order }: { order: OrderRecord }): JSX.Element {
+  if (order.personalisation === 'open') {
+    return (
+      <a
+        href={`/api/orders/${order.id}/personalisation-link`}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={stopRowClick}
+        className="text-accent inline-flex items-center gap-1 text-xs underline-offset-4 hover:underline"
+      >
+        Open link
+        <ExternalLink className="size-3" aria-hidden />
+      </a>
+    )
+  }
+  if (order.personalisation === 'done') {
+    return <TonePill label="Done" tone="success" />
+  }
+  if (order.personalisation === 'not_sent') {
+    // Not "Done". Nobody asked this customer anything, and a row that implies
+    // they were checked is how an order gets printed on unconfirmed values.
+    return <TonePill label="Not sent" tone="warning" />
+  }
+  return <span className="text-muted-foreground">—</span>
+}
+
 export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
   const router = useRouter()
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const status = ORDER_STATUS_CONFIG[order.status]
   // From the backend: the list response carries a count rather than the line
   // items themselves, so counting them here would give zero on every row.
@@ -55,19 +89,6 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
   const openDetail = (): void => router.push(href)
   const onKeyDown = (event: KeyboardEvent<HTMLTableRowElement>): void => {
     if (event.key === 'Enter') openDetail()
-  }
-
-  async function createJob(event: MouseEvent): Promise<void> {
-    stopRowClick(event)
-    setPending(true)
-    setError(null)
-    const res = await createJobsFromOrder(brand, order.id)
-    setPending(false)
-    if (!res.ok) {
-      setError(res.error ?? 'Could not create the job.')
-      return
-    }
-    router.push(href)
   }
 
   return (
@@ -169,6 +190,9 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
       <TableCell className="py-2" numeric>
         {itemCount > 0 ? itemCount : '—'}
       </TableCell>
+      <TableCell className="py-2 whitespace-nowrap">
+        <PersonalisationCell order={order} />
+      </TableCell>
       <TableCell className="py-2">
         <StatusCell value={order.fulfillmentStatus} />
       </TableCell>
@@ -194,53 +218,10 @@ export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
         <StatusCell value={order.deliveryStatus} />
       </TableCell>
       <TableCell className="py-2">
-        {order.tags.length === 0 ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <div className="flex max-w-40 flex-nowrap items-center gap-1 overflow-hidden">
-            {order.tags.slice(0, 2).map(tag => (
-              <span
-                key={tag}
-                className="bg-surface-muted text-muted-foreground max-w-28 truncate rounded px-1.5 py-0.5 text-xs whitespace-nowrap"
-              >
-                {tag}
-              </span>
-            ))}
-            {/* A count rather than a third chip: tags are free text and a long
-                one would push every column after it off the screen. */}
-            {order.tags.length > 2 ? (
-              <span className="text-subtle-foreground text-xs">+{order.tags.length - 2}</span>
-            ) : null}
-          </div>
-        )}
-      </TableCell>
-      <TableCell className="text-muted-foreground py-2 text-xs whitespace-nowrap">
-        {order.sourceName ?? '—'}
-      </TableCell>
-      <TableCell className="py-2">
         {/* "no_return" renders as a dash: Shopify states it on every order that
             was never sent back, and a "No return" pill on all 2,000 rows would
             be noise where the column only matters when it says otherwise. */}
         <StatusCell value={order.returnStatus} />
-      </TableCell>
-      <TableCell className="py-2 text-right">
-        <div className="flex flex-col items-end gap-1">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={pending}
-            onClick={event => void createJob(event)}
-          >
-            <Plus className="size-3.5" aria-hidden />
-            {pending ? 'Creating…' : 'Create Job'}
-          </Button>
-          {error ? (
-            <p role="alert" className="text-danger text-xs">
-              {error}
-            </p>
-          ) : null}
-        </div>
       </TableCell>
     </TableRow>
   )

@@ -229,6 +229,14 @@ export interface OrderRecord {
   personalisationNames: string[]
   sourceName: string | null
   /**
+   * The customer's thirty minutes: 'open' (the row offers the live link),
+   * 'done' (it closed), 'not_sent' (the message refused), or null when this
+   * order was never asked.
+   */
+  personalisation: 'open' | 'done' | 'not_sent' | null
+  /** When the window closes, ISO-8601. Set only while it is open. */
+  personalisationWindowEndsAt: string | null
+  /**
    * Money as the store stated it, in decimal strings. Null means Shopify never
    * stated the figure, which renders differently from a stated zero.
    *

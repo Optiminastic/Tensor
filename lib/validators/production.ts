@@ -402,6 +402,13 @@ export const OrderSchema = z.object({
   skus: z.string().array().nullish(),
   item_count: z.number().nullish(),
   source_name: z.string().nullish(),
+  /**
+   * Where the customer's 30-minute window stands: 'open' while they can still
+   * change the order, 'done' once it closed, 'not_sent' when the message
+   * permanently refused. Absent on an order that was never asked.
+   */
+  personalisation: z.string().nullish(),
+  personalisation_window_ends_at: z.string().nullish(),
   // Decimal strings, not numbers: the backend keeps the store's own precision
   // rather than round-tripping through a float. Null means Shopify never
   // stated the figure, which is not the same as zero.
