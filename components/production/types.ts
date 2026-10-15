@@ -10,15 +10,6 @@ export interface ProductionJob {
   status: JobStatus
 }
 
-export type MachineStatus = 'printing' | 'idle' | 'offline'
-
-export interface MachineSummary {
-  id: string
-  name: string
-  status: MachineStatus
-  jobsToday: number
-}
-
 export interface ActivityPoint {
   month: string
   completed: number

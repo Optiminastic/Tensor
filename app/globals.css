@@ -58,9 +58,12 @@
   /* The edge of an interactive control. Holds 3:1 for WCAG 1.4.11. */
   --border-strong: oklch(0.625 0.008 265);
 
-  /* Signal accent - azure blue (#0F56A1), used sparingly */
-  --accent: oklch(0.456 0.138 255);
-  --accent-hover: oklch(0.405 0.132 255);
+  /* Signal accent - the landing UI's ink. Was azure blue; the redesign is
+   * ink, lime and sky, so blue now only appears where it means something (the
+   * "under way" tag, a chart's sky series). Links, focus, progress and chart
+   * ramps all read from here. */
+  --accent: oklch(0.2 0.01 260);
+  --accent-hover: oklch(0.32 0.01 260);
   /* Label colour for text sitting on an --accent fill */
   --accent-foreground: oklch(1 0 0);
 
@@ -72,15 +75,7 @@
   --danger: oklch(0.52 0.2 25);
 
   /* Focus ring */
-  --ring: var(--accent);
-
-  /*
-   * The ground greyscale artwork is printed on. Artwork arrives on white
-   * paper; multiplying it onto this makes it read as ink on the page rather
-   * than a pasted rectangle. Transparent here, because in light mode the page
-   * already IS the paper.
-   */
-  --plate-paper: transparent;
+  --ring: var(--foreground);
 
   /*
    * Tint strength for translucent status/accent fills.
@@ -131,21 +126,11 @@
   --border-strong: oklch(0.555 0.007 265);
 
   /*
-   * In dark the page is no longer paper, so artwork is given its own: a
-   * mounted print on a dark wall. Inverting instead would be wrong — it
-   * flatters line art but turns a photograph into a negative, and these
-   * plates are one of each. Dimmed well below white so a lit plate reads as
-   * paper rather than a glaring panel.
+   * Ink inverts on the dark page: near-white, so links and focus stay
+   * legible, and a label on an --accent fill flips to ink.
    */
-  --plate-paper: oklch(0.86 0.008 78);
-
-  /*
-   * Lifted so the blue stays legible as text on a dark surface
-   * (link / badge). At this lightness a white label on an --accent
-   * fill would fail AA, so --accent-foreground flips to ink here.
-   */
-  --accent: oklch(0.67 0.13 255);
-  --accent-hover: oklch(0.73 0.115 255);
+  --accent: oklch(0.93 0.005 260);
+  --accent-hover: oklch(0.85 0.005 260);
   --accent-foreground: oklch(0.19 0.003 78);
 
   /*
@@ -194,7 +179,6 @@
   --color-subtle-foreground: var(--subtle-foreground);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
-  --color-plate-paper: var(--plate-paper);
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
@@ -442,12 +426,13 @@
    * are part of the treatment, so they ship with the family rather than
    * being re-specified (and drifted) at every call site.
    */
+  /* Page titles, in the landing UI's type: Inter Tight, medium, tightly set.
+   * Every older page that used the Mona Sans display face picks this up. */
   .text-display {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-optical-sizing: auto;
+    font-family: var(--font-inter-tight), var(--font-display);
+    font-weight: 500;
     line-height: 1.05;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.04em;
   }
 
   .tabular-nums {
@@ -458,5 +443,156 @@
   }
   .text-pretty {
     text-wrap: pretty;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Landing page.
+ *
+ * The public homepage has its own look - sky blue, lime and ink, set in Inter
+ * Tight - and these tokens belong to it alone. The dashboard's Editorial Ink
+ * palette above is untouched; nothing inside /dashboard uses a landing token.
+ * --------------------------------------------------------------------------- */
+@theme inline {
+  --font-landing: var(--font-inter-tight);
+
+  --color-landing-sky-deep: #0f5fe0;
+  --color-landing-sky: #2d8af7;
+  /* The darkest blue white body text still reads on (5.2:1). */
+  --color-landing-sky-mid: #1667e6;
+  --color-landing-sky-haze: #a9d4ff;
+  --color-landing-lime: #d7f75b;
+  --color-landing-lime-deep: #c2e83a;
+  --color-landing-ink: #0e1116;
+  --color-landing-paper: #f3f4f6;
+  --color-landing-muted: #8a8f99;
+  /* Chart series on white and on the dark surface. Validated with the dataviz
+   * palette checks (lightness, chroma, colour-blind separation, 3:1 contrast)
+   * in both modes. Pure lime fails contrast on white, so it is a tile colour
+   * and never a line. */
+  --color-landing-chart-sky: #2d8af7;
+  --color-landing-chart-olive: #7a9c00;
+
+  --animate-landing-marquee: landing-marquee 40s linear infinite;
+
+  @keyframes landing-marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-landing-marquee {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Tags.
+ *
+ * Every status tag in the product: a pastel fill that deepens a touch towards
+ * the bottom, a hairline edge a step darker than the fill, a glossy top
+ * highlight and a soft shadow - with the word and its icon in a strong shade
+ * of the same hue. Each ink/fill pair holds AA (4.5:1) at the tag's 12px
+ * size; the word is the meaning, the colour only echoes it.
+ *
+ * Dark mode keeps the hues but turns the fills to deep tints of them, with
+ * the ink lightened, so a tag glows on the dark page instead of shouting.
+ *
+ * Plain custom properties, not @theme inline: the .tag-* rules read them at
+ * runtime, and @theme inline bakes values into utilities without declaring
+ * the variables.
+ * --------------------------------------------------------------------------- */
+:root {
+  --tag-green-top: #e3f8ec;
+  --tag-green-bottom: #cff1dd;
+  --tag-green-edge: #a8e2c0;
+  --tag-green-ink: #0d6b3f;
+  --tag-amber-top: #fff1dc;
+  --tag-amber-bottom: #ffe2bd;
+  --tag-amber-edge: #f9c98d;
+  --tag-amber-ink: #9a4500;
+  --tag-red-top: #ffe8ea;
+  --tag-red-bottom: #ffd6da;
+  --tag-red-edge: #f8b3bb;
+  --tag-red-ink: #b0182f;
+  --tag-blue-top: #e7f1ff;
+  --tag-blue-bottom: #d4e6ff;
+  --tag-blue-edge: #b0cff8;
+  --tag-blue-ink: #1b5bc0;
+  --tag-grey-top: #f3f4f6;
+  --tag-grey-bottom: #e7e9ed;
+  --tag-grey-edge: #d3d6dc;
+  --tag-grey-ink: #4b505a;
+  --tag-highlight: rgb(255 255 255 / 0.75);
+}
+
+.dark {
+  --tag-green-top: #183a29;
+  --tag-green-bottom: #143223;
+  --tag-green-edge: #26583e;
+  --tag-green-ink: #86e3ae;
+  --tag-amber-top: #3f2e19;
+  --tag-amber-bottom: #372815;
+  --tag-amber-edge: #644624;
+  --tag-amber-ink: #ffc27e;
+  --tag-red-top: #45222a;
+  --tag-red-bottom: #3c1d24;
+  --tag-red-edge: #6c3340;
+  --tag-red-ink: #ffa4ae;
+  --tag-blue-top: #1c2f4d;
+  --tag-blue-bottom: #182843;
+  --tag-blue-edge: #2e4c7c;
+  --tag-blue-ink: #a2c7ff;
+  --tag-grey-top: #2b2e34;
+  --tag-grey-bottom: #26292e;
+  --tag-grey-edge: #3d4149;
+  --tag-grey-ink: #c7cbd3;
+  --tag-highlight: rgb(255 255 255 / 0.08);
+}
+
+@layer components {
+  .tag {
+    color: var(--tag-ink);
+    background-image: linear-gradient(to bottom, var(--tag-top), var(--tag-bottom));
+    border: 1px solid var(--tag-edge);
+    box-shadow:
+      inset 0 1px 0 var(--tag-highlight),
+      0 1px 2px rgb(0 0 0 / 0.06),
+      0 3px 8px -4px var(--tag-edge);
+  }
+  .tag-success {
+    --tag-top: var(--tag-green-top);
+    --tag-bottom: var(--tag-green-bottom);
+    --tag-edge: var(--tag-green-edge);
+    --tag-ink: var(--tag-green-ink);
+  }
+  .tag-warning {
+    --tag-top: var(--tag-amber-top);
+    --tag-bottom: var(--tag-amber-bottom);
+    --tag-edge: var(--tag-amber-edge);
+    --tag-ink: var(--tag-amber-ink);
+  }
+  .tag-danger {
+    --tag-top: var(--tag-red-top);
+    --tag-bottom: var(--tag-red-bottom);
+    --tag-edge: var(--tag-red-edge);
+    --tag-ink: var(--tag-red-ink);
+  }
+  .tag-accent {
+    --tag-top: var(--tag-blue-top);
+    --tag-bottom: var(--tag-blue-bottom);
+    --tag-edge: var(--tag-blue-edge);
+    --tag-ink: var(--tag-blue-ink);
+  }
+  .tag-muted {
+    --tag-top: var(--tag-grey-top);
+    --tag-bottom: var(--tag-grey-bottom);
+    --tag-edge: var(--tag-grey-edge);
+    --tag-ink: var(--tag-grey-ink);
   }
 }

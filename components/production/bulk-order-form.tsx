@@ -144,7 +144,7 @@ export function BulkOrderForm({
       }}
     >
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : null}
@@ -274,7 +274,7 @@ export function BulkOrderForm({
         })}
 
         {unpriced.length > 0 ? (
-          <p role="alert" className="bg-warning-subtle text-warning rounded-md px-3 py-2 text-sm">
+          <p role="alert" className="bg-warning-subtle text-warning rounded-2xl px-4 py-3 text-sm">
             {unpriced.map(l => l.sku).join(', ')} has no price in Shopify, so this quotation cannot
             be saved until it does or the line is removed.
           </p>

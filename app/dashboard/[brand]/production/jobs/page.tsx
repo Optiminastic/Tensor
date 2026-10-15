@@ -47,15 +47,13 @@ export default async function ProductionJobsPage({
         intervalSeconds={env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS}
         enabled={env.NEXT_PUBLIC_PRODUCTION_REFRESH_SECONDS !== undefined}
       />
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <ProductionPageHeader
-          title="Production Jobs"
-          description="Every job in the queue, from slicing through packaging."
-        />
-        <RefreshButton noun="jobs" />
-      </div>
+      <ProductionPageHeader
+        title="Production Jobs"
+        description="Every job in the queue, from slicing through packaging."
+        actions={<RefreshButton noun="jobs" />}
+      />
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : (

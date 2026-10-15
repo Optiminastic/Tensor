@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
 import { AcceptInviteForm } from '@/components/admin/accept-invite-form'
-import { AUTH_PLATES, AuthSplit } from '@/components/auth/auth-split'
+import { AuthHeading } from '@/components/auth/auth-heading'
+import { AUTH_PANELS } from '@/components/auth/auth-panels'
+import { AuthSplit } from '@/components/auth/auth-split'
 import { checkInvite } from '@/services/admin.service'
 
 export const metadata: Metadata = { title: 'Accept your invitation' }
@@ -41,15 +43,12 @@ export default async function AcceptInvitePage(props: AcceptInvitePageProps): Pr
   }
 
   return (
-    <AuthSplit plate={AUTH_PLATES.stone}>
-      <div className="flex flex-col gap-2">
-        <h1 className="text-display text-4xl">Welcome to Tensor</h1>
-        <p className="text-muted-foreground text-sm text-pretty">
-          You have been invited as{' '}
-          <span className="text-foreground font-medium">{invite.role.replace(/_/g, ' ')}</span>.
-          Choose a password — nobody else knows it, and nobody set one for you.
-        </p>
-      </div>
+    <AuthSplit panel={AUTH_PANELS.invite}>
+      <AuthHeading eyebrow="Invitation" title="Welcome to Tensor">
+        You have been invited as{' '}
+        <span className="font-medium">{invite.role.replace(/_/g, ' ')}</span>. Choose a password -
+        nobody else knows it, and nobody set one for you.
+      </AuthHeading>
       <AcceptInviteForm token={token} email={invite.email} />
     </AuthSplit>
   )

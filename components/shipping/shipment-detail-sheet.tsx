@@ -65,7 +65,7 @@ export function ShipmentDetailSheet({ shipment, onClose }: ShipmentDetailSheetPr
               {/* Delhivery's own sentence, at the top and unabbreviated. Every
                   classification on this page is derived from this line, so it
                   is the one thing that must never be paraphrased away. */}
-              <p className="bg-surface-muted rounded-md px-3 py-2 text-sm text-pretty">
+              <p className="bg-surface-muted rounded-2xl px-4 py-3 text-sm text-pretty">
                 {shipment.instruction || 'The carrier has not said why.'}
               </p>
 

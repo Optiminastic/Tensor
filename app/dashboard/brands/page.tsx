@@ -6,6 +6,7 @@ import type { JSX } from 'react'
 
 import { BrandConnections } from '@/components/brands/brand-connections'
 import { BrandEditor } from '@/components/brands/brand-editor'
+import { PageHeading } from '@/components/dashboard/page-heading'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getSessionSafe, getTokenSafe } from '@/lib/auth'
@@ -56,13 +57,16 @@ export default async function BrandsPage(): Promise<JSX.Element> {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:px-6">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-display text-4xl">Brands</h1>
-          <p className="text-muted-foreground max-w-prose text-sm text-pretty">
-            Each brand&apos;s price ladder and CP thresholds drive the pricing engine. Edit them
-            here and every new selling price uses the change.
-          </p>
-        </div>
+        <PageHeading
+          eyebrow="Workspace"
+          title="Brands"
+          description={
+            <>
+              Each brand&apos;s price ladder and CP thresholds drive the pricing engine. Edit them
+              here and every new selling price uses the change.
+            </>
+          }
+        />
         {canManageBrands ? (
           <Link href="/create-brand" className={buttonVariants()}>
             New brand
@@ -73,7 +77,7 @@ export default async function BrandsPage(): Promise<JSX.Element> {
       {loadError ? (
         <Card>
           <CardContent>
-            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+            <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
               {loadError}
             </p>
           </CardContent>

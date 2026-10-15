@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
 import { isAllBrands } from '@/components/dashboard/nav-config'
+import { PageHeading } from '@/components/dashboard/page-heading'
+import { DesignLifecycleStrip } from '@/components/designs/design-lifecycle-strip'
 import type { BrandChoice } from '@/components/designs/design-upload-form'
 import { DesignsView } from '@/components/designs/designs-view'
 import { ShopifyImportDialog } from '@/components/designs/shopify-import-dialog'
@@ -60,23 +62,23 @@ export default async function DesignsPage({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-display text-3xl">Designs</h1>
-          <p className="text-muted-foreground text-sm">
-            Upload a model, get the Green/Yellow/Red pre-check, and iterate until it is green.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Importing a Shopify listing needs one brand's store; offered per brand only. */}
-          {global ? null : <ShopifyImportDialog brand={brand} />}
-          <UploadDesignDialog brand={brand} brandOptions={global ? brandOptions : undefined} />
-        </div>
-      </div>
+    <main className="flex w-full flex-col gap-6 px-4 py-8 sm:px-6 lg:px-10">
+      <PageHeading
+        eyebrow={global ? 'All brands · Designs' : `${brand.replace(/-/g, ' ')} · Designs`}
+        title="Designs"
+        description="Upload a model, get the Green/Yellow/Red pre-check, and iterate until it is green."
+        actions={
+          <>
+            {/* Importing a Shopify listing needs one brand's store; offered per brand only. */}
+            {global ? null : <ShopifyImportDialog brand={brand} />}
+            <UploadDesignDialog brand={brand} brandOptions={global ? brandOptions : undefined} />
+          </>
+        }
+      />
+      {error ? null : <DesignLifecycleStrip brand={brand} designs={designs} active={view} />}
 
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : (

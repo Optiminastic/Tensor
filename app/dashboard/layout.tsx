@@ -5,6 +5,7 @@ import type { JSX, ReactNode } from 'react'
 import type { BrandOption } from '@/components/dashboard/brand-switcher'
 import { ALL_BRANDS, isAllBrands } from '@/components/dashboard/nav-config'
 import { Sidebar } from '@/components/dashboard/sidebar'
+import { interTight } from '@/components/landing/landing-font'
 import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import { can, currentAuthz } from '@/lib/authz'
 import { listBrands } from '@/services/brands.service'
@@ -50,7 +51,7 @@ export default async function DashboardLayout({
   return (
     // Column on a phone so the mobile top bar stacks above the page; row from
     // lg, where the rail and panel become real columns beside it.
-    <div className="flex min-h-dvh flex-col lg:flex-row">
+    <div className={`${interTight.variable} font-landing flex min-h-dvh flex-col lg:flex-row`}>
       <Sidebar
         email={session.user.email}
         brands={brands}

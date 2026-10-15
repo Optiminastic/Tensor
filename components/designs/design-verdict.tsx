@@ -23,7 +23,7 @@ interface DesignVerdictProps {
 
 /** The detailed costing: selling-price economics, the Green/Yellow/Red reasons,
  * the fix suggestions, and the itemised Design CP. The headline figures and the
- * cost composition live in the Overview (DesignOverview). */
+ * cost composition live in the Overview (DesignOverviewBento). */
 export function DesignVerdict({ pricing }: DesignVerdictProps): JSX.Element {
   const { breakdown, reasons, suggestions, sp_warnings } = pricing
 

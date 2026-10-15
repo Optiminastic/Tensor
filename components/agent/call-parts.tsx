@@ -2,32 +2,10 @@
 
 import type { JSX } from 'react'
 
+import { callCost, rupees } from '@/lib/agent-costs'
+import { callTime, duration, readable } from '@/lib/call-format'
 import { cn } from '@/lib/utils'
 import type { CallLog, TranscriptTurn } from '@/lib/validators/call-logs'
-
-/** mm:ss. A call is seconds-to-minutes; anything longer is another problem. */
-export function duration(seconds: number): string {
-  const whole = Math.round(seconds)
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`
-}
-
-/** Human form of Sarvam's SCREAMING_SNAKE outcomes. */
-export function readable(value: string): string {
-  if (!value || value.startsWith('NO_')) return '—'
-  return value.toLowerCase().replaceAll('_', ' ')
-}
-
-/** Sarvam sends "2026-10-07T07:49:48" with no zone; it is UTC. */
-export function callTime(raw: string): string {
-  const parsed = new Date(raw.endsWith('Z') ? raw : `${raw}Z`)
-  if (Number.isNaN(parsed.getTime())) return raw
-  return parsed.toLocaleString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 interface TranscriptViewProps {
   loading: boolean
@@ -39,7 +17,7 @@ export function TranscriptView({ loading, error, turns }: TranscriptViewProps): 
   if (loading) return <p className="text-muted-foreground text-sm">Reading the transcript…</p>
   if (error) {
     return (
-      <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+      <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
         {error}
       </p>
     )
@@ -115,6 +93,8 @@ export function CallFacts({ call }: { call: CallLog }): JSX.Element {
     { label: 'Failure', value: readable(call.failure_reason) },
     { label: 'Ended by', value: readable(call.ended_by) },
     { label: 'Length', value: duration(call.duration_seconds) },
+    // Worked out, not reported: Sarvam puts no price on a call.
+    { label: 'Cost', value: rupees(callCost(call)) },
     { label: 'Turns', value: String(call.messages) },
     { label: 'Language', value: call.language || '—' },
     {

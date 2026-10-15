@@ -60,7 +60,7 @@ export interface CheckoutActivity {
 }
 
 /** Sarvam's call times carry no zone and are UTC. */
-function callMillis(call: CallLog): number {
+export function callMillis(call: CallLog): number {
   const raw = call.started_at
   return Date.parse(raw.endsWith('Z') ? raw : `${raw}Z`)
 }

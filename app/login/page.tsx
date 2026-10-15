@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { JSX } from 'react'
 
-import { AUTH_PLATES, AuthSplit } from '@/components/auth/auth-split'
+import { AuthHeading } from '@/components/auth/auth-heading'
+import { AUTH_PANELS } from '@/components/auth/auth-panels'
+import { AuthSplit } from '@/components/auth/auth-split'
 import { LoginForm } from '@/components/auth/login-form'
-import { Logo } from '@/components/logo'
 
 export const metadata: Metadata = {
   title: 'Sign in',
@@ -12,12 +13,17 @@ export const metadata: Metadata = {
 
 export default function LoginPage(): JSX.Element {
   return (
-    <AuthSplit plate={AUTH_PLATES.stone}>
-      <Link href="/" className="w-fit">
-        <Logo />
-      </Link>
+    <AuthSplit panel={AUTH_PANELS.signIn}>
+      <AuthHeading eyebrow="Sign in" title="Welcome back">
+        Use your Tensor account to continue.
+      </AuthHeading>
       <LoginForm />
-      <p className="text-subtle-foreground text-xs">Access is provisioned by your admin.</p>
+      <p className="text-landing-ink/70 text-xs">
+        Access is provisioned by your admin.{' '}
+        <Link href="/" className="underline underline-offset-4">
+          Back to home
+        </Link>
+      </p>
     </AuthSplit>
   )
 }

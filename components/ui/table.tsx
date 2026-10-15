@@ -104,7 +104,7 @@ export function TableHeaderCell({
   ...props
 }: TableHeaderCellProps): JSX.Element {
   const base = cn(
-    'text-subtle-foreground px-4 py-3 text-left text-[11px] font-medium tracking-[0.06em] uppercase',
+    'text-subtle-foreground px-4 py-3.5 text-left font-mono text-[11px] font-normal tracking-[0.14em] whitespace-nowrap uppercase first:pl-6 last:pr-6',
     '[table[data-density=dense]_&]:px-2.5 [table[data-density=dense]_&]:py-2',
   )
 
@@ -157,7 +157,7 @@ export function TableCell({
       className={cn(
         // Taller than the old 16px. Rows this size are what make a dense list
         // scannable without rules between the columns.
-        'text-foreground px-4 py-3.5',
+        'text-foreground px-4 py-4 first:pl-6 last:pr-6',
         // Dense: set on the Table, applied here, so one prop retightens the
         // whole grid instead of every cell carrying its own override.
         '[table[data-density=dense]_&]:px-2.5 [table[data-density=dense]_&]:py-2 [table[data-density=dense]_&]:text-[0.8125rem]',

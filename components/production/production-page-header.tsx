@@ -1,18 +1,22 @@
-import type { JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
+
+import { PageHeading } from '@/components/dashboard/page-heading'
 
 interface ProductionPageHeaderProps {
   title: string
-  description: string
+  /** Left out where the page speaks for itself; no empty line is drawn. */
+  description?: ReactNode
+  /** The mono label above the title: the area this page belongs to. */
+  eyebrow?: string
+  actions?: ReactNode
 }
 
+/** A production, agent or shipping page's heading: PageHeading, eyebrow defaulting to Production. */
 export function ProductionPageHeader({
   title,
   description,
+  eyebrow = 'Production',
+  actions,
 }: ProductionPageHeaderProps): JSX.Element {
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-display text-3xl">{title}</h1>
-      <p className="text-muted-foreground text-sm">{description}</p>
-    </div>
-  )
+  return <PageHeading eyebrow={eyebrow} title={title} description={description} actions={actions} />
 }

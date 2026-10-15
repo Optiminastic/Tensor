@@ -5,8 +5,8 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { type JSX, useState } from 'react'
 
 import { NavSearch } from '@/components/dashboard/nav-search'
-import { SignOutButton } from '@/components/dashboard/sign-out-button'
-import { cn } from '@/lib/utils'
+import { NAV_GROUP_LABEL, navItemClass } from '@/components/dashboard/nav-styles'
+import { UserCard } from '@/components/dashboard/user-card'
 
 import { type BrandOption, BrandSwitcher } from './brand-switcher'
 import {
@@ -116,7 +116,12 @@ export function NavPanel({
          * chrome - uppercase tracking makes it compete with the rows it is
          * meant to introduce.
          */}
-        <p className="text-subtle-foreground px-3 pt-1 pb-2 text-xs font-medium">{section.label}</p>
+        <p className={`${NAV_GROUP_LABEL} pt-1 pb-2`}>
+          <span aria-hidden className="mr-2">
+            •
+          </span>
+          {section.label}
+        </p>
 
         {items.length > 0 ? (
           shown.map(item => {
@@ -126,28 +131,14 @@ export function NavPanel({
               <Link
                 key={item.href}
                 href={href}
-                className={cn(
-                  // A filled pill, not an underline or a left bar: the row is
-                  // the target, so the whole row is what lights up.
-                  //
-                  // NEUTRAL, not accent-tinted. Saturated colour in this
-                  // product means state - ready, late, held - and a nav row
-                  // tinted the same way competes with the badges on the page
-                  // it opens. Selection is a quiet raised row instead.
-                  'flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors',
-                  active
-                    ? 'bg-surface-muted text-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-surface-muted/70 hover:text-foreground',
-                )}
+                aria-current={active ? 'page' : undefined}
+                className={navItemClass(active)}
               >
-                <item.icon
-                  className={cn(
-                    'size-4 shrink-0 transition-colors',
-                    active ? 'text-accent' : 'text-subtle-foreground',
-                  )}
-                  aria-hidden
-                />
-                {item.label}
+                <item.icon className="size-4 shrink-0" aria-hidden />
+                <span className="flex-1 truncate">{item.label}</span>
+                {active ? (
+                  <span aria-hidden className="bg-landing-ink size-1.5 rounded-full" />
+                ) : null}
               </Link>
             )
           })
@@ -162,11 +153,8 @@ export function NavPanel({
         ) : null}
       </div>
 
-      <div className="border-border/70 flex flex-col gap-2 border-t px-4 py-3">
-        <span className="text-subtle-foreground truncate text-xs" title={email}>
-          {email}
-        </span>
-        <SignOutButton />
+      <div className="p-3">
+        <UserCard email={email} />
       </div>
     </aside>
   )

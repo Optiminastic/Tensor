@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, type JSX } from 'react'
 
 import { loadShopifyCatalog } from '@/app/dashboard/[brand]/designs/shopify-actions'
 import { DesignUploadForm, type ShopifyImportSource } from '@/components/designs/design-upload-form'
+import { PillButton } from '@/components/landing/pill-button'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -79,12 +80,12 @@ export function ShopifyImportDialog({ brand }: ShopifyImportDialogProps): JSX.El
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary">
-          <ShoppingBag aria-hidden />
+        <PillButton tone="ink" className="dark:bg-surface dark:ring-border gap-2 dark:ring-1">
+          <ShoppingBag className="size-4" aria-hidden />
           Shopify
-        </Button>
+        </PillButton>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:max-w-3xl sm:p-8">
         <DialogHeader>
           <DialogTitle>
             {selected ? `Import "${selected.title}"` : 'Import a Shopify product'}
@@ -140,7 +141,7 @@ function CatalogPicker({
   if (error) {
     return (
       <div className="flex flex-col gap-3">
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
         <div className="flex items-center gap-3">

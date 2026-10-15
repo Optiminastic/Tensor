@@ -1,27 +1,28 @@
 import { Loader2 } from 'lucide-react'
 import type { JSX } from 'react'
 
-import { cn } from '@/lib/utils'
+import type { PillTone } from '@/components/ui/pill-shape'
+import { Tag } from '@/components/ui/tag'
 import type { DesignLifecycle } from '@/lib/validators/designs'
 
 interface StatusConfig {
   label: string
-  className: string
+  tone: PillTone
   spin?: boolean
 }
 
 // Lifecycle (queued -> slicing -> priced | failed) is distinct from the
 // Green/Yellow/Red verdict, which only exists once a design is priced.
 const CONFIG: Record<DesignLifecycle, StatusConfig> = {
-  queued: { label: 'Queued', className: 'bg-surface-muted text-muted-foreground' },
-  slicing: { label: 'Slicing', className: 'bg-accent-subtle text-accent', spin: true },
-  priced: { label: 'Priced', className: 'bg-accent-subtle text-accent' },
-  failed: { label: 'Failed', className: 'bg-danger-subtle text-danger' },
-  submitted: { label: 'In review', className: 'bg-warning-subtle text-warning' },
-  changes_requested: { label: 'Changes requested', className: 'bg-danger-subtle text-danger' },
-  approved: { label: 'Approved', className: 'bg-accent-subtle text-accent' },
-  published: { label: 'Published', className: 'bg-success-subtle text-success' },
-  archived: { label: 'Archived', className: 'bg-surface-muted text-subtle-foreground' },
+  queued: { label: 'Queued', tone: 'muted' },
+  slicing: { label: 'Slicing', tone: 'accent', spin: true },
+  priced: { label: 'Priced', tone: 'accent' },
+  failed: { label: 'Failed', tone: 'danger' },
+  submitted: { label: 'In review', tone: 'warning' },
+  changes_requested: { label: 'Changes requested', tone: 'danger' },
+  approved: { label: 'Approved', tone: 'accent' },
+  published: { label: 'Published', tone: 'success' },
+  archived: { label: 'Archived', tone: 'muted' },
 }
 
 interface DesignStatusBadgeProps {
@@ -32,15 +33,12 @@ interface DesignStatusBadgeProps {
 export function DesignStatusBadge({ status, className }: DesignStatusBadgeProps): JSX.Element {
   const config = CONFIG[status]
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide uppercase',
-        config.className,
-        className,
-      )}
+    <Tag
+      tone={config.tone}
+      className={className}
+      icon={config.spin ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : undefined}
     >
-      {config.spin ? <Loader2 className="size-3 animate-spin" aria-hidden /> : null}
       {config.label}
-    </span>
+    </Tag>
   )
 }

@@ -6,14 +6,11 @@ import { ProductionPageHeader } from '@/components/production/production-page-he
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { AbandonedCheckout } from '@/lib/validators/abandoned-checkouts'
-import type { CallLog } from '@/lib/validators/call-logs'
-import type { MessageLog, MessageTemplate } from '@/lib/validators/message-logs'
 import {
   AbandonedCheckoutsServiceError,
   listAbandonedCheckouts,
 } from '@/services/abandoned-checkouts.service'
-import { listCallLogs } from '@/services/call-logs.service'
-import { getMessageTemplate, listMessageLogs } from '@/services/message-logs.service'
+import { type AgentData, NO_AGENT_DATA, loadAgentData } from '@/services/agent-data.service'
 import { getVoiceStatus } from '@/services/voice-calls.service'
 
 export const metadata: Metadata = { title: 'Abandoned Checkouts' }
@@ -22,13 +19,6 @@ export const dynamic = 'force-dynamic'
 
 interface AbandonedCheckoutPageProps {
   params: Promise<{ brand: string }>
-}
-
-interface AgentData {
-  calls: CallLog[]
-  messages: MessageLog[]
-  template: MessageTemplate | null
-  errors: { calls: string | null; messages: string | null }
 }
 
 /**
@@ -55,7 +45,7 @@ export default async function AbandonedCheckoutPage({
   let error: string | null = null
   // Asked up front so a Call button is never offered that cannot work.
   let callingEnabled = false
-  let agent: AgentData = { calls: [], messages: [], template: null, errors: none() }
+  let agent: AgentData = NO_AGENT_DATA
 
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
@@ -83,12 +73,13 @@ export default async function AbandonedCheckoutPage({
   return (
     <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <ProductionPageHeader
+        eyebrow="Agent"
         title="Abandoned Checkouts"
         description="Baskets a customer started and did not finish, from the last 30 days. Open one for its details, the agent's call and the messages sent."
       />
 
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : checkouts.length === 0 ? (
@@ -108,39 +99,4 @@ export default async function AbandonedCheckoutPage({
       )}
     </main>
   )
-}
-
-function none(): AgentData['errors'] {
-  return { calls: null, messages: null }
-}
-
-/**
- * The agent's calls, messages and template. Each settles on its own: one half
- * failing leaves the other readable, and the template - a footnote for old
- * messages - is never a reason for anything to fail.
- */
-async function loadAgentData(token: string, brand: string): Promise<AgentData> {
-  const [calls, messages, template] = await Promise.allSettled([
-    listCallLogs(token, brand),
-    listMessageLogs(token, brand),
-    getMessageTemplate(token, brand),
-  ])
-  return {
-    calls: calls.status === 'fulfilled' ? calls.value : [],
-    messages: messages.status === 'fulfilled' ? messages.value : [],
-    template: template.status === 'fulfilled' ? template.value : null,
-    errors: {
-      calls:
-        calls.status === 'rejected' ? describe(calls.reason, 'Could not load the calls.') : null,
-      messages:
-        messages.status === 'rejected'
-          ? describe(messages.reason, 'Could not load the messages.')
-          : null,
-    },
-  }
-}
-
-/** The upstream's own sentence where there is one - its refusals name the fix. */
-function describe(reason: unknown, fallback: string): string {
-  return reason instanceof Error ? reason.message : fallback
 }

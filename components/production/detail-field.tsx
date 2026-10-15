@@ -11,7 +11,9 @@ interface DetailFieldProps {
 export function DetailField({ label, value, mono }: DetailFieldProps): JSX.Element {
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
+      <p className="text-muted-foreground font-mono text-[11px] tracking-[0.14em] uppercase">
+        {label}
+      </p>
       <p className={cn('text-foreground text-sm font-medium', mono && 'font-mono tabular-nums')}>
         {value}
       </p>

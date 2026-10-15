@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { JSX } from 'react'
 
+import { PageHeading } from '@/components/dashboard/page-heading'
 import { ProjectManager, type BrandOption } from '@/components/projects/project-manager'
 import { getSessionSafe, getTokenSafe } from '@/lib/auth'
 import type { Project } from '@/lib/validators/projects'
@@ -47,13 +48,16 @@ export default async function ProjectsPage(): Promise<JSX.Element> {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:px-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-display text-4xl">Projects</h1>
-        <p className="text-muted-foreground max-w-prose text-sm text-pretty">
-          Group work into projects for a brand. Designs and the people who work on them attach to a
-          project later; for now it is a name, a brand, and a note.
-        </p>
-      </div>
+      <PageHeading
+        eyebrow="Workspace"
+        title="Projects"
+        description={
+          <>
+            Group work into projects for a brand. Designs and the people who work on them attach to
+            a project later; for now it is a name, a brand, and a note.
+          </>
+        }
+      />
       <ProjectManager initialProjects={projects} brands={brands} loadError={loadError} />
     </main>
   )

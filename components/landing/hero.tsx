@@ -1,42 +1,55 @@
-import Link from 'next/link'
+import { headers } from 'next/headers'
 import type { JSX } from 'react'
 
-import { Frame } from '@/components/landing/frame'
-import { Badge } from '@/components/ui/badge'
-import { buttonVariants } from '@/components/ui/button'
+import { LayerMark } from '@/components/landing/layer-mark'
+import { PillLink } from '@/components/landing/pill-link'
+import { PrintBedCarousel } from '@/components/landing/print-bed-carousel'
+import { SiteHeader } from '@/components/landing/site-header'
+import { SkyBackdrop } from '@/components/landing/sky-backdrop'
+import { getSessionSafe } from '@/lib/auth'
 
 /**
- * The one display moment on the page. The headline carries `.text-display`; no
- * other heading may, so the hierarchy stays legible from across the room. Copy
- * and actions sit right of the headline rather than under it, which keeps the
- * measure short enough to read and the fold high enough to see the figure.
+ * The sky card: nav, the two-tone headline, the two pill actions, and Tensor's
+ * screens standing on a curved print bed.
  */
-export function Hero(): JSX.Element {
+export async function Hero(): Promise<JSX.Element> {
+  // A failed lookup means "signed out": the homepage must never 500 over auth.
+  const signedIn = Boolean(await getSessionSafe(await headers()))
+  const start = signedIn ? '/dashboard' : '/login'
   return (
-    <Frame marked className="px-6 pt-12 pb-14 sm:px-10 sm:pt-16 sm:pb-20">
-      <div className="grid gap-x-10 gap-y-8 md:grid-cols-12">
-        <div className="flex flex-col items-start gap-5 md:col-span-7">
-          <Badge tone="accent">Internal · costing &amp; pricing</Badge>
-          <h1 className="text-display text-foreground text-4xl text-balance sm:text-5xl lg:text-6xl">
-            Slicer-true costing and margin-safe pricing for 3D printed goods.
-          </h1>
-        </div>
+    <section id="product" className="p-2 sm:p-3">
+      <div className="relative isolate overflow-hidden rounded-[1.75rem]">
+        <SkyBackdrop />
+        <SiteHeader signedIn={signedIn} />
 
-        <div className="flex flex-col items-start gap-5 md:col-span-5 md:pt-11">
-          <p className="text-muted-foreground max-w-sm text-sm leading-relaxed text-pretty">
-            Tensor turns a design file into a true Design CP, flags what will cost you before it
-            ships, and prices it off the approved ladder — so margin is decided, not discovered.
+        <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-5 pt-10 text-center sm:pt-16">
+          <h1 className="text-[2.6rem] leading-[1.02] font-medium tracking-[-0.045em] text-balance text-white sm:text-6xl lg:text-7xl">
+            From design file to doorstep,
+            <span className="block text-white/70">every print accounted for</span>
+          </h1>
+          <p className="mt-6 max-w-xl text-base text-pretty text-white/90 sm:text-lg">
+            Tensor costs every design from the slicer, packs the beds, runs the printers and follows
+            each order to the customer&apos;s door.
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href="/login" className={buttonVariants({ variant: 'primary' })}>
-              Sign in
-            </Link>
-            <Link href="/style-guide" className={buttonVariants({ variant: 'secondary' })}>
-              Design system
-            </Link>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <PillLink href="#about" tone="glass">
+              View pipeline
+            </PillLink>
+            <PillLink href={start} tone="lime" withArrow>
+              Get started
+            </PillLink>
           </div>
         </div>
+
+        <div className="relative z-10 mt-14 px-4 sm:mt-16">
+          <PrintBedCarousel />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center gap-2 pt-10 pb-10 text-center">
+          <p className="text-landing-ink/80 text-sm">Costed from the slicer, never estimated.</p>
+          <LayerMark />
+        </div>
       </div>
-    </Frame>
+    </section>
   )
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
+import { PageHeading } from '@/components/dashboard/page-heading'
 import { InventoryTabs } from '@/components/production/inventory-tabs'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
@@ -69,17 +70,16 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
   return (
     <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : (
         <>
-          <div className="flex flex-col gap-1">
-            <h1 className="text-display text-3xl">Inventory</h1>
-            <p className="text-muted-foreground text-sm">
-              Filament on the spool shelf, and everything else a plank ships with.
-            </p>
-          </div>
+          <PageHeading
+            eyebrow="Production"
+            title="Inventory"
+            description={<>Filament on the spool shelf, and everything else a plank ships with.</>}
+          />
           <InventoryTabs
             brand={brand}
             filaments={filaments}

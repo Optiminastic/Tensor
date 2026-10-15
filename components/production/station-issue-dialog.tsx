@@ -114,7 +114,7 @@ export function StationIssueDialog({ brand, stage, job }: StationIssueDialogProp
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="soft-danger" size="sm">
           <TriangleAlert className="size-3.5" aria-hidden />
           Issue
         </Button>

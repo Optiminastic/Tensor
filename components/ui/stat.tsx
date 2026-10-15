@@ -36,7 +36,9 @@ export interface StatProps {
 export function Stat({ label, value, hint, subCounts, className }: StatProps): JSX.Element {
   return (
     <div className={cn('border-border bg-surface rounded-lg border p-4 shadow-xs', className)}>
-      <p className="text-subtle-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
+      <p className="text-muted-foreground font-mono text-[11px] tracking-[0.14em] uppercase">
+        {label}
+      </p>
       <p className="text-foreground mt-2 font-mono text-2xl font-medium tracking-tight tabular-nums">
         {value}
       </p>

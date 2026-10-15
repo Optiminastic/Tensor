@@ -53,7 +53,10 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
     >
       <TableCell className="font-mono text-sm whitespace-nowrap">
         {job.jobNumber}
-        <FailureNote reason={job.batchingBlockedReason} className="mt-1 font-sans" />
+        <FailureNote
+          reason={job.batchingBlockedReason}
+          className="mt-1 max-w-56 font-sans whitespace-normal"
+        />
       </TableCell>
       {/* Beside the job number rather than buried in the description: the SKU
           is what says WHICH product this is. Product names are renamed freely
@@ -71,7 +74,7 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
           </span>
         ) : null}
       </TableCell>
-      <TableCell>
+      <TableCell className="min-w-56">
         {job.description}
         {/* Which jobs are waiting on a person, and which on a render. A plank
             builds itself from the customer's names; everything else needs

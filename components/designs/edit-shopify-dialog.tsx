@@ -10,6 +10,7 @@ import {
   loadShopifyListing,
   updateShopifyListing,
 } from '@/app/dashboard/[brand]/designs/shopify-actions'
+import { PillButton } from '@/components/landing/pill-button'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -89,10 +90,10 @@ export function EditShopifyListingDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
-          <Pencil aria-hidden />
+        <PillButton tone="outline" className="h-10 gap-2">
+          <Pencil className="size-4" aria-hidden />
           Edit listing
-        </Button>
+        </PillButton>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
@@ -100,7 +101,7 @@ export function EditShopifyListingDialog({
         </DialogHeader>
         {loadError ? (
           <div className="flex flex-col gap-3">
-            <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+            <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
               {loadError}
             </p>
             <Button
@@ -315,7 +316,7 @@ function ListingEditForm({ brand, designId, state, onDone }: ListingEditFormProp
       </p>
 
       {error ? (
-        <p role="alert" className="bg-danger-subtle text-danger rounded-md px-3 py-2 text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : null}

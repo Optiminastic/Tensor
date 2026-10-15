@@ -16,13 +16,20 @@ import type { WeeklyPoint } from '@/lib/dashboard/analytics'
 
 interface ActivityAreaChartProps {
   data: WeeklyPoint[]
+  /** Series colours; default to the dashboard's accent and success. */
+  createdColor?: string
+  completedColor?: string
 }
 
 const AXIS_TICK = { fill: 'var(--subtle-foreground)', fontSize: 11 }
 
 // Two count series on one axis (no dual scale): created is the accent lead, completed
 // the success fill. Faint area fills read as volume without becoming decoration.
-export function ActivityAreaChart({ data }: ActivityAreaChartProps): JSX.Element {
+export function ActivityAreaChart({
+  data,
+  createdColor = 'var(--accent)',
+  completedColor = 'var(--success)',
+}: ActivityAreaChartProps): JSX.Element {
   return (
     <div className="h-full min-h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -41,9 +48,9 @@ export function ActivityAreaChart({ data }: ActivityAreaChartProps): JSX.Element
             dataKey="created"
             name="Created"
             type="monotone"
-            stroke="var(--accent)"
+            stroke={createdColor}
             strokeWidth={2}
-            fill="var(--accent)"
+            fill={createdColor}
             fillOpacity={0.1}
             activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--surface)' }}
           />
@@ -51,9 +58,9 @@ export function ActivityAreaChart({ data }: ActivityAreaChartProps): JSX.Element
             dataKey="completed"
             name="Completed"
             type="monotone"
-            stroke="var(--success)"
+            stroke={completedColor}
             strokeWidth={2}
-            fill="var(--success)"
+            fill={completedColor}
             fillOpacity={0.1}
             activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--surface)' }}
           />
