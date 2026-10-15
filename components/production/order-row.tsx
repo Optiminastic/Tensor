@@ -2,7 +2,6 @@
 
 import { AlertTriangle, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import type { JSX, KeyboardEvent, MouseEvent } from 'react'
 
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
@@ -18,6 +17,8 @@ import { cn } from '@/lib/utils'
 interface OrderRowProps {
   brand: string
   order: OrderRecord
+  /** Opens the drawer over the table. */
+  onOpen: () => void
 }
 
 function stopRowClick(event: MouseEvent): void {
@@ -78,23 +79,24 @@ function PersonalisationCell({ order }: { order: OrderRecord }): JSX.Element {
   return <span className="text-muted-foreground">—</span>
 }
 
-export function OrderRow({ brand, order }: OrderRowProps): JSX.Element {
-  const router = useRouter()
+export function OrderRow({ brand, order, onOpen }: OrderRowProps): JSX.Element {
   const status = ORDER_STATUS_CONFIG[order.status]
   // From the backend: the list response carries a count rather than the line
   // items themselves, so counting them here would give zero on every row.
   const itemCount = order.itemCount
   const href = `/dashboard/${brand}/production/orders/${order.id}`
 
-  const openDetail = (): void => router.push(href)
+  // THE DRAWER, NOT THE PAGE. Opening an order used to leave the table, and
+  // coming back lost the filter, the search, the period and the page somebody
+  // had set to find it.
   const onKeyDown = (event: KeyboardEvent<HTMLTableRowElement>): void => {
-    if (event.key === 'Enter') openDetail()
+    if (event.key === 'Enter') onOpen()
   }
 
   return (
     <TableRow
       tabIndex={0}
-      onClick={openDetail}
+      onClick={onOpen}
       onKeyDown={onKeyDown}
       className={cn('cursor-pointer', failureRowClass(Boolean(order.jobCreationError)))}
       aria-label={`Open ${order.orderNumber}`}

@@ -9,6 +9,7 @@ import {
   resolvePeriod,
 } from '@/components/production/date-range'
 import { FilterBar } from '@/components/production/filter-bar'
+import { OrderDetailSheet } from '@/components/production/order-detail-sheet'
 import { OrderRow } from '@/components/production/order-row'
 import { TablePagination } from '@/components/production/table-pagination'
 import type { OrderRecord } from '@/components/production/types'
@@ -224,6 +225,11 @@ export function OrdersTable({
     [orders, search, status, periodRange, withoutJobs, nonDnp],
   )
   const page = usePagination(filtered)
+  // Which order the drawer is showing. The number travels with the id so
+  // the header reads correctly before the fetch lands - the row already
+  // knows it, and a drawer that opens titled "Loading" for a second is a
+  // drawer that looks broken.
+  const [open, setOpen] = useState<{ id: string; number: string } | null>(null)
 
   return (
     <div className="flex flex-col gap-4">
@@ -260,12 +266,26 @@ export function OrdersTable({
                 </TableCell>
               </TableRow>
             ) : (
-              page.items.map(order => <OrderRow key={order.id} brand={brand} order={order} />)
+              page.items.map(order => (
+                <OrderRow
+                  key={order.id}
+                  brand={brand}
+                  order={order}
+                  onOpen={() => setOpen({ id: order.id, number: order.orderNumber })}
+                />
+              ))
             )}
           </TableBody>
         </Table>
         <TablePagination page={page} noun="orders" />
       </Card>
+
+      <OrderDetailSheet
+        brand={brand}
+        orderId={open?.id ?? null}
+        orderNumber={open?.number ?? ''}
+        onClose={() => setOpen(null)}
+      />
     </div>
   )
 }
