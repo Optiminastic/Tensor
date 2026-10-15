@@ -7,9 +7,6 @@ export const BootstrapStatusSchema = z.object({
   adminExists: z.boolean(),
 })
 
-/** A brand slug: lowercase alphanumerics separated by single hyphens. */
-export const BrandSlugSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'invalid brand slug')
-
 /**
  * What an admin submits to invite someone. Notably: no password field, and no
  * brands — every role reaches every store, so there is nothing per-member to
@@ -28,7 +25,13 @@ export const InviteCreatedSchema = z.object({
   id: z.string(),
   email: z.string(),
   role: RoleSchema,
-  brand_slugs: z.array(BrandSlugSchema),
+  // NO brand_slugs. It was required here and has not been sent since "every
+  // role can access every store" removed per-member brands from the backend,
+  // so every single invite failed this parse - and a ZodError is not an
+  // AdminServiceError, so the admin was told "Something went wrong. Please
+  // try again." The invite was created regardless, because the transaction
+  // commits before the response is parsed: the retries that message invites
+  // are what put duplicate rows in the invitations list.
   expires_at: z.string(),
   token: z.string(),
 })
