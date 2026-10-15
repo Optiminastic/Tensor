@@ -39,19 +39,22 @@ function isNameLabel(label: string): boolean {
 }
 
 /**
- * Keeps the letters and the spaces, drops everything else as it is typed.
+ * Keeps the English letters and the spaces, drops everything else as it is
+ * typed.
  *
  * STRIPPED RATHER THAN REFUSED. The alternative is letting the character
  * appear and rejecting the whole field on Save, which tells somebody their
  * name is wrong after they have finished typing it. Here the emoji simply
  * never lands.
  *
- * \p{L} rather than A-Z: the shop prints names in other scripts too, and the
- * thing being excluded is digits, punctuation and emoji - in every script,
- * not only in this one. It matches what the server enforces.
+ * A-Z only, matching validName on the server exactly. It has to match: a page
+ * that strips what the server would accept, or keeps what it will refuse, is
+ * a Save button that fails for a reason the customer cannot see. The
+ * constraint is the font on the machine - a character it has no glyph for is
+ * cut as a hollow box or as nothing at all.
  */
 function lettersOnly(value: string): string {
-  return value.replace(/[^\p{L} ]/gu, '')
+  return value.replace(/[^A-Za-z ]/g, '')
 }
 
 interface PersonalisationItemCardProps {
