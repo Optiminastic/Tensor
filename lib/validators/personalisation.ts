@@ -53,6 +53,19 @@ export const PersonalisationItemSchema = z.object({
     .boolean()
     .nullish()
     .transform(v => v ?? true),
+  /**
+   * Whether THIS ITEM can still be written to, as against whether the window
+   * is open. The two come apart on an order that reached a printer before
+   * its customer was asked: the clock is still running, and the job is on a
+   * locked bed that cannot change.
+   *
+   * Defaulted to true for a backend that predates it, which is the behaviour
+   * the page had before.
+   */
+  editable: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? true),
   model_ready: z.boolean(),
   /**
    * Changes when the model does - it is the print file's id, and a re-render
