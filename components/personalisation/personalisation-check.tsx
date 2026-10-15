@@ -4,6 +4,7 @@ import { type JSX, useEffect, useState } from 'react'
 
 import { PersonalisationItemCard } from '@/components/personalisation/personalisation-item-card'
 import { Button } from '@/components/ui/button'
+import { Tag } from '@/components/ui/tag'
 import type { PersonalisationLink } from '@/lib/validators/personalisation'
 
 interface PersonalisationCheckProps {
@@ -48,12 +49,21 @@ export function PersonalisationCheck({ token, link }: PersonalisationCheckProps)
 
   return (
     <div className="min-h-dvh pb-28">
-      <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-7">
-        <header className="flex flex-col gap-1.5">
-          <p className="text-subtle-foreground font-mono text-xs tracking-wide">
+      <main className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-7">
+        {/* The shop's own mark, so a link arriving in WhatsApp from a number
+            the customer has never saved still looks like the shop they
+            bought from. */}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-landing-ink bg-landing-lime inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold tracking-tight">
+            The 3D Printing Store
+          </span>
+          <span className="text-subtle-foreground font-mono text-xs tracking-wide">
             {link.order_number}
-          </p>
-          <h1 className="text-display text-[26px] leading-tight">
+          </span>
+        </div>
+
+        <header className="flex flex-col gap-2">
+          <h1 className="text-display text-[30px] leading-[1.1]">
             {firstName ? `Thanks, ${firstName}` : 'Thanks for your order'}
           </h1>
           <p className="text-muted-foreground text-pretty">
@@ -77,7 +87,7 @@ export function PersonalisationCheck({ token, link }: PersonalisationCheckProps)
       </main>
 
       {open ? (
-        <div className="border-border/60 bg-surface/95 fixed inset-x-0 bottom-0 border-t backdrop-blur">
+        <div className="border-border/70 bg-surface/95 fixed inset-x-0 bottom-0 border-t backdrop-blur">
           {/* safe-area-inset so the button clears the home indicator on a
               modern phone rather than sitting under it. */}
           <div className="mx-auto w-full max-w-md px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -104,19 +114,28 @@ interface StatusProps {
 }
 
 function Status({ secondsLeft, confirmed }: StatusProps): JSX.Element {
+  // The same Tag the rest of the product uses for a state, so the one page a
+  // customer sees is not the one place with a shape of its own. The sentence
+  // sits under it rather than inside: a tag is a label, and three lines of
+  // explanation in a pill reads as neither.
   if (confirmed) {
     return (
-      <p className="bg-success-subtle text-success rounded-xl px-4 py-3 text-sm text-pretty">
-        Confirmed — thank you. This is going into production exactly as shown.
-      </p>
+      <div className="flex flex-col gap-2">
+        <Tag tone="success">Confirmed</Tag>
+        <p className="text-muted-foreground text-sm text-pretty">
+          Thank you — this is going into production exactly as shown.
+        </p>
+      </div>
     )
   }
   if (secondsLeft <= 0) {
     return (
-      <p className="bg-surface-muted text-muted-foreground rounded-xl px-4 py-3 text-sm text-pretty">
-        This window has closed and your order is being made as shown. Message the shop if something
-        still needs changing.
-      </p>
+      <div className="flex flex-col gap-2">
+        <Tag tone="muted">Window closed</Tag>
+        <p className="text-muted-foreground text-sm text-pretty">
+          Your order is being made as shown. Message the shop if something still needs changing.
+        </p>
+      </div>
     )
   }
 
@@ -125,19 +144,14 @@ function Status({ secondsLeft, confirmed }: StatusProps): JSX.Element {
   // Under two minutes it stops being background information and becomes the
   // thing to act on.
   const urgent = secondsLeft < 120
+  const clock = `${minutes}:${String(seconds).padStart(2, '0')}`
 
   return (
-    <p
-      className={
-        urgent
-          ? 'bg-warning-subtle text-warning rounded-xl px-4 py-2.5 text-sm'
-          : 'bg-surface-muted text-muted-foreground rounded-xl px-4 py-2.5 text-sm'
-      }
-    >
-      You can make changes for{' '}
-      <span className="font-mono font-medium tabular-nums">
-        {minutes}:{String(seconds).padStart(2, '0')}
-      </span>
-    </p>
+    <div className="flex items-center gap-2">
+      <Tag tone={urgent ? 'warning' : 'accent'}>
+        <span className="font-mono tabular-nums">{clock}</span>
+      </Tag>
+      <p className="text-muted-foreground text-sm">left to make changes</p>
+    </div>
   )
 }

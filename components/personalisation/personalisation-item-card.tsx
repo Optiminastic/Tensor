@@ -94,7 +94,7 @@ export function PersonalisationItemCard({
   const readOnlyFields = item.fields.filter(field => !editable || !field.editable)
 
   return (
-    <section className="border-border/60 bg-surface overflow-hidden rounded-2xl border">
+    <section className="border-border/70 bg-surface overflow-hidden rounded-3xl border">
       {/* The picture first and full-bleed. On a phone this is the whole
           screen width, which is the only way a 3D model is worth showing at
           all. Absent entirely for a product nobody renders - an empty frame
@@ -113,7 +113,7 @@ export function PersonalisationItemCard({
           )}
 
           {item.unit_count > 1 ? (
-            <span className="bg-surface/90 text-subtle-foreground absolute top-3 left-3 rounded-full px-2.5 py-1 text-xs backdrop-blur">
+            <span className="bg-surface/90 text-subtle-foreground absolute top-3 left-3 rounded-lg px-2.5 py-1 text-xs font-semibold backdrop-blur">
               {item.unit_index} of {item.unit_count}
             </span>
           ) : null}
@@ -136,7 +136,9 @@ export function PersonalisationItemCard({
 
       <div className="flex flex-col gap-5 p-4 sm:p-5">
         <header className="flex flex-col gap-0.5">
-          <h2 className="text-foreground leading-tight font-medium">{item.product_name}</h2>
+          <h2 className="text-foreground text-[17px] leading-tight font-semibold tracking-tight">
+            {item.product_name}
+          </h2>
           {item.part ? <p className="text-subtle-foreground text-xs">{item.part}</p> : null}
         </header>
 
@@ -185,8 +187,8 @@ export function PersonalisationItemCard({
                   className={cn(
                     'size-11 rounded-full border transition',
                     colour === option.name
-                      ? 'border-foreground ring-foreground/20 ring-2'
-                      : 'border-border/70',
+                      ? 'border-accent ring-accent/25 ring-[3px]'
+                      : 'border-border/70 hover:border-border-strong',
                   )}
                   style={{ backgroundColor: option.hex }}
                 />
@@ -196,7 +198,7 @@ export function PersonalisationItemCard({
         ) : null}
 
         {readOnlyFields.length > 0 ? (
-          <dl className="border-border/60 flex flex-col gap-1.5 border-t pt-4">
+          <dl className="border-border/70 flex flex-col gap-1.5 border-t pt-4">
             {readOnlyFields.map(field => (
               <div key={field.label} className="flex justify-between gap-4 text-sm">
                 <dt className="text-subtle-foreground">{field.label}</dt>
@@ -207,7 +209,7 @@ export function PersonalisationItemCard({
         ) : null}
 
         {error ? (
-          <p role="alert" className="bg-danger-subtle text-danger rounded-lg px-3 py-2 text-sm">
+          <p role="alert" className="bg-danger-subtle text-danger rounded-xl px-3 py-2 text-sm">
             {error}
           </p>
         ) : null}
