@@ -31,6 +31,8 @@ export const ProductionJobSchema = z.object({
    */
   order_number: z.string().nullish(),
   batch_id: z.string().nullish(),
+  /** The bed this job sits on, by its own number, when it sits on one. */
+  batch_number: z.string().nullish(),
   description: z.string(),
   quantity: z.number(),
   status: z.string(),
@@ -173,6 +175,8 @@ export const JobPatchInputSchema = z.object({
   priority: z.number().int().optional(),
   held: z.boolean().optional(),
   batch_id: z.string().nullish(),
+  /** The bed this job sits on, by its own number, when it sits on one. */
+  batch_number: z.string().nullish(),
 })
 export type JobPatchInput = z.infer<typeof JobPatchInputSchema>
 

@@ -105,6 +105,7 @@ function JobRow({ job, colours, expanded, onToggle }: JobRowProps): JSX.Element 
   const changed = job.personalisation_changes
   const fields = customerFields(job)
   const windowEndsAt = job.personalisation_window_ends_at ?? null
+  const onABed = Boolean(job.batch_id && job.batch_number)
 
   return (
     <div>
@@ -139,6 +140,14 @@ function JobRow({ job, colours, expanded, onToggle }: JobRowProps): JSX.Element 
             </span>
           ) : null}
           {windowEndsAt ? <WindowCountdown endsAt={windowEndsAt} /> : null}
+          {onABed ? (
+            // A STALE FILE ON A BED THAT IS ALREADY LOCKED cannot be pulled
+            // back out - the planner only dissolves Drafts. The replacement
+            // re-plates the bed, so the designer needs to know which one.
+            <span className="text-subtle-foreground shrink-0 font-mono text-[11px]">
+              {job.batch_number}
+            </span>
+          ) : null}
         </button>
 
         {windowEndsAt ? (
@@ -203,6 +212,13 @@ function JobRow({ job, colours, expanded, onToggle }: JobRowProps): JSX.Element 
               ))}
             </dl>
           )}
+
+          {onABed ? (
+            <p className="text-warning text-xs">
+              This job is already on {job.batch_number}. Uploading a replacement re-plates that bed;
+              if it has already been sent to a printer, tell the floor.
+            </p>
+          ) : null}
 
           {changed.length === 0 && !windowEndsAt ? (
             <p className="text-subtle-foreground text-xs">
