@@ -14,7 +14,7 @@ const FOOTER_LINKS = [
 export function SiteFooter(): JSX.Element {
   return (
     <footer className="p-2 sm:p-3">
-      <div className="bg-landing-ink flex flex-col gap-6 rounded-[1.75rem] px-6 py-8 text-white sm:flex-row sm:items-center sm:justify-between sm:px-10">
+      <div className="bg-landing-ink dark:ring-border flex flex-col gap-6 rounded-[1.75rem] px-6 py-8 text-white sm:flex-row sm:items-center sm:justify-between sm:px-10 dark:ring-1">
         <Logo className="text-white" />
         <nav
           aria-label="Footer"

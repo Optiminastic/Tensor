@@ -22,7 +22,7 @@ export function PrinciplesList(): JSX.Element {
               {String(index + 1).padStart(2, '0')}
             </span>
             <h3 className="text-2xl font-medium tracking-[-0.03em]">{principle.title}</h3>
-            <p className="text-landing-ink/75 text-sm text-pretty">{principle.body}</p>
+            <p className="text-muted-foreground text-sm text-pretty">{principle.body}</p>
           </li>
         ))}
       </ol>

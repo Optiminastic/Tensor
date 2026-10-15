@@ -464,8 +464,10 @@
   --color-landing-lime: #d7f75b;
   --color-landing-lime-deep: #c2e83a;
   --color-landing-ink: #0e1116;
-  --color-landing-paper: #f3f4f6;
-  --color-landing-muted: #8a8f99;
+  /* Paper and muted follow the theme (values below); sky, lime and ink are
+   * fixed fills, the same in both. */
+  --color-landing-paper: var(--landing-paper);
+  --color-landing-muted: var(--landing-muted);
   /* Chart series on white and on the dark surface. Validated with the dataviz
    * palette checks (lightness, chroma, colour-blind separation, 3:1 contrast)
    * in both modes. Pure lime fails contrast on white, so it is a tile colour
@@ -595,4 +597,16 @@
     --tag-edge: var(--tag-grey-edge);
     --tag-ink: var(--tag-grey-ink);
   }
+}
+
+/* The landing UI's two theme-aware colours: the card surface on the page,
+ * and quiet text. Sky, lime and ink stay fixed fills in both themes. */
+:root {
+  --landing-paper: #f3f4f6;
+  --landing-muted: #6f7480;
+}
+
+.dark {
+  --landing-paper: var(--surface-muted);
+  --landing-muted: #a3a8b2;
 }

@@ -6,7 +6,7 @@ const TONES: Record<PillTone, string> = {
   lime: 'bg-landing-lime text-landing-ink hover:bg-landing-lime-deep',
   glass:
     'bg-landing-ink/25 text-white ring-1 ring-white/25 backdrop-blur-sm hover:bg-landing-ink/40',
-  ink: 'bg-landing-ink text-white hover:bg-landing-ink/85',
+  ink: 'bg-landing-ink text-white hover:bg-landing-ink/85 dark:ring-1 dark:ring-white/20',
   // In-app tones: built on the theme tokens, so they flip with dark mode where
   // the landing tones (fixed sky, lime and ink) do not need to.
   solid: 'bg-foreground text-background hover:bg-foreground/85',

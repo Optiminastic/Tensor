@@ -28,7 +28,7 @@ export function InsideTensor(): JSX.Element {
         {AREAS.map((area, index) => (
           <AreaCard key={area.key} area={area} index={index} />
         ))}
-        <div className="bg-landing-lime flex flex-col justify-between gap-6 rounded-3xl p-6">
+        <div className="bg-landing-lime text-landing-ink flex flex-col justify-between gap-6 rounded-3xl p-6">
           <p className="text-2xl font-medium tracking-[-0.03em] text-balance">
             See every page, and how a design travels from upload to the customer&apos;s door.
           </p>

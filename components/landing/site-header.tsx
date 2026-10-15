@@ -4,6 +4,7 @@ import type { JSX } from 'react'
 import { PillLink } from '@/components/landing/pill-link'
 import { type SitePage, SiteNavLinks } from '@/components/landing/site-nav-links'
 import { Logo } from '@/components/logo'
+import { ThemeSwitch } from '@/components/ui/theme-switch'
 
 export type { SitePage }
 
@@ -33,14 +34,17 @@ export function SiteHeader({ signedIn, current }: SiteHeaderProps): JSX.Element 
           <Logo className="text-white" />
         </Link>
         <SiteNavLinks current={current} className="hidden items-center gap-9 md:flex" />
-        <PillLink href={action.href} tone="lime" className="h-9">
-          {action.label}
-        </PillLink>
+        <div className="flex items-center gap-2">
+          <ThemeSwitch tone="sky" className="hidden sm:inline-flex" />
+          <PillLink href={action.href} tone="lime" className="h-9">
+            {action.label}
+          </PillLink>
+        </div>
       </div>
-      <SiteNavLinks
-        current={current}
-        className="flex flex-wrap items-center gap-x-6 gap-y-2 md:hidden"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3 md:hidden">
+        <SiteNavLinks current={current} className="flex flex-wrap items-center gap-x-6 gap-y-2" />
+        <ThemeSwitch tone="sky" className="sm:hidden" />
+      </div>
     </header>
   )
 }

@@ -12,7 +12,7 @@ export function IntegrationCard({ integration }: IntegrationCardProps): JSX.Elem
   return (
     <li className="bg-landing-paper flex flex-col gap-4 rounded-3xl p-6">
       <div className="flex items-center justify-between gap-3">
-        <span className="bg-landing-ink grid size-11 place-items-center rounded-2xl text-white">
+        <span className="bg-landing-ink dark:bg-foreground dark:text-background grid size-11 place-items-center rounded-2xl text-white">
           <Icon className="size-5" aria-hidden />
         </span>
         <span className="text-landing-muted font-mono text-xs tracking-[0.16em] uppercase">
@@ -20,7 +20,7 @@ export function IntegrationCard({ integration }: IntegrationCardProps): JSX.Elem
         </span>
       </div>
       <h2 className="text-2xl font-medium tracking-[-0.03em]">{integration.name}</h2>
-      <p className="text-landing-ink/75 text-sm text-pretty">{integration.does}</p>
+      <p className="text-muted-foreground text-sm text-pretty">{integration.does}</p>
     </li>
   )
 }

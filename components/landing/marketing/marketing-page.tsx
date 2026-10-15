@@ -26,7 +26,7 @@ export async function MarketingPage(props: MarketingPageProps): Promise<JSX.Elem
   const signedIn = Boolean(await getSessionSafe(await headers()))
   return (
     <div
-      className={`${interTight.variable} font-landing text-landing-ink flex min-h-screen flex-col bg-white`}
+      className={`${interTight.variable} font-landing text-foreground bg-background flex min-h-screen flex-col`}
     >
       <section className="p-2 sm:p-3">
         <div className="relative isolate overflow-hidden rounded-[1.75rem]">

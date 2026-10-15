@@ -13,9 +13,9 @@ interface BentoStatCardProps {
 }
 
 const TONES: Record<StatTone, string> = {
-  paper: 'bg-landing-paper text-landing-ink',
+  paper: 'bg-landing-paper text-foreground',
   lime: 'bg-landing-lime text-landing-ink',
-  ink: 'bg-landing-ink text-white',
+  ink: 'bg-landing-ink text-white dark:ring-1 dark:ring-border',
 }
 
 /** A bento tile: a small label, one big figure, and what it means. */

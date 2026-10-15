@@ -17,7 +17,7 @@ export function AuthHeading({ eyebrow, title, children }: AuthHeadingProps): JSX
         {eyebrow}
       </p>
       <h1 className="text-4xl font-medium tracking-[-0.04em]">{title}</h1>
-      {children ? <p className="text-landing-ink/75 text-sm text-pretty">{children}</p> : null}
+      {children ? <p className="text-muted-foreground text-sm text-pretty">{children}</p> : null}
     </div>
   )
 }

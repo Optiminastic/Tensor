@@ -3,13 +3,13 @@ import type { JSX } from 'react'
 
 import { cn } from '@/lib/utils'
 
-export type SitePage = 'home' | 'product' | 'about' | 'integrations'
+export type SitePage = 'home' | 'product' | 'about' | 'integrations' | 'design-system'
 
 const NAV_LINKS: { href: string; label: string; page?: SitePage }[] = [
   { href: '/product', label: 'Product', page: 'product' },
   { href: '/about', label: 'About', page: 'about' },
   { href: '/integrations', label: 'Integrations', page: 'integrations' },
-  { href: '/style-guide', label: 'Design system' },
+  { href: '/style-guide', label: 'Design system', page: 'design-system' },
 ]
 
 interface SiteNavLinksProps {

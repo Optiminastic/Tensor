@@ -7,6 +7,7 @@ import type { JSX } from 'react'
 
 import { interTight } from '@/components/landing/landing-font'
 import { QueryProvider } from '@/components/providers/query-provider'
+import { ThemeProvider } from '@/components/providers/theme-provider'
 
 import './globals.css'
 
@@ -52,7 +53,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
       suppressHydrationWarning
     >
       <body>
-        <QueryProvider>{children}</QueryProvider>
+        <ThemeProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

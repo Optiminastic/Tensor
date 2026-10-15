@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 
 import { SignOutButton } from '@/components/dashboard/sign-out-button'
+import { ThemeSwitch } from '@/components/ui/theme-switch'
 
 interface UserCardProps {
   email: string
@@ -21,6 +22,10 @@ export function UserCard({ email }: UserCardProps): JSX.Element {
         <span className="truncate text-sm" title={email}>
           {email}
         </span>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted-foreground text-xs">Theme</span>
+        <ThemeSwitch />
       </div>
       <SignOutButton />
     </div>

@@ -18,7 +18,7 @@ export default function LoginPage(): JSX.Element {
         Use your Tensor account to continue.
       </AuthHeading>
       <LoginForm />
-      <p className="text-landing-ink/70 text-xs">
+      <p className="text-muted-foreground text-xs">
         Access is provisioned by your admin.{' '}
         <Link href="/" className="underline underline-offset-4">
           Back to home

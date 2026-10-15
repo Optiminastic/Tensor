@@ -37,7 +37,7 @@ export function PartnerRow({ duplicate }: PartnerRowProps): JSX.Element {
       {PARTNERS.map(p => (
         <li
           key={p.name}
-          className="text-landing-ink/70 flex items-center gap-2 text-lg font-medium tracking-tight"
+          className="text-muted-foreground flex items-center gap-2 text-lg font-medium tracking-tight"
         >
           <p.icon className="size-5" aria-hidden />
           {p.name}

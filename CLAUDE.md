@@ -181,6 +181,8 @@ The public landing page, the auth pages and the dashboard (layout and navigation
 - Lime is a fill (selected nav item, pills, tiles), never a line or text colour on white: it fails contrast there. Selection never relies on lime alone - weight, a dot or a marker and `aria-current` carry it too.
 - The shared primitives carry the landing UI, so every dashboard page picks it up: `Button` (primary is lime on ink; `soft-*` variants for colour-coded actions), `Dialog`/`Sheet`, `Card`, `Tabs` (pill by default), `Table`, `PageHeading` (every page title; `ProductionPageHeader` wraps it), and status tags through `components/ui/tag.tsx` (`.tag-*` colours in `app/globals.css`).
 - `--accent` is the landing ink in both themes, not blue. Blue only appears where it means something: the "under way" tag.
+- **Light and dark, everywhere.** `ThemeProvider` (next-themes, in `app/layout.tsx`) follows the system by default and remembers a manual choice; `ThemeSwitch` (`components/ui/theme-switch.tsx`) sits in the dashboard's user card, the public header and the auth pages. Public pages use the theme's `bg-background`/`text-foreground`, and `--color-landing-paper` and `--color-landing-muted` follow the theme. Sky, lime and ink are fixed fills: anything on lime sets `text-landing-ink` itself, and ink panels take a `dark:ring` so they do not sink into the dark page.
+- The design system page (`/style-guide`) renders the real primitives in both themes; when a primitive changes, it changes there too.
 
 ---
 

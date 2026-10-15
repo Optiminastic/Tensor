@@ -10,7 +10,7 @@ import { WorksWithMarquee } from '@/components/landing/works-with-marquee'
 export default function LandingPage(): JSX.Element {
   return (
     <div
-      className={`${interTight.variable} font-landing text-landing-ink flex min-h-screen flex-col bg-white`}
+      className={`${interTight.variable} font-landing text-foreground bg-background flex min-h-screen flex-col`}
     >
       <main className="flex-1">
         <Hero />
