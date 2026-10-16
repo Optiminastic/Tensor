@@ -16,6 +16,7 @@ import {
   Library,
   type LucideIcon,
   MessageSquare,
+  PackageX,
   PackageCheck,
   PackageSearch,
   PencilLine,
@@ -222,6 +223,14 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
         label: 'WhatsApp Inbox',
         href: '/agent/inbox',
         icon: MessageSquare,
+        permission: 'whatsapp:read',
+      },
+      // The same gate as the inbox: a damage report IS a customer's chat,
+      // with their photographs in it.
+      {
+        label: 'Damaged Products',
+        href: '/agent/damaged-products',
+        icon: PackageX,
         permission: 'whatsapp:read',
       },
     ],
