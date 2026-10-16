@@ -61,7 +61,7 @@ export function WhatsAppThread({
       />
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
         {data.items.map(m => (
-          <WhatsAppMessageBubble key={m.id} message={m} />
+          <WhatsAppMessageBubble key={m.id} message={m} brand={brand} />
         ))}
         <div ref={bottom} />
       </div>

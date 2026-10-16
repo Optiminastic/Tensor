@@ -114,3 +114,31 @@ export async function handBackWhatsAppConversation(
     timeoutMs: READ_TIMEOUT_MS,
   })
 }
+
+/**
+ * One attachment's raw bytes, as a Response the route handler streams on.
+ *
+ * Deliberately not routed through `call`: that helper asks for JSON and reads
+ * the body to find a `detail`, and this is a photograph. The status is passed
+ * back untouched because the backend distinguishes an attachment still
+ * downloading from one that failed, and the bubble draws those differently.
+ */
+export async function fetchWhatsAppMedia(
+  token: string,
+  brand: string,
+  messageId: string,
+): Promise<Response> {
+  const path =
+    `/brands/${encodeURIComponent(brand)}` +
+    `/whatsapp/messages/${encodeURIComponent(messageId)}/media`
+  try {
+    return await fetch(`${env.TENSOR_CORE_URL}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(READ_TIMEOUT_MS),
+    })
+  } catch (error) {
+    log.error({ err: error }, 'Tensor-Core is unreachable')
+    throw new WhatsAppInboxServiceError('Tensor-Core is unreachable. Is the backend running?')
+  }
+}

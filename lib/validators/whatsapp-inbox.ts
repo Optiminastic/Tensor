@@ -46,6 +46,30 @@ export const WhatsAppMessageSchema = z.object({
     .number()
     .nullish()
     .transform(v => v ?? null),
+  /**
+   * Who replied, for a staff message: a Better Auth user id.
+   *
+   * Tensor-Core has sent this since the inbox shipped and the schema did not
+   * declare it, so Zod stripped it silently - "which of us answered" was on
+   * the wire the whole time and thrown away on arrival.
+   */
+  sent_by: z
+    .string()
+    .nullish()
+    .transform(v => v ?? null),
+  /**
+   * How this message's attachment stands: '' when there is none, then
+   * pending, stored or failed. Downloading and unavailable are opposite
+   * answers to "did their photo arrive?", so the bubble draws them apart.
+   */
+  media_status: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  mime_type: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
   created_at: z.string(),
 })
 
