@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Library,
   type LucideIcon,
+  MessageSquare,
   PackageCheck,
   PackageSearch,
   PencilLine,
@@ -215,6 +216,14 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // by one.
       { label: 'Overview', href: '/agent/overview', icon: LayoutDashboard },
       { label: 'Abandoned Checkout', href: '/agent/abandoned-checkout', icon: ShoppingBag },
+      // A permission of its own: reading customers' chats is narrower than
+      // seeing their orders, and replying speaks for the shop.
+      {
+        label: 'WhatsApp Inbox',
+        href: '/agent/inbox',
+        icon: MessageSquare,
+        permission: 'whatsapp:read',
+      },
     ],
   },
   {
