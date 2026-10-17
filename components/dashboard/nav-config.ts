@@ -15,7 +15,7 @@ import {
   LayoutGrid,
   Library,
   type LucideIcon,
-  MessageSquare,
+  MessageSquareText,
   PackageX,
   PackageCheck,
   PackageSearch,
@@ -217,20 +217,21 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // by one.
       { label: 'Overview', href: '/agent/overview', icon: LayoutDashboard },
       { label: 'Abandoned Checkout', href: '/agent/abandoned-checkout', icon: ShoppingBag },
-      // A permission of its own: reading customers' chats is narrower than
-      // seeing their orders, and replying speaks for the shop.
-      {
-        label: 'WhatsApp Inbox',
-        href: '/agent/inbox',
-        icon: MessageSquare,
-        permission: 'whatsapp:read',
-      },
-      // The same gate as the inbox: a damage report IS a customer's chat,
-      // with their photographs in it.
+      // A permission of its own: a damage report carries a customer's
+      // photographs and their number, which is narrower than seeing the
+      // orders list.
       {
         label: 'Damaged Products',
         href: '/agent/damaged-products',
         icon: PackageX,
+        permission: 'whatsapp:read',
+      },
+      // The words the bot says. Same gate: whoever may read customer chats
+      // may read what the shop replies with.
+      {
+        label: 'Bot Messages',
+        href: '/agent/bot-messages',
+        icon: MessageSquareText,
         permission: 'whatsapp:read',
       },
     ],
