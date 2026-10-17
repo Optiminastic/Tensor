@@ -4,43 +4,30 @@ import { cn } from '@/lib/utils'
 import type { DamageReport } from '@/lib/validators/whatsapp-damage'
 
 interface DamagePhotoStateProps {
-  report: Pick<DamageReport, 'photo_count' | 'photos_stored' | 'photos_pending' | 'photos_failed'>
+  report: Pick<DamageReport, 'file_count'>
 }
 
 /**
- * Whether we actually have the customer's photographs.
+ * How much the customer sent to look at.
  *
- * NOT A COUNT. "Three photos" is what the customer sent; what decides whether
- * anybody can work the report is how many of them reached Tensor, and those
- * are different numbers. A report showing "3" that holds none of them sends
- * somebody to the queue expecting evidence that is not there.
+ * ONE NUMBER NOW. This used to read "2 of 3 received · 1 unavailable",
+ * because the photographs came in as WhatsApp attachments that Tensor had to
+ * fetch back out of Meta and could still be chasing, or have given up on. The
+ * form uploads them here directly, so a file the report has is simply there
+ * and the only thing left to say is how many.
  *
- * The four states are deliberately distinct, because the action each calls for
- * is different: all here, nothing to do; some still arriving, wait; some gone
- * for good, ask the customer again; none at all, the download never ran.
+ * A report with none is still called out: it should not happen - the form
+ * refuses an empty submission - so when it does, somebody should see it
+ * rather than read a quiet dash.
  */
 export function DamagePhotoState({ report }: DamagePhotoStateProps): JSX.Element {
-  const { photo_count: sent, photos_stored: stored, photos_pending: pending } = report
-  const failed = report.photos_failed
-
-  if (sent === 0) {
-    return <span className="text-muted-foreground text-xs">No photos sent</span>
+  const count = report.file_count
+  if (count === 0) {
+    return <span className="text-warning text-xs">Nothing attached</span>
   }
-
-  const parts: string[] = [`${stored} of ${sent} received`]
-  if (pending > 0) parts.push('downloading')
-  if (failed > 0) parts.push(`${failed} unavailable`)
-
-  // Tone follows the worst thing true of the row, so a report missing a
-  // photograph cannot read as complete.
-  const tone =
-    failed > 0
-      ? 'text-danger'
-      : pending > 0
-        ? 'text-muted-foreground'
-        : stored === sent
-          ? 'text-success'
-          : 'text-warning'
-
-  return <span className={cn('font-mono text-xs tabular-nums', tone)}>{parts.join(' · ')}</span>
+  return (
+    <span className={cn('font-mono text-xs tabular-nums', 'text-muted-foreground')}>
+      {count} {count === 1 ? 'file' : 'files'}
+    </span>
+  )
 }

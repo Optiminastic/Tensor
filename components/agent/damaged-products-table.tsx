@@ -36,7 +36,7 @@ const COLUMNS: { id: string; label: string; sort?: SortKey }[] = [
   { id: 'customer', label: 'Customer', sort: 'customer' },
   { id: 'phone', label: 'Number' },
   { id: 'reported', label: 'Reported', sort: 'reported' },
-  { id: 'photos', label: 'Photos' },
+  { id: 'photos', label: 'Attached' },
   { id: 'status', label: 'Status' },
 ]
 
@@ -153,7 +153,7 @@ export function DamagedProductsTable({
             renderEmptyState={() => (
               <span className="text-muted-foreground text-sm text-pretty">
                 {reports.length === 0
-                  ? 'No damage reports yet. One appears here when a customer finishes the Damage concern flow on WhatsApp.'
+                  ? 'No damage reports yet. One appears here when a customer taps Damage concern on WhatsApp and submits the form it sends them.'
                   : 'No damage reports match these filters.'}
               </span>
             )}

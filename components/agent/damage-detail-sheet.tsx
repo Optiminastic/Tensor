@@ -5,11 +5,9 @@ import Link from 'next/link'
 import { type JSX, useEffect, useState } from 'react'
 
 import { loadDamageReportAction } from '@/app/dashboard/[brand]/agent/damaged-products/actions'
-import { loadThreadAction } from '@/app/dashboard/[brand]/agent/inbox/actions'
-import { DamagePhotoGrid } from '@/components/agent/damage-photo-grid'
+import { DamageFileGrid } from '@/components/agent/damage-file-grid'
 import { DAMAGE_STATUS_CONFIG } from '@/components/agent/damage-status-config'
 import { DamageStatusControl } from '@/components/agent/damage-status-control'
-import { WhatsAppMessageBubble } from '@/components/agent/whatsapp-message-bubble'
 import { displayNumber, messageTime } from '@/components/agent/whatsapp-time'
 import { TonePill } from '@/components/production/tone-pill'
 import {
@@ -22,7 +20,6 @@ import {
 } from '@/components/ui/sheet'
 import { Tabs } from '@/components/ui/tabs'
 import type { DamageReport, DamageReportDetail } from '@/lib/validators/whatsapp-damage'
-import type { WhatsAppMessage } from '@/lib/validators/whatsapp-inbox'
 
 interface DamageDetailSheetProps {
   brand: string
@@ -35,12 +32,16 @@ interface DamageDetailSheetProps {
 }
 
 /**
- * One damage report: the photographs, the conversation it came from, the order
- * and where anyone has got to with it.
+ * One damage report: the photographs, the order and where anyone has got to
+ * with it.
  *
- * NOTHING IS FETCHED UNTIL IT OPENS, and the chat is its own request made only
- * when that tab is selected - the same shape as the order drawer. A list of
- * fifty reports must not pull fifty threads nobody reads.
+ * DAMAGE ONLY. There is deliberately no view of the wider conversation here -
+ * the menu taps, the delivery questions, the small talk. This screen answers
+ * "what broke, what did they send us, and what did we do about it", and
+ * anything else on the thread is somebody else's business.
+ *
+ * Nothing is fetched until it opens, so a list of fifty reports does not pull
+ * fifty sets of photographs nobody looks at.
  */
 export function DamageDetailSheet({
   brand,
@@ -69,7 +70,7 @@ export function DamageDetailSheet({
   )
 }
 
-type View = 'photos' | 'chat' | 'order'
+type View = 'photos' | 'order'
 
 interface DrawerContentsProps {
   brand: string
@@ -81,7 +82,6 @@ interface DrawerContentsProps {
 function DrawerContents({ brand, report, canUpdate, onChanged }: DrawerContentsProps): JSX.Element {
   const [view, setView] = useState<View>('photos')
   const detail = useDamageDetail(brand, report.id)
-  const chat = useThread(brand, report.wa_id, view === 'chat')
   const status = DAMAGE_STATUS_CONFIG[report.status]
 
   return (
@@ -115,7 +115,6 @@ function DrawerContents({ brand, report, canUpdate, onChanged }: DrawerContentsP
         <Tabs
           tabs={[
             { value: 'photos', label: 'Photos' },
-            { value: 'chat', label: 'Chat' },
             { value: 'order', label: 'Order' },
           ]}
           value={view}
@@ -132,11 +131,7 @@ function DrawerContents({ brand, report, canUpdate, onChanged }: DrawerContentsP
             ) : !detail.data ? (
               <Loading />
             ) : (
-              <DamagePhotoGrid
-                brand={brand}
-                photos={detail.data.photos}
-                sent={report.photo_count}
-              />
+              <DamageFileGrid brand={brand} reportId={report.id} files={detail.data.files} />
             )}
             <DamageStatusControl
               brand={brand}
@@ -145,18 +140,6 @@ function DrawerContents({ brand, report, canUpdate, onChanged }: DrawerContentsP
               onChanged={onChanged}
             />
           </div>
-        ) : view === 'chat' ? (
-          chat.error ? (
-            <Failed what="this conversation" />
-          ) : !chat.data ? (
-            <Loading />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {chat.data.map(message => (
-                <WhatsAppMessageBubble key={message.id} message={message} brand={brand} />
-              ))}
-            </div>
-          )
         ) : (
           <OrderTab brand={brand} report={report} />
         )}
@@ -169,8 +152,9 @@ function OrderTab({ brand, report }: { brand: string; report: DamageReport }): J
   if (!report.order_id) {
     return (
       <p className="text-muted-foreground text-sm text-pretty">
-        Order <span className="font-mono">{report.order_number}</span> has not been imported into
-        Tensor. The bot found it in Shopify, so the damage tag and note were written there.
+        No order in Tensor matches <span className="font-mono">{report.order_number}</span> - the
+        customer typed it into the damage form themselves, so it may be mistyped, or from a sync
+        that has not caught up yet.
       </p>
     )
   }
@@ -228,42 +212,6 @@ function useDamageDetail(
       cancelled = true
     }
   }, [brand, id])
-
-  return { data, error }
-}
-
-/**
- * The conversation, asked for only when that tab is opened.
- *
- * Reuses the inbox's own action, so the thread here and the thread there
- * cannot drift. Fetched once per report: `data !== null` is the guard, so
- * switching tabs back and forth does not re-ask.
- */
-function useThread(
-  brand: string,
-  waId: string,
-  wanted: boolean,
-): { data: WhatsAppMessage[] | null; error: boolean } {
-  const [data, setData] = useState<WhatsAppMessage[] | null>(null)
-  const [error, setError] = useState(false)
-
-  useEffect(() => {
-    if (!wanted || data !== null) return
-    let cancelled = false
-    setError(false)
-    loadThreadAction({ brand, waId })
-      .then(result => {
-        if (cancelled) return
-        if (result.ok && result.data) setData(result.data.items)
-        else setError(true)
-      })
-      .catch(() => {
-        if (!cancelled) setError(true)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [wanted, brand, waId, data])
 
   return { data, error }
 }

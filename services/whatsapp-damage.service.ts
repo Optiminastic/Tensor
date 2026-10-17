@@ -87,3 +87,31 @@ export async function updateDamageReport(update: DamageUpdate): Promise<DamageRe
   })
   return DamageReportSchema.parse(await response.json())
 }
+
+/**
+ * One damage file's raw bytes, as a Response the route handler streams on.
+ *
+ * Deliberately not routed through `call`: that helper asks for JSON and reads
+ * the body to find a `detail`, and this is a photograph or a video. The
+ * status is passed back untouched so the page can tell "not on this report"
+ * from "storage is down".
+ */
+export async function fetchDamageFile(
+  token: string,
+  brand: string,
+  file: { reportId: string; fileId: string },
+): Promise<Response> {
+  const { reportId, fileId } = file
+  const path =
+    `${reportsPath(brand)}/${encodeURIComponent(reportId)}` + `/files/${encodeURIComponent(fileId)}`
+  try {
+    return await fetch(`${env.TENSOR_CORE_URL}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    })
+  } catch (error) {
+    log.error({ err: error }, 'Tensor-Core is unreachable')
+    throw new DamageServiceError('Tensor-Core is unreachable. Is the backend running?')
+  }
+}

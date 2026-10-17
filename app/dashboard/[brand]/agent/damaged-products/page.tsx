@@ -19,9 +19,8 @@ interface DamagedProductsPageProps {
 const EMPTY: DamageReports = { items: [], counts: {} }
 
 /**
- * Every customer who told the WhatsApp bot their order arrived damaged: the
- * order, their number, whether their photographs reached us, and how far
- * anybody has got with it.
+ * Every customer who reported damage: the order they named, their number,
+ * what they uploaded, and how far anybody has got with it.
  */
 export default async function DamagedProductsPage({
   params,
@@ -44,10 +43,11 @@ export default async function DamagedProductsPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <ProductionPageHeader
+        eyebrow="Agent"
         title="Damaged Products"
-        description="Customers who reported damage on WhatsApp, the photographs they sent, and what was done about it."
+        description="Customers who reported damage on WhatsApp, the photos and videos they uploaded, and what was done about it."
       />
       {error ? (
         <p className="text-danger text-sm" role="alert">
@@ -56,6 +56,6 @@ export default async function DamagedProductsPage({
       ) : (
         <DamagedProducts brand={brand} initial={reports} canUpdate={canUpdate} />
       )}
-    </div>
+    </main>
   )
 }

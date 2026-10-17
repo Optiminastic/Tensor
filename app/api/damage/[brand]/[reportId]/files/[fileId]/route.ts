@@ -1,26 +1,21 @@
 import { resolveBackendToken } from '@/lib/backend-token'
-import { fetchWhatsAppMedia, WhatsAppInboxServiceError } from '@/services/whatsapp-inbox.service'
+import { DamageServiceError, fetchDamageFile } from '@/services/whatsapp-damage.service'
 
 interface RouteContext {
-  params: Promise<{ brand: string; messageId: string }>
+  params: Promise<{ brand: string; reportId: string; fileId: string }>
 }
 
 /**
- * Streams one WhatsApp attachment - a customer's damage photograph, usually -
- * to the browser.
+ * Streams one damage photograph or video to the browser.
  *
  * Its own route rather than /api/files/[id] because Tensor-Core serves these
- * from a brand-scoped endpoint: the brand is in the query's WHERE clause, so
- * one brand's chat media cannot be fetched under another brand's slug. The
- * bearer token is minted server-side from the session, so an <img src> never
- * carries it - the same pattern as /api/files/[id].
- *
- * A 404 here is meaningful and is passed through rather than flattened: the
- * backend answers one for an attachment still downloading and a different one
- * for an attachment that failed, and the bubble draws those differently.
+ * from an endpoint scoped to the report AND the brand: a file id on its own
+ * means nothing there, so one report's photographs cannot be fetched through
+ * another's. The bearer token is minted server-side from the session, so an
+ * `<img src>` never carries it - the same pattern as /api/files/[id].
  */
 export async function GET(_request: Request, { params }: RouteContext): Promise<Response> {
-  const { brand, messageId } = await params
+  const { brand, reportId, fileId } = await params
   const { token, error } = await resolveBackendToken()
   if (!token) {
     return Response.json(
@@ -31,9 +26,9 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
 
   let upstream: Response
   try {
-    upstream = await fetchWhatsAppMedia(token, brand, messageId)
+    upstream = await fetchDamageFile(token, brand, { reportId, fileId })
   } catch (err) {
-    if (err instanceof WhatsAppInboxServiceError) {
+    if (err instanceof DamageServiceError) {
       return Response.json({ detail: err.message }, { status: 502 })
     }
     throw err
@@ -41,7 +36,7 @@ export async function GET(_request: Request, { params }: RouteContext): Promise<
 
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => '')
-    return new Response(detail || '{"detail":"That attachment is not available."}', {
+    return new Response(detail || '{"detail":"That file is not available."}', {
       status: upstream.status,
       headers: { 'Content-Type': 'application/json' },
     })

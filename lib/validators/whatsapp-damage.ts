@@ -1,12 +1,14 @@
 import { z } from 'zod'
 
 /**
- * A damage report: a customer who told the WhatsApp bot their order arrived
- * broken, the photographs they sent, and how far anyone has got with it.
+ * A damage report: a customer who filled in the damage form, the photographs
+ * and videos they uploaded, and how far anyone has got with it.
  *
- * `photo_count` is what the customer sent. `photos_stored`, `photos_pending`
- * and `photos_failed` are what Tensor actually holds - which is a different
- * number, and the one that decides whether the report can be worked at all.
+ * `file_count` is a single number, and that is a change worth knowing about.
+ * The first version of this carried stored/pending/failed counts, because the
+ * photographs arrived as WhatsApp attachments that had to be fetched back out
+ * of Meta and could still be in flight. They are uploaded straight to Tensor
+ * now, so a file the report has is simply there.
  */
 export const DamageStatusSchema = z.enum(['new', 'in_review', 'resolved'])
 export type DamageStatus = z.infer<typeof DamageStatusSchema>
@@ -22,10 +24,7 @@ export const DamageReportSchema = z.object({
     .string()
     .nullish()
     .transform(v => v ?? null),
-  photo_count: z.number(),
-  photos_stored: z.number(),
-  photos_pending: z.number(),
-  photos_failed: z.number(),
+  file_count: z.number(),
   status: DamageStatusSchema,
   resolution_note: z.string(),
   reported_at: z.string(),
@@ -45,23 +44,19 @@ export const DamageReportsResponseSchema = z.object({
   counts: z.record(z.string(), z.number()),
 })
 
-export const DamagePhotoSchema = z.object({
-  message_id: z.string(),
-  kind: z.string(),
-  /** What the customer typed alongside the photograph. */
-  caption: z.string(),
-  media_status: z.string(),
-  mime_type: z.string(),
-  media_error: z.string(),
+export const DamageFileSchema = z.object({
+  id: z.string(),
+  content_type: z.string(),
+  size_bytes: z.number(),
   created_at: z.string(),
 })
 
 export const DamageReportDetailSchema = z.object({
   report: DamageReportSchema,
-  photos: z.array(DamagePhotoSchema),
+  files: z.array(DamageFileSchema),
 })
 
 export type DamageReport = z.infer<typeof DamageReportSchema>
-export type DamagePhoto = z.infer<typeof DamagePhotoSchema>
+export type DamageFile = z.infer<typeof DamageFileSchema>
 export type DamageReportDetail = z.infer<typeof DamageReportDetailSchema>
 export type DamageReports = z.infer<typeof DamageReportsResponseSchema>
