@@ -44,8 +44,9 @@ export default async function BotMessagesPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
       <ProductionPageHeader
+        eyebrow="Agent"
         title="Bot Messages"
         description="What the WhatsApp bot says when a customer writes in. Changes apply to the next message — no deploy needed."
       />
@@ -56,6 +57,6 @@ export default async function BotMessagesPage({
       ) : (
         <BotMessageEditor brand={brand} initial={content} canEdit={canEdit} />
       )}
-    </div>
+    </main>
   )
 }

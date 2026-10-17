@@ -1,12 +1,14 @@
 'use client'
 
-import { GripVertical, Plus, Trash2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { type JSX, useState } from 'react'
 
 import { saveBotContentAction } from '@/app/dashboard/[brand]/agent/bot-messages/actions'
-import { BotRowFields } from '@/components/agent/bot-row-fields'
+import { BotRowFields, Counter } from '@/components/agent/bot-row-fields'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { BotContent, BotContentRow } from '@/lib/validators/whatsapp-bot-content'
 
 interface BotMessageEditorProps {
@@ -46,18 +48,15 @@ export function BotMessageEditor({ brand, initial, canEdit }: BotMessageEditorPr
   const [saved, setSaved] = useState(false)
   const limits = initial.limits
 
-  function patch(list: 'menu' | 'faq', index: number, change: Partial<BotContentRow>): void {
+  function patchFaq(index: number, change: Partial<BotContentRow>): void {
     setSaved(false)
-    const apply = (rows: BotContentRow[]): BotContentRow[] =>
-      rows.map((r, i) => (i === index ? { ...r, ...change } : r))
-    if (list === 'menu') setMenu(apply)
-    else setFaq(apply)
+    setFaq(rows => rows.map((r, i) => (i === index ? { ...r, ...change } : r)))
   }
 
   function move(index: number, by: number): void {
-    const next = [...faq]
     const to = index + by
-    if (to < 0 || to >= next.length) return
+    if (to < 0 || to >= faq.length) return
+    const next = [...faq]
     ;[next[index], next[to]] = [next[to], next[index]]
     setFaq(next.map((r, i) => ({ ...r, position: i })))
     setSaved(false)
@@ -82,39 +81,52 @@ export function BotMessageEditor({ brand, initial, canEdit }: BotMessageEditorPr
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card className="flex flex-col gap-4">
-        <header className="flex flex-col gap-1">
-          <h2 className="text-sm font-medium">The three buttons</h2>
-          <p className="text-muted-foreground text-xs text-pretty">
+    <div className="flex w-full flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>The three buttons</CardTitle>
+          <CardDescription>
             Shown under the greeting on any message. You can rename them; what each one does is
             built in, so a button cannot be removed or repointed here.
-          </p>
-        </header>
-        {menu.map((row, i) => (
-          <BotRowFields
-            key={row.key}
-            row={row}
-            limits={limits}
-            canEdit={canEdit}
-            onChange={change => patch('menu', i, change)}
-          />
-        ))}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-5 sm:grid-cols-3">
+          {menu.map((row, i) => (
+            <div key={row.key} className="flex flex-col gap-1.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor={`menu-${row.key}`}>Button {i + 1}</Label>
+                <Counter length={row.title.length} max={limits.menu_title} />
+              </div>
+              <Input
+                id={`menu-${row.key}`}
+                value={row.title}
+                disabled={!canEdit}
+                onChange={e => {
+                  setSaved(false)
+                  setMenu(rows =>
+                    rows.map((r, j) => (j === i ? { ...r, title: e.target.value } : r)),
+                  )
+                }}
+              />
+            </div>
+          ))}
+        </CardContent>
       </Card>
 
-      <Card className="flex flex-col gap-4">
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-sm font-medium">Questions behind “Other”</h2>
-            <p className="text-muted-foreground text-xs text-pretty">
+      <Card>
+        <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <CardTitle>Questions behind “Other”</CardTitle>
+            <CardDescription>
               {faq.length} of {limits.faq_rows} — WhatsApp shows at most {limits.faq_rows} in one
               list. A question with an answer is sent straight back; the greyed ones start a
               conversation instead.
-            </p>
+            </CardDescription>
           </div>
           {canEdit ? (
             <Button
               variant="secondary"
+              className="shrink-0"
               disabled={faq.length >= limits.faq_rows}
               onClick={() => {
                 setFaq([...faq, newRow(faq.length)])
@@ -125,56 +137,25 @@ export function BotMessageEditor({ brand, initial, canEdit }: BotMessageEditorPr
               Add a question
             </Button>
           ) : null}
-        </header>
-
-        {faq.map((row, i) => (
-          <div key={row.key} className="flex items-start gap-2">
-            {canEdit ? (
-              <div className="flex flex-col items-center gap-1 pt-2">
-                <GripVertical className="text-subtle-foreground size-4" aria-hidden />
-                <button
-                  type="button"
-                  onClick={() => move(i, -1)}
-                  disabled={i === 0}
-                  aria-label={`Move ${row.title || 'this question'} up`}
-                  className="text-muted-foreground hover:text-foreground text-xs disabled:opacity-30"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => move(i, 1)}
-                  disabled={i === faq.length - 1}
-                  aria-label={`Move ${row.title || 'this question'} down`}
-                  className="text-muted-foreground hover:text-foreground text-xs disabled:opacity-30"
-                >
-                  ↓
-                </button>
-              </div>
-            ) : null}
-            <div className="flex-1">
-              <BotRowFields
-                row={row}
-                limits={limits}
-                canEdit={canEdit}
-                onChange={change => patch('faq', i, change)}
-              />
-            </div>
-            {canEdit && !row.locked ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setFaq(faq.filter((_, j) => j !== i))
-                  setSaved(false)
-                }}
-                aria-label={`Remove ${row.title || 'this question'}`}
-                className="text-muted-foreground hover:text-danger pt-2"
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </button>
-            ) : null}
-          </div>
-        ))}
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {faq.map((row, i) => (
+            <BotRowFields
+              key={row.key}
+              row={row}
+              index={i}
+              count={faq.length}
+              limits={limits}
+              canEdit={canEdit}
+              onChange={change => patchFaq(i, change)}
+              onMove={by => move(i, by)}
+              onRemove={() => {
+                setFaq(faq.filter((_, j) => j !== i))
+                setSaved(false)
+              }}
+            />
+          ))}
+        </CardContent>
       </Card>
 
       {error ? (
@@ -186,9 +167,13 @@ export function BotMessageEditor({ brand, initial, canEdit }: BotMessageEditorPr
       {canEdit ? (
         <div className="flex items-center gap-3">
           <Button onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : 'Save and send this from now on'}
+            {saving ? 'Saving…' : 'Save'}
           </Button>
-          {saved ? <span className="text-success text-sm">Saved.</span> : null}
+          <span className="text-muted-foreground text-xs">
+            {saved
+              ? 'Saved — the next message uses this.'
+              : 'Applies to the next customer message.'}
+          </span>
         </div>
       ) : null}
     </div>
