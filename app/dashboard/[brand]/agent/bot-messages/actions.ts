@@ -2,7 +2,7 @@
 
 import { resolveBackendToken } from '@/lib/backend-token'
 import { createLogger } from '@/lib/logger'
-import type { BotContent, BotContentRow } from '@/lib/validators/whatsapp-bot-content'
+import type { BotNode, BotTree } from '@/lib/validators/whatsapp-bot-content'
 import {
   BotContentServiceError,
   getBotContent,
@@ -29,7 +29,7 @@ function failure<T>(error: unknown): ActionResult<T> {
  * against the token, and that is the only check that counts.
  */
 
-export async function loadBotContentAction(brand: string): Promise<ActionResult<BotContent>> {
+export async function loadBotContentAction(brand: string): Promise<ActionResult<BotTree>> {
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error }
   try {
@@ -41,13 +41,12 @@ export async function loadBotContentAction(brand: string): Promise<ActionResult<
 
 export async function saveBotContentAction(input: {
   brand: string
-  menu: BotContentRow[]
-  faq: BotContentRow[]
-}): Promise<ActionResult<BotContent>> {
+  nodes: BotNode[]
+}): Promise<ActionResult<BotTree>> {
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error }
   try {
-    const data = await saveBotContent(token, input.brand, { menu: input.menu, faq: input.faq })
+    const data = await saveBotContent(token, input.brand, input.nodes)
     return { ok: true, data }
   } catch (err) {
     return failure(err)

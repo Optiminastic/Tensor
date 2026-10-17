@@ -1,10 +1,6 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
-import {
-  type BotContent,
-  BotContentSchema,
-  type BotContentRow,
-} from '@/lib/validators/whatsapp-bot-content'
+import { type BotNode, type BotTree, BotTreeSchema } from '@/lib/validators/whatsapp-bot-content'
 
 const log = createLogger('WhatsAppBotContentService')
 
@@ -20,7 +16,7 @@ async function call(
   token: string,
   brand: string,
   init: { method?: string; body?: unknown } = {},
-): Promise<BotContent> {
+): Promise<BotTree> {
   let response: Response
   try {
     response = await fetch(`${env.TENSOR_CORE_URL}${contentPath(brand)}`, {
@@ -48,19 +44,25 @@ async function call(
     // is the only useful thing to show somebody mid-edit.
     throw new BotContentServiceError(detail ?? `Request failed (${response.status})`)
   }
-  return BotContentSchema.parse(await response.json())
+  return BotTreeSchema.parse(await response.json())
 }
 
-/** What the bot currently says, stored rows and code defaults together. */
-export async function getBotContent(token: string, brand: string): Promise<BotContent> {
+/** The bot's tree: the shop's own where it has one, the code's where not. */
+export async function getBotContent(token: string, brand: string): Promise<BotTree> {
   return call(token, brand)
 }
 
-/** Replaces the whole set, and answers with what the bot will say from now on. */
+/**
+ * Replaces the WHOLE tree, and answers with what the bot will say from now on.
+ *
+ * Not a patch: which messages exist, which options are on them and the order
+ * of both are one decision, and sending them piecemeal would leave a
+ * half-saved menu behind a second call that failed on its own.
+ */
 export async function saveBotContent(
   token: string,
   brand: string,
-  rows: { menu: BotContentRow[]; faq: BotContentRow[] },
-): Promise<BotContent> {
-  return call(token, brand, { method: 'PUT', body: rows })
+  nodes: BotNode[],
+): Promise<BotTree> {
+  return call(token, brand, { method: 'PUT', body: { nodes } })
 }
