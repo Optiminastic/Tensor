@@ -1,4 +1,19 @@
 packages:
   - .
+# pnpm 11 refuses to install until every dependency with a build script is
+# explicitly allowed or denied, and `pnpm install` is what the pre-commit hook
+# runs first - so an unanswered entry here blocks every commit in the repo.
+#
+# All false, which is what is actually installed: none of these has ever had
+# its build script run here. sharp is the only one worth a second look - Next
+# uses it for image optimisation - and it has been unbuilt all along without
+# anything missing it, so turning it on is a separate decision with a native
+# Windows compile behind it, not a side effect of unblocking a commit.
 allowBuilds:
+  '@prisma/client': false
+  '@prisma/engines': false
+  better-sqlite3: false
+  prisma: false
+  protobufjs: false
+  sharp: false
   unrs-resolver: false
