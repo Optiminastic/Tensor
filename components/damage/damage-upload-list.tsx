@@ -61,12 +61,17 @@ export function DamageUploadList({
             ? `That is all ${maxFiles} — send the rest on WhatsApp if you need to.`
             : `You can pick several at once · up to ${maxFiles} files · ${maxFileMB} MB each`}
         </span>
+        {/* VISUALLY HIDDEN, NOT display:none. A file input the browser has
+            not laid out is one several mobile browsers refuse to open from a
+            label tap - iOS Safari in particular - and the failure is silent:
+            the customer taps the box and nothing at all happens. This keeps
+            it rendered and zero-sized instead. */}
         <input
           type="file"
           accept={ACCEPTED}
           multiple
           disabled={full}
-          className="hidden"
+          className="absolute size-px overflow-hidden opacity-0"
           onChange={choose}
         />
       </label>

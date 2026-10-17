@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { DamageFormFile } from '@/lib/validators/damage-form'
 
@@ -102,38 +102,60 @@ export function useDamageUploads({
     [patch, token],
   )
 
+  // THE UPDATER STAYS PURE, and the request is started from an effect.
+  //
+  // Sending from inside setRows looked natural and was wrong: React invokes
+  // an updater more than once - twice in development under StrictMode, and
+  // again whenever it replays a render it threw away - so every file went up
+  // twice, under two different keys, and the rows belonging to the discarded
+  // invocation were orphaned where no progress update could reach them.
+  //
+  // The keys are minted out here so that both invocations of the updater
+  // produce identical rows; the effect then starts whatever is 'uploading'
+  // and has not been started yet.
   const add = useCallback(
     (files: File[]): void => {
+      const prepared = files.map(file => ({
+        key: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        file,
+      }))
+      for (const { key, file } of prepared) blobs.set(key, file)
+
       setRows(current => {
         const room = maxFiles - current.filter(r => r.state !== 'failed').length
-        const taken = files.slice(0, Math.max(0, room))
-        const next: UploadRow[] = []
-        for (const file of taken) {
-          const key = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-          blobs.set(key, file)
+        const next = prepared.slice(0, Math.max(0, room)).map(({ key, file }) => ({
+          key,
+          name: file.name,
+          sizeBytes: file.size,
+          percent: 0,
           // Refused here as well as at the server, so somebody on a slow
           // connection is told now rather than after two minutes of
           // uploading.
-          if (file.size > maxFileMB * 1024 * 1024) {
-            next.push({
-              key,
-              name: file.name,
-              sizeBytes: file.size,
-              percent: 0,
-              state: 'failed',
-              error: `Over ${maxFileMB} MB. Send a shorter video, or a photo instead.`,
-            })
-            continue
-          }
-          next.push({ key, name: file.name, sizeBytes: file.size, percent: 0, state: 'uploading' })
-          // After this render, so the row exists before its first patch.
-          queueMicrotask(() => send(key, file))
-        }
-        return [...current, ...next]
+          ...(file.size > maxFileMB * 1024 * 1024
+            ? {
+                state: 'failed' as const,
+                error: `Over ${maxFileMB} MB. Send a shorter video, or a photo instead.`,
+              }
+            : { state: 'uploading' as const }),
+        }))
+        return next.length === 0 ? current : [...current, ...next]
       })
     },
-    [blobs, maxFileMB, maxFiles, send],
+    [blobs, maxFileMB, maxFiles],
   )
+
+  // One request per row that needs one, exactly once. startedRef is what
+  // makes it exactly once across re-renders and re-run effects.
+  const startedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    for (const row of rows) {
+      if (row.state !== 'uploading' || startedRef.current.has(row.key)) continue
+      const file = blobs.get(row.key)
+      if (!file) continue
+      startedRef.current.add(row.key)
+      send(row.key, file)
+    }
+  }, [rows, blobs, send])
 
   const retry = useCallback(
     (key: string): void => {
