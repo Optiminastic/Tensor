@@ -23,6 +23,24 @@ try {
   // Ignore a malformed URL; the default same-origin policy still applies.
 }
 
+// Extra hosts, comma-separated, for a tunnel that is NOT the app URL.
+//
+// NEXT_PUBLIC_APP_URL cannot just be repointed at a tunnel: it is also the
+// base of every OAuth redirect URI (Google, Shopify), and those are
+// registered with the provider. So a tunnel used for something else - a
+// WhatsApp link opened on a phone, a webhook - needs its own entry.
+//
+// WORTH KNOWING HOW THIS FAILS. A blocked origin does not error: Next
+// refuses to serve its own /_next/* dev resources, the HTML still renders,
+// and React never hydrates. Every handler is simply absent, which on screen
+// looks like "the button does nothing" and leaves no trace in the browser
+// console - only one line in the dev server's own output. It cost an
+// afternoon on the damage form.
+for (const host of (process.env.ALLOWED_DEV_ORIGINS ?? '').split(',')) {
+  const trimmed = host.trim()
+  if (trimmed) devOrigins.push(trimmed)
+}
+
 // Headers applied to every response. Tune CSP for your asset/CDN/auth setup.
 const securityHeaders = [
   {

@@ -1,4 +1,5 @@
 import { env } from '@/lib/env'
+import { describeFetchFailure } from '@/lib/fetch-failure'
 import { createLogger } from '@/lib/logger'
 import {
   type CallLog,
@@ -28,7 +29,7 @@ async function call<T>(path: string, token: string, parse: (data: unknown) => T)
     })
   } catch (error) {
     log.error({ path, err: error }, 'Tensor-Core is unreachable')
-    throw new CallLogsServiceError('Tensor-Core is unreachable. Is the backend running?')
+    throw new CallLogsServiceError(describeFetchFailure(error, TIMEOUT_MS / 1000))
   }
 
   if (!response.ok) {

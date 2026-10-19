@@ -4,11 +4,11 @@ import { z } from 'zod'
  * What a customer was asked and what they changed, for the order drawer's
  * Personalisation tab.
  *
- * The message is rebuilt by Tensor-Core rather than stored: the copy comes
- * from the approved WhatsApp template and the values from the order, which is
- * the same pair the sender used. `reconstructed` is always true and the panel
- * says so - a quoted message that claims to be a recording would be a forged
- * record.
+ * The message is the one that was sent, frozen on the link row at send time.
+ * `reconstructed` is true only for a row written before Tensor started
+ * freezing it, whose body is today's template filled with this order's values
+ * rather than the words that actually left - a different claim, and the panel
+ * says which it is looking at.
  */
 export const PersonalisationMessageSchema = z.object({
   template: z.string(),
@@ -56,6 +56,11 @@ export const PersonalisationItemChangesSchema = z.object({
 export const OrderPersonalisationSchema = z.object({
   /** Null when this order was never asked - the feature was off, no phone, or it predates the watermark. */
   message: PersonalisationMessageSchema.nullable(),
+  /**
+   * Why nobody was asked, when nobody was. The rule the sender named, which
+   * used to exist only in a log line that went with the container.
+   */
+  skip_reason: z.string().nullish(),
   items: z
     .array(PersonalisationItemChangesSchema)
     .nullish()

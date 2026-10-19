@@ -137,6 +137,8 @@ export const ProductionJobSchema = z.object({
    * drawn - so absence means "go ahead", not "unknown".
    */
   personalisation_window_ends_at: z.string().nullish(),
+  /** Why nobody was asked. Sent only beside an empty `personalisation`. */
+  personalisation_skip_reason: z.string().nullish(),
   /**
    * Hexes an uploaded 3MF asked for that the shop has never recorded as a
    * filament. Present only on an upload response, and only when the file named
@@ -409,6 +411,8 @@ export const OrderSchema = z.object({
    */
   personalisation: z.string().nullish(),
   personalisation_window_ends_at: z.string().nullish(),
+  /** Why nobody was asked. Sent only beside an empty `personalisation`. */
+  personalisation_skip_reason: z.string().nullish(),
   // Decimal strings, not numbers: the backend keeps the store's own precision
   // rather than round-tripping through a float. Null means Shopify never
   // stated the figure, which is not the same as zero.

@@ -1,4 +1,5 @@
 import { env } from '@/lib/env'
+import { describeFetchFailure } from '@/lib/fetch-failure'
 import { createLogger } from '@/lib/logger'
 import {
   type MessageLog,
@@ -17,7 +18,16 @@ const log = createLogger('MessageLogsService')
  * because without a delivery webhook Meta has nothing to add to what was
  * recorded at send time.
  */
-const TIMEOUT_MS = 8_000
+/**
+ * Twenty seconds, matching the call log beside it.
+ *
+ * NOT A GENEROUS GUESS. This endpoint does not only read Tensor's ledger: for
+ * any sent row whose words were never recorded it rebuilds the message, which
+ * costs one Meta template read and up to forty Shopify queries. Eight seconds
+ * was never enough for that, and the failure landed as "Tensor-Core is
+ * unreachable" above a page full of figures that had loaded perfectly.
+ */
+const TIMEOUT_MS = 20_000
 
 export class MessageLogsServiceError extends Error {}
 
@@ -34,7 +44,7 @@ export async function listMessageLogs(token: string, brand: string): Promise<Mes
     })
   } catch (error) {
     log.error({ path, err: error }, 'Tensor-Core is unreachable')
-    throw new MessageLogsServiceError('Tensor-Core is unreachable. Is the backend running?')
+    throw new MessageLogsServiceError(describeFetchFailure(error, TIMEOUT_MS / 1000))
   }
 
   if (!response.ok) {

@@ -76,6 +76,24 @@ function PersonalisationCell({ order }: { order: OrderRecord }): JSX.Element {
     // they were checked is how an order gets printed on unconfirmed values.
     return <TonePill label="Not sent" tone="warning" />
   }
+  // STILL A DASH, now one that can answer for itself.
+  //
+  // The glyph is deliberate: on a page where almost every row predates the
+  // feature, a pill on each of them would be noise, and the operator reading
+  // this column is looking for the handful that are not dashes. But a dash
+  // that means six different things is the reason somebody asks "why is this
+  // one empty?" and nobody can say - so where Tensor recorded the rule, the
+  // dash carries it on hover and the drawer prints it in full.
+  if (order.personalisationSkipReason) {
+    return (
+      <span
+        title={order.personalisationSkipReason}
+        className="text-muted-foreground decoration-muted-foreground/40 cursor-help underline decoration-dotted underline-offset-4"
+      >
+        —
+      </span>
+    )
+  }
   return <span className="text-muted-foreground">—</span>
 }
 

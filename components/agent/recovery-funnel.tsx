@@ -6,6 +6,14 @@ import { money } from '@/lib/checkout-format'
 interface RecoveryFunnelProps {
   funnel: Funnel
   currency: string
+  /**
+   * True when the message ledger could not be read.
+   *
+   * "Reached by the agent" counts a cart contacted by CALL OR BY MESSAGE,
+   * so a missing ledger silently lowers it - and every percentage under it.
+   * The bars would still be drawn, confidently, at the wrong length.
+   */
+  messagesUnavailable?: boolean
 }
 
 interface Step {
@@ -23,7 +31,11 @@ interface Step {
  * Every bar carries its count and share as text, so the colour is never the
  * only thing saying what it is.
  */
-export function RecoveryFunnel({ funnel, currency }: RecoveryFunnelProps): JSX.Element {
+export function RecoveryFunnel({
+  funnel,
+  currency,
+  messagesUnavailable = false,
+}: RecoveryFunnelProps): JSX.Element {
   const steps: Step[] = [
     { label: 'Abandoned', count: funnel.abandoned, tone: 'accent' },
     { label: 'Reached by the agent', count: funnel.contacted, tone: 'accent' },
@@ -38,6 +50,12 @@ export function RecoveryFunnel({ funnel, currency }: RecoveryFunnelProps): JSX.E
   return (
     <section className="border-border bg-surface flex flex-col gap-4 rounded-lg border p-5 shadow-xs">
       <h2 className="text-foreground text-sm font-medium">Recovery funnel</h2>
+      {messagesUnavailable ? (
+        <p className="text-warning text-xs text-pretty">
+          The message ledger could not be read, so “reached by the agent” counts calls only — the
+          real figure is this one or higher.
+        </p>
+      ) : null}
       <ol className="flex flex-col gap-3">
         {steps.map(step => (
           <FunnelStep key={step.label} step={step} total={funnel.abandoned} />

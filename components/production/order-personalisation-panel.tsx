@@ -27,7 +27,11 @@ export function OrderPersonalisationPanel({ data }: OrderPersonalisationPanelPro
         <h3 className="text-subtle-foreground text-[11px] font-medium tracking-wide uppercase">
           The message we sent
         </h3>
-        {data.message ? <SentMessage message={data.message} /> : <NeverAsked />}
+        {data.message ? (
+          <SentMessage message={data.message} />
+        ) : (
+          <NeverAsked reason={data.skip_reason ?? null} />
+        )}
       </section>
 
       <section className="flex flex-col gap-2.5">
@@ -76,7 +80,27 @@ export function OrderPersonalisationPanel({ data }: OrderPersonalisationPanelPro
   )
 }
 
-function NeverAsked(): JSX.Element {
+/**
+ * Nobody was messaged - and, where Tensor knows it, the rule that decided so.
+ *
+ * The list of maybes below is the fallback for an order whose verdict
+ * predates Tensor recording one. When there IS a reason it goes first and in
+ * the sender's own words, because "which of those six was it" is the entire
+ * question somebody opens this tab with.
+ */
+function NeverAsked({ reason }: { reason: string | null }): JSX.Element {
+  if (reason) {
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground text-sm text-pretty">
+          No personalisation link was sent for this order.
+        </p>
+        <p className="bg-surface-muted text-foreground rounded-xl px-3 py-2 text-sm text-pretty">
+          {reason}
+        </p>
+      </div>
+    )
+  }
   return (
     <p className="text-muted-foreground text-sm text-pretty">
       No personalisation link was sent for this order. That happens when the check was switched off,
@@ -121,11 +145,10 @@ function SentMessage({
             {message.template}
             {message.language ? ` · ${message.language}` : ''}
             {message.buttons > 0 ? ` · ${message.buttons} buttons` : ''}
-            {/* Said out loud. The words are the approved template's and the
-                values are this order's, filled the same way the sender filled
-                them - but nothing was recorded at send time, and a quotation
-                that claimed to be a recording would be a forged record. */}
-            {message.reconstructed ? ' · rebuilt from the approved template' : ''}
+            {/* Said out loud, because they are different claims: a frozen
+                body is the words that left, and a rebuilt one is today's
+                template filled with this order's values. */}
+            {message.reconstructed ? ' · rebuilt from the approved template' : ' · as sent'}
           </p>
         </>
       ) : (

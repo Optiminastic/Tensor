@@ -8,10 +8,25 @@ import { duration } from '@/lib/call-format'
 interface AgentStatRowProps {
   calls: CallStats
   messages: MessageStats
+  /**
+   * True when the message ledger could not be read.
+   *
+   * IT HAS TO REACH THIS TILE. When that request fails the page still
+   * renders, with an empty message list behind it - so "WhatsApp sent"
+   * showed a confident 0 next to a red banner, and 0 is a real number a
+   * reader will believe. "No messages went out this week" and "we could not
+   * find out" are different answers, and only one of them is cause to go
+   * looking.
+   */
+  messagesUnavailable?: boolean
 }
 
 /** The agent's activity and spend for the period, as four tiles. */
-export function AgentStatRow({ calls, messages }: AgentStatRowProps): JSX.Element {
+export function AgentStatRow({
+  calls,
+  messages,
+  messagesUnavailable = false,
+}: AgentStatRowProps): JSX.Element {
   const connectRate = calls.placed > 0 ? Math.round((calls.connected / calls.placed) * 100) : 0
   const perCall = calls.placed > 0 ? calls.callCost / calls.placed : 0
 
@@ -38,15 +53,19 @@ export function AgentStatRow({ calls, messages }: AgentStatRowProps): JSX.Elemen
       />
       <Stat
         label="WhatsApp sent"
-        value={messages.sent}
-        subCounts={[
-          {
-            label: 'Failed',
-            value: messages.failed,
-            tone: messages.failed > 0 ? 'danger' : 'muted',
-          },
-          { label: 'Unfinished', value: messages.pending, tone: 'muted' },
-        ]}
+        value={messagesUnavailable ? '—' : messages.sent}
+        subCounts={
+          messagesUnavailable
+            ? [{ label: 'Could not be read', value: 'see above', tone: 'warning' }]
+            : [
+                {
+                  label: 'Failed',
+                  value: messages.failed,
+                  tone: messages.failed > 0 ? 'danger' : 'muted',
+                },
+                { label: 'Unfinished', value: messages.pending, tone: 'muted' },
+              ]
+        }
       />
     </div>
   )
