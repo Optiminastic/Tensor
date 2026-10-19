@@ -136,8 +136,16 @@ export default async function AgentOverviewPage({
         currency={overview.currency}
         periodLabel={summaryLabel}
       />
-      <AgentStatRow calls={overview.calls} messages={overview.messages} />
-      <RecoveryFunnel funnel={overview.funnel} currency={overview.currency} />
+      <AgentStatRow
+        calls={overview.calls}
+        messages={overview.messages}
+        messagesUnavailable={agent.errors.messages !== null}
+      />
+      <RecoveryFunnel
+        funnel={overview.funnel}
+        currency={overview.currency}
+        messagesUnavailable={agent.errors.messages !== null}
+      />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-foreground text-sm font-medium">Day by day</h2>
