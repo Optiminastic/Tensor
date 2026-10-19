@@ -9,6 +9,7 @@ import { DamageFileGrid } from '@/components/agent/damage-file-grid'
 import { DAMAGE_STATUS_CONFIG } from '@/components/agent/damage-status-config'
 import { DamageStatusControl } from '@/components/agent/damage-status-control'
 import { displayNumber, messageTime } from '@/components/agent/whatsapp-time'
+import { OrderDetailView } from '@/components/production/order-detail-view'
 import { TonePill } from '@/components/production/tone-pill'
 import {
   Sheet,
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/sheet'
 import { Tabs } from '@/components/ui/tabs'
 import type { DamageReport, DamageReportDetail } from '@/lib/validators/whatsapp-damage'
+import { type OrderDrawerDetail, fetchOrderDetail } from '@/services/order-drawer.service'
 
 interface DamageDetailSheetProps {
   brand: string
@@ -148,31 +150,84 @@ function DrawerContents({ brand, report, canUpdate, onChanged }: DrawerContentsP
   )
 }
 
+/**
+ * The order the customer named, in full.
+ *
+ * THE WHOLE ORDER, not a link to it. Somebody working a damage report is
+ * deciding whether to reprint or refund, and that needs what was bought,
+ * which names were engraved, what it cost and where it went - all of which
+ * already exist on the order drawer. Reusing OrderDetailView means this tab
+ * cannot drift from the orders page, and a link alone would have made the
+ * reader leave the report to find out.
+ *
+ * Fetched only when this tab is opened, so a list of reports does not pull
+ * an order for each one.
+ */
 function OrderTab({ brand, report }: { brand: string; report: DamageReport }): JSX.Element {
+  const detail = useOrderDetail(report.order_id)
+
   if (!report.order_id) {
     return (
       <p className="text-muted-foreground text-sm text-pretty">
-        No order in Tensor matches <span className="font-mono">{report.order_number}</span> - the
+        No order in Tensor matches <span className="font-mono">{report.order_number}</span> — the
         customer typed it into the damage form themselves, so it may be mistyped, or from a sync
         that has not caught up yet.
       </p>
     )
   }
-  return (
-    <div className="flex flex-col gap-3 text-sm">
-      <p className="text-muted-foreground text-pretty">
-        This report is against order <span className="font-mono">{report.order_number}</span>.
-      </p>
-      <Link
-        href={`/dashboard/${brand}/production/orders/${report.order_id}`}
-        prefetch={false}
-        className="text-accent inline-flex items-center gap-1 underline-offset-4 hover:underline"
-      >
-        Open the full order
-        <ExternalLink className="size-3" aria-hidden />
-      </Link>
-    </div>
-  )
+  if (detail.error) {
+    return (
+      <div className="flex flex-col gap-3 text-sm">
+        {/* The backend gates orders on order:read and this page on
+            whatsapp:read, so a reader can legitimately hold one and not the
+            other. Saying so beats a bare "could not load". */}
+        <p className="text-muted-foreground text-pretty">
+          Could not load order <span className="font-mono">{report.order_number}</span>. You may not
+          have permission to see orders.
+        </p>
+        <Link
+          href={`/dashboard/${brand}/production/orders/${report.order_id}`}
+          prefetch={false}
+          className="text-accent inline-flex items-center gap-1 underline-offset-4 hover:underline"
+        >
+          Open the full order
+          <ExternalLink className="size-3" aria-hidden />
+        </Link>
+      </div>
+    )
+  }
+  if (!detail.data) {
+    return <Loading />
+  }
+  return <OrderDetailView brand={brand} order={detail.data.order} jobs={detail.data.jobs} />
+}
+
+/** One order and its jobs, asked for when the Order tab is opened. */
+function useOrderDetail(orderId: string | null): {
+  data: OrderDrawerDetail | null
+  error: boolean
+} {
+  const [data, setData] = useState<OrderDrawerDetail | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    if (!orderId) return
+    let cancelled = false
+    setData(null)
+    setError(false)
+    fetchOrderDetail(orderId)
+      .then(result => {
+        if (!cancelled) setData(result)
+      })
+      .catch(() => {
+        if (!cancelled) setError(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [orderId])
+
+  return { data, error }
 }
 
 function Loading(): JSX.Element {
