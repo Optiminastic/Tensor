@@ -233,7 +233,12 @@ export const ObservedPropertySchema = z.object({
 export const FieldMapSchema = z.object({
   property_key: z.string(),
   scad_variable: z.string(),
-  value_type: z.enum(['string', 'number']),
+  /** 'count' reads a number out of the storefront's WORDING: the shop does not
+   *  sell "1", it sells "1 RED HEART", and renames it to "2 PINK HEARTS"
+   *  whenever the catalogue changes. Without it a heart option could only be
+   *  mapped as a string — reaching OpenSCAD as side_hearts="1 RED HEART",
+   *  which is not a number — or as a number, which refuses it outright. */
+  value_type: z.enum(['string', 'number', 'count']),
   /** Which design file this row feeds. 'body' for a product printing one. */
   role: z.string(),
   /** Whether an order that does not answer it holds the job. False means the
@@ -242,6 +247,14 @@ export const FieldMapSchema = z.object({
   /** A value that does not come from the order. Set on a row that says
    *  "always 200" rather than "whatever the customer typed". */
   fixed_value: z.string().nullish(),
+  /** What an OPTIONAL field passes when the order does not answer it.
+   *
+   *  Different from fixed_value, which ignores the order entirely: this is the
+   *  answer for a SILENT order, not for every order. The heart count is why it
+   *  exists — the 2-STEP plank sells no heart option at all, and without a
+   *  default of 0 every one of those planks would take the template's own
+   *  side_hearts = 1 and grow a heart nobody bought. */
+  default_value: z.string().nullish(),
   position: z.number(),
 })
 
@@ -264,7 +277,16 @@ export const FieldMapWriteSchema = z
      * wrong product, successfully.
      */
     fixed_value: z.string().trim().max(120).optional(),
-    value_type: z.enum(['string', 'number']),
+    /**
+     * What an optional field passes when the order is silent.
+     *
+     * Not the same as fixed_value: the order is still consulted first. A
+     * default on a REQUIRED field is refused by the API, because a required
+     * field that goes unanswered holds the job and the default could never be
+     * reached.
+     */
+    default_value: z.string().trim().max(120).optional(),
+    value_type: z.enum(['string', 'number', 'count']),
     /**
      * Absent means required, so the rule a product was configured under does not
      * change because a newer client stopped sending the flag.

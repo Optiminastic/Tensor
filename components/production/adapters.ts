@@ -108,7 +108,9 @@ function toOrderStatus(financial: string): OrderStatus {
  * know is worse than one that says nothing.
  */
 function toWindowState(value: string | null | undefined): OrderRecord['personalisation'] {
-  return value === 'open' || value === 'done' || value === 'not_sent' ? value : null
+  return value === 'open' || value === 'done' || value === 'not_sent' || value === 'changed'
+    ? value
+    : null
 }
 
 export function toOrderRecord(order: Order): OrderRecord {

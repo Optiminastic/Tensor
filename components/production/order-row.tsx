@@ -68,6 +68,14 @@ function PersonalisationCell({ order }: { order: OrderRecord }): JSX.Element {
       </a>
     )
   }
+  if (order.personalisation === 'changed') {
+    // NOT "Done". Both are closed windows, but the difference is what the
+    // floor is about to print: Done means the values are the ones typed at
+    // checkout, Changed means the customer corrected a name afterwards and
+    // the plank carries the correction. Reading them as the same thing is
+    // how an edit gets printed as though nobody had made it.
+    return <TonePill label="Changed" tone="warning" />
+  }
   if (order.personalisation === 'done') {
     return <TonePill label="Done" tone="success" />
   }
