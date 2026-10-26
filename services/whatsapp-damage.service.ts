@@ -1,10 +1,17 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
 import {
+  type DamagePaymentResult,
+  DamagePaymentResultSchema,
+  type DamagePickupResult,
+  DamagePickupResultSchema,
   type DamageReport,
   type DamageReportDetail,
   DamageReportDetailSchema,
   DamageReportSchema,
+  type DamageResolutionKind,
+  DamageResolutionResultSchema,
+  type DamageResolutionResult,
   type DamageReports,
   DamageReportsResponseSchema,
   type DamageStatus,
@@ -89,6 +96,36 @@ export async function updateDamageReport(update: DamageUpdate): Promise<DamageRe
 }
 
 /**
+ * Decides what happens to a damaged parcel: reprint it at our cost, or offer
+ * the customer the ₹100 reverse pickup.
+ *
+ * A SEPARATE CALL from updateDamageReport, because it is a separate decision
+ * with a separate permission (damage:resolve) and a side effect that one has
+ * not got: choosing a reprint messages the customer. The backend records it
+ * once and refuses a second, so this is not idempotent and must not be
+ * retried blindly.
+ */
+export interface DamageResolution {
+  token: string
+  brand: string
+  id: string
+  /** Never `''` — that is the absence of a decision, not one of them. */
+  kind: Exclude<DamageResolutionKind, ''>
+  note: string
+}
+
+export async function resolveDamageReport(
+  input: DamageResolution,
+): Promise<DamageResolutionResult> {
+  const { token, brand, id, ...body } = input
+  const response = await call(token, `${reportsPath(brand)}/${encodeURIComponent(id)}/resolution`, {
+    method: 'POST',
+    body,
+  })
+  return DamageResolutionResultSchema.parse(await response.json())
+}
+
+/**
  * One damage file's raw bytes, as a Response the route handler streams on.
  *
  * Deliberately not routed through `call`: that helper asks for JSON and reads
@@ -114,4 +151,49 @@ export async function fetchDamageFile(
     log.error({ err: error }, 'Tensor-Core is unreachable')
     throw new DamageServiceError('Tensor-Core is unreachable. Is the backend running?')
   }
+}
+
+/**
+ * Records that the customer's ₹100 arrived.
+ *
+ * SOMEBODY LOOKED AT THE MONEY. There is no automatic version of this and
+ * there is not meant to be: a screenshot is a picture of a screen, and a
+ * person checking the bank is the reason support is in this flow at all.
+ *
+ * Reversible, unlike the booking that follows it, which is why they are two
+ * calls rather than one.
+ */
+export async function confirmDamagePayment(input: {
+  token: string
+  brand: string
+  id: string
+}): Promise<DamagePaymentResult> {
+  const { token, brand, id } = input
+  const response = await call(token, `${reportsPath(brand)}/${encodeURIComponent(id)}/payment`, {
+    method: 'POST',
+  })
+  return DamagePaymentResultSchema.parse(await response.json())
+}
+
+/**
+ * Books the courier to collect the damaged parcel.
+ *
+ * THE ONE CALL HERE THAT SPENDS MONEY AND CANNOT BE TAKEN BACK — it puts a van
+ * outside somebody's house. Everything before it is a row in a database.
+ *
+ * NOT RETRYABLE. A timeout may well have booked a shipment; calling again
+ * would book a second. On anything other than a clean answer the screen says
+ * what happened and leaves it to a person, because the only way back is
+ * cancelling a waybill at Delhivery.
+ */
+export async function bookDamagePickup(input: {
+  token: string
+  brand: string
+  id: string
+}): Promise<DamagePickupResult> {
+  const { token, brand, id } = input
+  const response = await call(token, `${reportsPath(brand)}/${encodeURIComponent(id)}/pickup`, {
+    method: 'POST',
+  })
+  return DamagePickupResultSchema.parse(await response.json())
 }

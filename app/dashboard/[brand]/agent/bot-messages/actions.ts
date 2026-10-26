@@ -3,11 +3,17 @@
 import { resolveBackendToken } from '@/lib/backend-token'
 import { createLogger } from '@/lib/logger'
 import type { BotNode, BotTree } from '@/lib/validators/whatsapp-bot-content'
+import type { BotNotice } from '@/lib/validators/whatsapp-bot-messages'
 import {
   BotContentServiceError,
   getBotContent,
   saveBotContent,
 } from '@/services/whatsapp-bot-content.service'
+import {
+  BotMessagesServiceError,
+  resetBotNotice,
+  saveBotNotice,
+} from '@/services/whatsapp-bot-messages.service'
 
 const log = createLogger('BotContentActions')
 
@@ -51,4 +57,45 @@ export async function saveBotContentAction(input: {
   } catch (err) {
     return failure(err)
   }
+}
+
+/*
+ * The one-off messages, saved one at a time.
+ *
+ * Each returns the WHOLE set, so the page shows what is actually stored rather
+ * than what it hoped it stored - and a save refused for one message cannot
+ * leave the others looking changed.
+ */
+
+export async function saveBotNoticeAction(input: {
+  brand: string
+  key: string
+  body: string
+}): Promise<ActionResult<BotNotice[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    return { ok: true, data: await saveBotNotice({ token, ...input }) }
+  } catch (err) {
+    return noticeFailure(err)
+  }
+}
+
+export async function resetBotNoticeAction(input: {
+  brand: string
+  key: string
+}): Promise<ActionResult<BotNotice[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    return { ok: true, data: await resetBotNotice({ token, ...input }) }
+  } catch (err) {
+    return noticeFailure(err)
+  }
+}
+
+function noticeFailure<T>(error: unknown): ActionResult<T> {
+  if (error instanceof BotMessagesServiceError) return { ok: false, error: error.message }
+  log.error({ err: error }, 'Unexpected bot-message error')
+  return { ok: false, error: 'Something went wrong. Please try again.' }
 }

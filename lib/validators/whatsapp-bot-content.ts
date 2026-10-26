@@ -8,14 +8,27 @@ import { z } from 'zod'
  * model: "Explore products opens the shop's website" is a row of data, not a
  * branch in the backend.
  *
- * Three actions are different and the page has to treat them so. `damage`,
- * `track` and `team` each change the state of the conversation, which lives
- * in Tensor-Core's pure state machine - it cannot read this table. So those
- * three keep reserved ids the machine listens for. The shop can rename them,
- * reorder them, move them to another message or leave them out; it cannot
- * invent a fourth of them, and it cannot change their id.
+ * Four actions are different and the page has to treat them so. `damage`,
+ * `track`, `team` and `feedback` each change the state of the conversation,
+ * which lives in Tensor-Core's pure state machine - it cannot read this table.
+ * So those four keep reserved ids the machine listens for. The shop can rename
+ * them, reorder them, move them to another message or leave them out; it
+ * cannot invent a fifth of them, and it cannot change their id.
+ *
+ * `feedback` hands over like `team` and says something different while doing
+ * it. Its own action rather than a second `team` option, because the id is
+ * what the machine hears: two options claiming `team` could not both be
+ * listened for, and here they would read as the same thing.
  */
-export const BotActionSchema = z.enum(['answer', 'open', 'url', 'damage', 'track', 'team'])
+export const BotActionSchema = z.enum([
+  'answer',
+  'open',
+  'url',
+  'damage',
+  'track',
+  'team',
+  'feedback',
+])
 export type BotAction = z.infer<typeof BotActionSchema>
 
 /** The ids Tensor-Core's state machine listens for. */
@@ -23,6 +36,7 @@ export const RESERVED_IDS: Partial<Record<BotAction, string>> = {
   damage: 'damage',
   track: 'track',
   team: 'team',
+  feedback: 'feedback',
 }
 
 export const BotOptionSchema = z.object({
@@ -117,13 +131,25 @@ export function describeAction(option: BotOption, nodes: BotNode[]): string {
       return 'Asks for an order number'
     case 'team':
       return 'Hands the chat to a person'
+    case 'feedback':
+      return 'Invites feedback, then hands over'
   }
 }
 
-/** A short name for a message, taken from its own first line. */
+/**
+ * A short name for a message, taken from its own first line.
+ *
+ * CUT BY CHARACTERS, NOT BY `slice`. A JavaScript string is UTF-16 and an
+ * emoji is two units of it, so `slice(0, 40)` can land between the halves of
+ * one and leave a lone surrogate behind. That is not merely ugly: the broken
+ * half renders one way in the server's HTML and another after React hydrates,
+ * which fails hydration and throws the whole editor away. It happened to the
+ * real FAQ message, whose first line is 39 characters and then a 👇.
+ */
 export function messageName(node: BotNode): string {
   const first = node.body.split('\n').find(line => line.trim() !== '')
   if (!first) return node.key
   const cleaned = first.replace(/[*_~]/g, '').trim()
-  return cleaned.length > 40 ? `${cleaned.slice(0, 40)}…` : cleaned
+  const chars = [...cleaned]
+  return chars.length > 40 ? `${chars.slice(0, 40).join('')}…` : cleaned
 }

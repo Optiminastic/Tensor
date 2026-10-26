@@ -6,8 +6,9 @@ import { type JSX, useEffect, useState } from 'react'
 
 import { loadDamageReportAction } from '@/app/dashboard/[brand]/agent/damaged-products/actions'
 import { DamageFileGrid } from '@/components/agent/damage-file-grid'
+import { DamageResolutionControl } from '@/components/agent/damage-resolution-control'
 import { DAMAGE_STATUS_CONFIG } from '@/components/agent/damage-status-config'
-import { DamageStatusControl } from '@/components/agent/damage-status-control'
+import { DamageTimeline } from '@/components/agent/damage-timeline'
 import { displayNumber, messageTime } from '@/components/agent/whatsapp-time'
 import { OrderDetailView } from '@/components/production/order-detail-view'
 import { TonePill } from '@/components/production/tone-pill'
@@ -28,7 +29,7 @@ interface DamageDetailSheetProps {
   /** Kept while the drawer closes, so it slides out whole. */
   report: DamageReport | null
   open: boolean
-  canUpdate: boolean
+  canResolve: boolean
   onClose: () => void
   onChanged: () => void
 }
@@ -49,7 +50,7 @@ export function DamageDetailSheet({
   brand,
   report,
   open,
-  canUpdate,
+  canResolve,
   onClose,
   onChanged,
 }: DamageDetailSheetProps): JSX.Element {
@@ -63,7 +64,7 @@ export function DamageDetailSheet({
             key={report.id}
             brand={brand}
             report={report}
-            canUpdate={canUpdate}
+            canResolve={canResolve}
             onChanged={onChanged}
           />
         ) : null}
@@ -77,14 +78,31 @@ type View = 'photos' | 'order'
 interface DrawerContentsProps {
   brand: string
   report: DamageReport
-  canUpdate: boolean
+  canResolve: boolean
   onChanged: () => void
 }
 
-function DrawerContents({ brand, report, canUpdate, onChanged }: DrawerContentsProps): JSX.Element {
+function DrawerContents({
+  brand,
+  report,
+  canResolve,
+  onChanged,
+}: DrawerContentsProps): JSX.Element {
   const [view, setView] = useState<View>('photos')
-  const detail = useDamageDetail(brand, report.id)
+  // Bumped by anything that acts on the report, to re-read the timeline.
+  //
+  // The list behind this drawer refreshes itself and hands down a new report,
+  // which is enough for the badges - but the stages are fetched HERE and keyed
+  // on the report id, so without this a confirmed payment left the progress
+  // list showing the step it had just completed as still to come.
+  const [reloads, setReloads] = useState(0)
+  const detail = useDamageDetail(brand, report.id, reloads)
   const status = DAMAGE_STATUS_CONFIG[report.status]
+
+  function changed(): void {
+    setReloads(n => n + 1)
+    onChanged()
+  }
 
   return (
     <>
@@ -135,12 +153,21 @@ function DrawerContents({ brand, report, canUpdate, onChanged }: DrawerContentsP
             ) : (
               <DamageFileGrid brand={brand} reportId={report.id} files={detail.data.files} />
             )}
-            <DamageStatusControl
+            {/* WHAT we are doing about it, and HOW FAR ALONG the report is,
+                are two questions. They were one dropdown labelled
+                "Resolution" that in fact set the status, which is why a
+                decided report still read as undecided. */}
+            <DamageResolutionControl
               brand={brand}
               report={report}
-              canUpdate={canUpdate}
-              onChanged={onChanged}
+              canResolve={canResolve}
+              stages={detail.data?.stages ?? []}
+              paymentProof={detail.data?.payment_proof ?? null}
+              onChanged={changed}
             />
+            {/* Below the control, because it is the record of what the
+                control did - and what it has not managed yet. */}
+            {detail.data ? <DamageTimeline stages={detail.data.stages} /> : null}
           </div>
         ) : (
           <OrderTab brand={brand} report={report} />
@@ -242,10 +269,14 @@ function Failed({ what }: { what: string }): JSX.Element {
   )
 }
 
-/** The report and its photographs, asked for as the drawer opens. */
+/**
+ * The report, its photographs and its timeline, asked for as the drawer opens
+ * and again whenever `reloads` changes.
+ */
 function useDamageDetail(
   brand: string,
   id: string,
+  reloads: number,
 ): { data: DamageReportDetail | null; error: boolean } {
   const [data, setData] = useState<DamageReportDetail | null>(null)
   const [error, setError] = useState(false)
@@ -266,7 +297,7 @@ function useDamageDetail(
     return () => {
       cancelled = true
     }
-  }, [brand, id])
+  }, [brand, id, reloads])
 
   return { data, error }
 }

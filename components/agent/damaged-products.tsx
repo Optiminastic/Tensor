@@ -10,7 +10,7 @@ import type { DamageReports } from '@/lib/validators/whatsapp-damage'
 interface DamagedProductsProps {
   brand: string
   initial: DamageReports
-  canUpdate: boolean
+  canResolve: boolean
 }
 
 /**
@@ -24,7 +24,7 @@ interface DamagedProductsProps {
  */
 const POLL_MS = 30_000
 
-export function DamagedProducts({ brand, initial, canUpdate }: DamagedProductsProps): JSX.Element {
+export function DamagedProducts({ brand, initial, canResolve }: DamagedProductsProps): JSX.Element {
   const { data, refetch } = useQuery({
     queryKey: ['damage-reports', brand],
     queryFn: async () => {
@@ -41,7 +41,7 @@ export function DamagedProducts({ brand, initial, canUpdate }: DamagedProductsPr
       brand={brand}
       reports={data.items}
       counts={data.counts}
-      canUpdate={canUpdate}
+      canResolve={canResolve}
       onChanged={() => void refetch()}
     />
   )

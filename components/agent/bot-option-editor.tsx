@@ -42,6 +42,11 @@ const ACTIONS: { value: BotAction; label: string; help: string }[] = [
     label: 'Hand over to a person',
     help: 'Silences the bot on this chat for 12 hours.',
   },
+  {
+    value: 'feedback',
+    label: 'Ask for feedback',
+    help: 'Invites them to type it, then hands over like the option above.',
+  },
 ]
 
 interface BotOptionEditorProps {

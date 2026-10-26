@@ -27,7 +27,10 @@ export default async function DamagedProductsPage({
 }: DamagedProductsPageProps): Promise<JSX.Element> {
   const { brand } = await params
   await requirePermission('whatsapp:read', `/dashboard/${brand}`)
-  const canUpdate = can(await currentAuthz(), 'whatsapp:reply')
+  const authz = await currentAuthz()
+  // Deciding the OUTCOME is a different permission from moving a report along:
+  // admin and customer support hold it, and nobody else does.
+  const canResolve = can(authz, 'damage:resolve')
 
   let reports: DamageReports = EMPTY
   let error: string | null = null
@@ -54,7 +57,7 @@ export default async function DamagedProductsPage({
           {error}
         </p>
       ) : (
-        <DamagedProducts brand={brand} initial={reports} canUpdate={canUpdate} />
+        <DamagedProducts brand={brand} initial={reports} canResolve={canResolve} />
       )}
     </main>
   )
