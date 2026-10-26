@@ -17,12 +17,24 @@ interface RegistryTabsProps {
   components: InventoryItem[]
   products: RegistryProductDetail[]
   templates: DesignTemplate[]
+  /**
+   * Which tabs this page carries. All four when omitted.
+   *
+   * The registry is authored under Designs, where the files and the products
+   * that print from them live together. Production keeps the two halves the
+   * floor reads - which file a SKU prints from, and which slicer settings it
+   * prints with - without the authoring beside them.
+   */
+  only?: readonly string[]
 }
 
 const COMPONENTS_TAB = 'components'
 const PRODUCTS_TAB = 'products'
 const DESIGNS_TAB = 'designs'
 const SLICING_TAB = 'slicing'
+
+/** What Production carries: the file a SKU prints from, and how it slices. */
+export const PRODUCTION_TABS = [DESIGNS_TAB, SLICING_TAB] as const
 
 /**
  * The registry, split by what kind of thing is being described.
@@ -49,10 +61,9 @@ export function RegistryTabs({
   components,
   products,
   templates,
+  only,
 }: RegistryTabsProps): JSX.Element {
-  const [tab, setTab] = useQueryTab<string>('tab', PRODUCTS_TAB)
-
-  const tabs: TabItem[] = [
+  const all: TabItem[] = [
     { value: PRODUCTS_TAB, label: 'Products', count: products.length },
     { value: COMPONENTS_TAB, label: 'Components', count: components.length },
     { value: DESIGNS_TAB, label: 'Designs', count: templates.length },
@@ -60,27 +71,38 @@ export function RegistryTabs({
     // class default, and that is not known until the tab has loaded.
     { value: SLICING_TAB, label: 'Slicing' },
   ]
+  const tabs = only ? all.filter(t => only.includes(t.value)) : all
+
+  const [tab, setTab] = useQueryTab<string>('tab', tabs[0]?.value ?? PRODUCTS_TAB)
+  // A ?tab= this page does not carry falls back to its first, rather than
+  // rendering a page with a tab bar and nothing under it. It happens whenever
+  // somebody follows a link to the full registry from the narrower one.
+  const active = tabs.some(t => t.value === tab) ? tab : (tabs[0]?.value ?? PRODUCTS_TAB)
 
   return (
     <div className="flex flex-col gap-4">
-      <Tabs tabs={tabs} value={tab} onValueChange={setTab} label="Choose a registry" />
+      <Tabs tabs={tabs} value={active} onValueChange={setTab} label="Choose a registry" />
 
-      {tab === COMPONENTS_TAB ? <ComponentRegistryTable brand={brand} items={components} /> : null}
+      {/* The provider wraps BOTH panels that choose a design file. It used to
+          wrap only the products one; a component that is printed here names a
+          design file too, and without this its picker would silently offer an
+          empty list rather than fail. */}
+      <DesignTemplatesProvider templates={templates}>
+        {active === COMPONENTS_TAB ? (
+          <ComponentRegistryTable brand={brand} items={components} />
+        ) : null}
 
-      {/* The provider wraps only the products panel, which is where a design
-          gets chosen. The Designs tab holds the same list already. */}
-      {tab === PRODUCTS_TAB ? (
-        <DesignTemplatesProvider templates={templates}>
-          <ProductRegistryPanel brand={brand} products={products} />
-        </DesignTemplatesProvider>
-      ) : null}
+        {active === PRODUCTS_TAB ? (
+          <ProductRegistryPanel brand={brand} products={products} components={components} />
+        ) : null}
+      </DesignTemplatesProvider>
 
-      {tab === DESIGNS_TAB ? <DesignRegistryTable brand={brand} templates={templates} /> : null}
+      {active === DESIGNS_TAB ? <DesignRegistryTable brand={brand} templates={templates} /> : null}
 
       {/* Its own tab, not a control inside each product: the job is usually
           "these twenty SKUs all print with DNP-H2C", which a per-product panel
           would turn into twenty visits. */}
-      {tab === SLICING_TAB ? <SKUPipelinePanel brand={brand} /> : null}
+      {active === SLICING_TAB ? <SKUPipelinePanel brand={brand} /> : null}
     </div>
   )
 }

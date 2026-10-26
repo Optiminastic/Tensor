@@ -10,7 +10,16 @@ import { Button } from '@/components/ui/button'
 interface TemplateUploadButtonProps {
   brand: string
   templateKey: string
-  /** Wording for the control. "Replace" where a file already prints. */
+  /**
+   * What the control MEANS: "Replace" where a file already prints, "Upload"
+   * where the embedded copy still does.
+   *
+   * It is no longer drawn. The button is an icon by the shop's request, so
+   * this reaches the reader through aria-label and title instead - an icon
+   * alone says nothing to a screen reader, and nothing on hover either. It is
+   * still a prop rather than a constant because the two cases are genuinely
+   * different actions and the row already knows which one it is.
+   */
   label?: string
 }
 
@@ -71,13 +80,16 @@ export function TemplateUploadButton({
       />
       <Button
         type="button"
-        variant="secondary"
+        variant="ghost"
         size="sm"
         disabled={pending}
+        aria-label={pending ? 'Uploading…' : `${label} ${templateKey}.scad`}
+        title={pending ? 'Uploading…' : `${label} ${templateKey}.scad`}
         onClick={() => inputRef.current?.click()}
       >
-        <Upload className="size-3.5" aria-hidden />
-        {pending ? 'Uploading…' : label}
+        {/* Spinning while it uploads, because with the text gone there is
+            nothing else left to say the button did anything. */}
+        <Upload className={`size-3.5 ${pending ? 'animate-pulse' : ''}`} aria-hidden />
       </Button>
       {message ? (
         <p

@@ -207,7 +207,7 @@ export function PersonalisationItemCard({
                 <Input
                   id={`${item.job_id}-${field.label}`}
                   value={values[field.label] ?? ''}
-                  maxLength={12}
+                  maxLength={field.max_length}
                   // 16px or larger, or iOS zooms the whole page on focus and
                   // the customer loses the layout mid-edit. Capitals because
                   // that is how it is engraved.

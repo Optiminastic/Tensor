@@ -45,7 +45,7 @@ export async function uploadDesignTemplateAction(
 
   try {
     const template = await uploadDesignTemplate(token, key, form)
-    revalidatePath(`/dashboard/${brand}/production/registry`)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
     return { ok: true, data: template }
   } catch (err) {
     return {

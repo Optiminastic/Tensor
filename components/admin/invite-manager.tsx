@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { InviteCreateSchema, type Invite, type InviteCreateInput } from '@/lib/validators/admin'
 
-// Exactly the six roles Tensor-Core will accept (auth.AllRoles, and the
+// Exactly the seven roles Tensor-Core will accept (auth.AllRoles, and the
 // `oneof` on its create-invite route). MARKETING_HEAD used to be listed here
 // and is not one of them - choosing it produced a 400 that read as "Something
 // went wrong", with nothing saying the role did not exist. PACKAGING_QC was
@@ -26,6 +26,10 @@ const ROLES = [
   { value: 'OPERATOR', label: 'Operator — all of production, cannot see costs' },
   { value: 'PACKAGING_QC', label: 'Packaging & QC — runs those stations' },
   { value: 'PERFORMANCE_MARKETER', label: 'Performance Marketer — reads pricing' },
+  {
+    value: 'CUSTOMER_SUPPORT',
+    label: 'Customer Support — the Agent area and Shipping only',
+  },
   { value: 'ADMIN', label: 'Admin — full access, and can make other admins' },
 ] as const
 

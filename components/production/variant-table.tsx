@@ -3,6 +3,7 @@
 import { FileCog } from 'lucide-react'
 import type { JSX } from 'react'
 
+import { PersonalisationLinkToggle } from '@/components/production/personalisation-link-toggle'
 import { VariantDesignDialog } from '@/components/production/variant-design-dialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,7 +22,7 @@ interface VariantTableProps {
 }
 
 const FIGURE = 'font-mono tabular-nums'
-const COLUMNS = ['SKU', 'Variant', 'Prints from', 'Parts', 'Parts cost', '']
+const COLUMNS = ['SKU', 'Variant', 'Prints from', 'Asks customer', 'Parts', 'Parts cost', '']
 
 function money(value: number): string {
   return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -88,6 +89,9 @@ export function VariantTable({ brand, variants }: VariantTableProps): JSX.Elemen
                 {variant.design?.template_key ?? (
                   <span className="text-muted-foreground font-sans">no design</span>
                 )}
+              </TableCell>
+              <TableCell className="py-2">
+                <PersonalisationLinkToggle brand={brand} variant={variant} />
               </TableCell>
               <TableCell className="py-2">
                 {variant.part_count > 0 ? (

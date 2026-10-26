@@ -3,8 +3,13 @@
 import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
-import { type SKUPipelines, SKUPipelineWriteInputSchema } from '@/lib/validators/registry'
 import {
+  type PipelineTargets,
+  type SKUPipelines,
+  SKUPipelineWriteInputSchema,
+} from '@/lib/validators/registry'
+import {
+  listPipelineTargets,
   listSKUPipelines,
   RegistryServiceError,
   saveSKUPipelines,
@@ -35,6 +40,23 @@ export async function loadSKUPipelines(): Promise<ActionResult<SKUPipelines>> {
 }
 
 /**
+ * The products slicer settings are assigned to, and the SKUs with no parent.
+ *
+ * Read on demand for the same reason as the SKU list: the pipelines live in
+ * BambuBuddy and change there.
+ */
+export async function loadPipelineTargets(): Promise<ActionResult<PipelineTargets>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    return { ok: true, data: await listPipelineTargets(token) }
+  } catch (err) {
+    return failure(err, 'Could not read the products.')
+  }
+}
+
+/**
  * Saves a set of SKU-to-pipeline mappings.
  *
  * Re-validated here because a server action's arguments are client-controlled:
@@ -59,7 +81,10 @@ export async function saveSKUPipelinesAction(
 
   try {
     const saved = await saveSKUPipelines(token, parsed.data)
-    revalidatePath(`/dashboard/${brand}/production/registry`)
+    // Both, because the Slicing tab is on each: the full registry under
+    // Designs, and the narrower page the floor reads.
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    revalidatePath(`/dashboard/${brand}/production/slicing-settings`)
     return { ok: true, data: saved }
   } catch (err) {
     return failure(err, 'Could not save the slicing settings.')

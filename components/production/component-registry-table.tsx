@@ -16,6 +16,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/ui/table'
+import { Tag } from '@/components/ui/tag'
 import { usePagination } from '@/hooks/use-pagination'
 import type { InventoryItem } from '@/lib/validators/inventory'
 
@@ -24,7 +25,7 @@ interface ComponentRegistryTableProps {
   items: InventoryItem[]
 }
 
-const COLUMNS = ['Code', 'Part', 'Unit', 'Price per unit']
+const COLUMNS = ['Code', 'Part', 'Made', 'Unit', 'Price per unit']
 
 /** Figures are mono/tabular so the price column lines up down the page. */
 const FIGURE = 'font-mono tabular-nums'
@@ -130,6 +131,17 @@ export function ComponentRegistryTable({ brand, items }: ComponentRegistryTableP
                       )}
                     </TableCell>
                     <TableCell className="py-2 font-medium">{item.name}</TableCell>
+                    {/* Whether the shop makes this part or buys it. It decides
+                        whether the part has a design file and a ready-made
+                        plate behind it, which is the difference between
+                        reprinting a tray of hearts and ringing a supplier. */}
+                    <TableCell className="py-2">
+                      {item.source === 'printed' ? (
+                        <Tag tone="accent">Printed here</Tag>
+                      ) : (
+                        <Tag tone="muted">Bought in</Tag>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground py-2">{item.unit}</TableCell>
                     {/* An em dash, not ₹0: nobody having recorded a price is
                         different from the part being free, and a BOM that

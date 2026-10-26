@@ -24,35 +24,27 @@ interface RegistryPageProps {
 /**
  * The registry: what things ARE, as against what happened to them.
  *
- * Every other page in Production is a record of work - orders that arrived, jobs
- * that were made, beds that printed. This one is the master data underneath:
- * which parts exist and what one costs, which products are sold and in what
- * variants, and which file prints each of them. Designs keep a tab of their
- * own because one template usually prints several variants; a product links to
- * a design rather than owning a copy of it.
+ * It lives under Designs because that is what authoring it is. A product links
+ * to a design file, a design file is filled from a customer's answers, and a
+ * component is a printed part with files of its own - every one of those is a
+ * decision about what the shop makes, taken by whoever knows the models.
  *
- * It matters because that knowledge currently lives in Go constants and three
- * embedded .scad files, so adding a colour or a heart count means a developer,
- * a recompile and a deploy. Everything here is meant to be edited by the people
- * who actually know the answers.
+ * Production keeps the two halves the floor reads, at
+ * /production/slicing-settings: which file a SKU prints from, and which slicer
+ * settings it prints with. Same data, same endpoints, same guard - a narrower
+ * page, not a second copy.
  *
- * Guarded on registry:read, which used to be config:read.
+ * NOTHING ON THE PRODUCTION PIPELINE DEPENDS ON WHERE THESE PAGES SIT. The
+ * render path reads the database through FindProductBySKU, never through a
+ * screen, so moving the authoring does not move what prints.
  *
- * It was split off when the shop put an Operator on every Production page: the
- * registry is one, and an Operator needs it - which parts a SKU takes is what
- * assembling one requires - while config:read also opens cost assumptions,
- * which that role has never been allowed to see. Reading the catalogue and
- * reading the costing are different acts, so they are different permissions.
- *
- * Writing it is still config:manage. The Components tab's own writes go through
- * the inventory endpoints and their filament:manage guard.
- *
- * The money on this page (parts_cost, line_cost, unit_price) is withheld by
- * Tensor-Core from a caller without config:read, so a role that can open the
- * page still cannot read prices off it - and not merely because the UI hides
- * them.
+ * Guarded on registry:read. Writing it is still config:manage, and the backend
+ * withholds parts_cost/line_cost from a caller without config:read, so a role
+ * that can open this page still cannot read prices off it.
  */
-export default async function RegistryPage({ params }: RegistryPageProps): Promise<JSX.Element> {
+export default async function DesignRegistryPage({
+  params,
+}: RegistryPageProps): Promise<JSX.Element> {
   const { brand } = await params
   await requirePermission('registry:read', `/dashboard/${brand}`)
 
@@ -69,10 +61,6 @@ export default async function RegistryPage({ params }: RegistryPageProps): Promi
     } catch (err) {
       error = err instanceof InventoryServiceError ? err.message : 'Could not load the parts list.'
     }
-    // Each product's full definition, so the Products tab can render its axes
-    // and variants without a request per click. There are a handful of
-    // products, not a catalogue - fetching them all is cheaper than the
-    // loading state the alternative would need.
     try {
       templates = await listDesignTemplates(token)
     } catch {
@@ -80,6 +68,9 @@ export default async function RegistryPage({ params }: RegistryPageProps): Promi
       // template list is no reason to hide the parts and products beside it.
       templates = []
     }
+    // Each product's full definition, so the Products tab can render its
+    // variants without a request per click. There are a handful of products,
+    // not a catalogue.
     try {
       const summaries = await listRegistryProducts(token)
       products = await Promise.all(summaries.map(p => getRegistryProduct(token, p.code)))
@@ -100,7 +91,7 @@ export default async function RegistryPage({ params }: RegistryPageProps): Promi
       ) : (
         <>
           <PageHeading
-            eyebrow="Production"
+            eyebrow="Designs"
             title="Registry"
             description={<>What a product is made of, what it is made from, and what one costs.</>}
           />

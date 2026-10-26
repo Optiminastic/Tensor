@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
+import type { PreviewDesign, SKUReadiness } from '@/lib/validators/preview-design'
 import {
   FieldMapsWriteSchema,
   ProductDesignWriteSchema,
@@ -11,6 +12,13 @@ import {
   type ProductPart,
   type TemplateParam,
 } from '@/lib/validators/registry'
+import {
+  clearPreviewDesign,
+  listPreviewDesigns,
+  listSKUReadiness,
+  setPreviewDesign,
+  setVariantPersonalisationLink,
+} from '@/services/preview-design.service'
 import {
   getProductFieldMaps,
   listObservedProperties,
@@ -135,7 +143,7 @@ export async function saveFieldMaps(
 
   try {
     await saveProductFieldMaps(token, code, parsed.data)
-    revalidatePath(`/dashboard/${brand}/production/registry`)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
     return { ok: true, data: null }
   } catch (err) {
     return failure(err, 'Could not save the mapped fields.')
@@ -158,9 +166,114 @@ export async function assignProductDesign(
 
   try {
     await setProductDesign(token, code, parsed.data)
-    revalidatePath(`/dashboard/${brand}/production/registry`)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
     return { ok: true, data: null }
   } catch (err) {
     return failure(err, 'Could not set the design.')
+  }
+}
+
+/**
+ * Which assembled file each colourway's personalisation preview is drawn from.
+ *
+ * Read per product and on demand, like the three lists above: a product that
+ * has no preview file is the ordinary case, and loading this for every
+ * product on every page view would make the page pay for a panel nobody
+ * opened.
+ */
+export async function loadPreviewDesigns(
+  brand: string,
+  code: string,
+): Promise<ActionResult<PreviewDesign[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    return { ok: true, data: await listPreviewDesigns(token, code) }
+  } catch (err) {
+    return failure(err, 'Could not read the preview files for this product.')
+  }
+}
+
+/**
+ * Points one colourway, or all of them, at an assembled file.
+ *
+ * Tensor-Core refuses a file that does not declare the variables the printed
+ * design is driven by, and its refusal names them - passed straight through,
+ * because the person reading it is the one who can fix the .scad.
+ */
+export async function assignPreviewDesign(
+  brand: string,
+  code: string,
+  input: { templateKey: string; variantSku?: string },
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    await setPreviewDesign(token, code, {
+      template_key: input.templateKey,
+      ...(input.variantSku ? { variant_sku: input.variantSku } : {}),
+    })
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, 'Could not assign the preview file.')
+  }
+}
+
+/** Drops the assembled file, so the picture goes back to showing what prints. */
+export async function removePreviewDesign(
+  brand: string,
+  code: string,
+  variantSku?: string,
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    await clearPreviewDesign(token, code, variantSku)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, 'Could not remove the preview file.')
+  }
+}
+
+/**
+ * Turns one SKU's personalisation link on or off.
+ *
+ * Off means its customer is not asked and the job is not held for thirty
+ * minutes: it renders and batches straight away.
+ */
+export async function toggleVariantPersonalisationLink(
+  brand: string,
+  variantId: string,
+  enabled: boolean,
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    await setVariantPersonalisationLink(token, variantId, enabled)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, 'Could not change that setting.')
+  }
+}
+
+/** What each child SKU still needs before an order can be made from it. */
+export async function loadSKUReadiness(
+  brand: string,
+  code: string,
+): Promise<ActionResult<SKUReadiness[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    return { ok: true, data: await listSKUReadiness(token, code) }
+  } catch (err) {
+    return failure(err, 'Could not check what these SKUs still need.')
   }
 }

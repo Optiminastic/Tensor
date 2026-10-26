@@ -60,6 +60,17 @@ export const RegistryVariantSchema = z.object({
   // Null when any part has no recorded price: a total that treated unknown as
   // zero would read as a real figure.
   parts_cost: z.number().nullish(),
+  /**
+   * Whether this SKU's customer is asked to confirm before it prints.
+   *
+   * Off skips the personalisation link AND the thirty-minute hold, so the job
+   * renders and batches straight away. Defaults true for an older response,
+   * because true is how every SKU behaved before the switch existed.
+   */
+  personalisation_link: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? true),
 })
 
 /**
@@ -447,10 +458,75 @@ export const SKUPipelinesSchema = z.object({
 })
 export type SKUPipelines = z.infer<typeof SKUPipelinesSchema>
 
+/**
+ * One thing slicer settings can be assigned to.
+ *
+ * A PRODUCT, whose SKUs all inherit them - the Lotus prints the same way in
+ * three colours and the plank in forty-four - or a lone SKU belonging to no
+ * registry product, which has no parent to inherit from.
+ */
+export const PipelineTargetSchema = z.object({
+  /** The Shopify product every SKU under it inherits from. */
+  shopify_product_id: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  product_code: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  name: z.string(),
+  sku: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  sku_count: z
+    .number()
+    .nullish()
+    .transform(v => v ?? 0),
+  pipelines: z
+    .record(z.string(), SKUPipelineChoiceSchema)
+    .nullish()
+    .transform(v => v ?? {}),
+})
+export type PipelineTarget = z.infer<typeof PipelineTargetSchema>
+
+export const PipelineTargetsSchema = z.object({
+  products: PipelineTargetSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  /**
+   * SKUs belonging to no registry product.
+   *
+   * Listed on their own because nothing can stand for them: most of what
+   * prints today matches no variant row, so a page showing only products
+   * would quietly leave the busiest SKUs unmappable.
+   */
+  loose: PipelineTargetSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  pipelines: PipelineOptionSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  families: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+})
+export type PipelineTargets = z.infer<typeof PipelineTargetsSchema>
+
 export const SKUPipelineWriteSchema = z.object({
-  sku: z.string().min(1).max(128),
+  /**
+   * Exactly one of these three. The Slicing page sends a Shopify product -
+   * the parent every SKU already has - and the others exist for the narrower
+   * statements the backend still understands.
+   */
+  shopify_product_id: z.string().max(64).optional(),
+  sku: z.string().max(128).optional(),
+  product_code: z.string().max(32).optional(),
   machine_family: z.string().min(1).max(16),
-  /** Zero clears the mapping, returning the SKU to the class default. */
+  /** Zero clears the mapping, returning it to the class default. */
   pipeline_id: z.number().int().min(0),
 })
 
@@ -477,7 +553,40 @@ export const ColourPartSchema = z.object({
   part_name: z.string(),
   colour_hex: z.string(),
   position: z.number(),
+  /**
+   * The colourway this piece belongs to, or "" for the product's own scheme -
+   * what every variant prints from until it declares something of its own.
+   *
+   * Nullish because an older backend does not send it, and a missing field
+   * reading as "the product's scheme" is the answer that was true before
+   * per-variant schemes existed.
+   */
+  variant_sku: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
 })
+
+/** One piece on its way to the backend: a name, and a colour or the customer's. */
+export const ColourSchemePartSchema = z.object({
+  part_name: z.string().min(1),
+  colour_hex: z.string(),
+  /**
+   * The shop's word for the colour, preferred over the hex when both are sent.
+   *
+   * A name is resolved against this shop's spools on the backend; a hex is
+   * taken literally. Sending the name is what keeps a fixed piece on the
+   * filament the shop actually holds rather than the catalogue's idea of it.
+   */
+  colour_name: z.string().optional(),
+})
+
+export const ColourSchemeWriteSchema = z.object({
+  variant_sku: z.string(),
+  parts: ColourSchemePartSchema.array().min(1),
+})
+
+export type ColourSchemeWriteInput = z.infer<typeof ColourSchemeWriteSchema>
 
 export const ColourPartsResponseSchema = z.object({ items: z.array(ColourPartSchema) })
 

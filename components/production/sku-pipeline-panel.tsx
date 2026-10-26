@@ -1,332 +1,268 @@
 'use client'
 
-import { Loader2, Search } from 'lucide-react'
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useCallback, useEffect, useState, type JSX } from 'react'
 
 import {
-  loadSKUPipelines,
+  loadPipelineTargets,
   saveSKUPipelinesAction,
 } from '@/app/dashboard/[brand]/production/sku-pipeline-actions'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import type { PipelineOption, SKUPipelineRow } from '@/lib/validators/registry'
+import type { PipelineOption, PipelineTarget, PipelineTargets } from '@/lib/validators/registry'
 
 interface SKUPipelinePanelProps {
   brand: string
 }
 
-/** The empty option: this SKU uses whatever the machine class defaults to. */
+/** The select's value for "no mapping": the machine class's own default. */
 const CLASS_DEFAULT = ''
 
 /**
- * Which slicing settings each SKU prints with, per machine class.
+ * Which slicer settings each product prints with.
  *
- * Settings used to be chosen by printer model alone, so a Dual Name Plank and a
- * heart keychain sent to the same H2C were sliced identically — and with two
- * H2C pipelines on the floor, which one they got was whichever BambuBuddy
- * listed first.
+ * ASSIGNED TO THE PRODUCT, not the SKU. The Lotus sells in three colourways
+ * and the plank will have forty-four, and every one of them prints with the
+ * same settings - so a mapping per SKU is the same answer typed out once per
+ * colour, and as many chances for one of them to drift.
  *
- * A table of every SKU rather than a control buried in each product, because
- * the job is usually "these twenty SKUs all print with DNP-H2C". Several SKUs
- * mapped to one pipeline keep sharing a plate; SKUs mapped differently stop,
- * which is the same rule colour already follows — one plate is sliced once,
- * with one process preset.
+ * Underneath, a SKU may still carry its own: one colourway on a glow filament
+ * can need its own profile, and the backend prefers a SKU's rule over its
+ * product's. This page does not offer that yet; the rule exists so it can.
  *
- * The settings themselves stay in BambuBuddy. This names one of its pipelines;
- * it does not copy any of it.
+ * The second table is the SKUs that belong to no registry product. They have
+ * no parent to inherit from, and most of what prints today is in there -
+ * listing only products would leave the busiest SKUs unmappable.
  */
 export function SKUPipelinePanel({ brand }: SKUPipelinePanelProps): JSX.Element {
-  const [rows, setRows] = useState<SKUPipelineRow[]>([])
-  const [pipelines, setPipelines] = useState<PipelineOption[]>([])
-  const [families, setFamilies] = useState<string[]>([])
-  const [query, setQuery] = useState('')
-  const [chosen, setChosen] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState('')
-  const [saved, setSaved] = useState('')
+  const [data, setData] = useState<PipelineTargets | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState<number>(0)
+  const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    void loadSKUPipelines().then(res => {
-      if (cancelled) return
-      setLoading(false)
-      if (!res.ok || !res.data) {
-        setError(res.error ?? 'Could not read the SKU list.')
-        return
-      }
-      setRows(res.data.skus)
-      setPipelines(res.data.pipelines)
-      setFamilies(res.data.families)
-    })
-    return () => {
-      cancelled = true
+  const refresh = useCallback(async (): Promise<void> => {
+    const res = await loadPipelineTargets()
+    if (!res.ok || !res.data) {
+      setError(res.error ?? 'Could not read the products.')
+      return
     }
+    setData(res.data)
   }, [])
 
-  const shown = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    if (needle === '') return rows
-    return rows.filter(r =>
-      [r.sku, r.product_name, r.product_code].some(f => f.toLowerCase().includes(needle)),
-    )
-  }, [rows, query])
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
 
-  async function save(mappings: { sku: string; machine_family: string; pipeline_id: number }[]) {
-    setPending(true)
-    setError('')
-    setSaved('')
-    const res = await saveSKUPipelinesAction(brand, { mappings })
-    setPending(false)
-    if (!res.ok || !res.data) {
+  async function set(target: PipelineTarget, family: string, raw: string): Promise<void> {
+    setBusy(true)
+    setError(null)
+    const res = await saveSKUPipelinesAction(brand, {
+      mappings: [
+        {
+          // The Shopify parent, which every SKU under it inherits. Exactly
+          // one target: the backend refuses a mapping naming two or none.
+          ...(target.shopify_product_id !== ''
+            ? { shopify_product_id: target.shopify_product_id }
+            : target.product_code !== ''
+              ? { product_code: target.product_code }
+              : { sku: target.sku }),
+          machine_family: family,
+          pipeline_id: raw === CLASS_DEFAULT ? 0 : Number(raw),
+        },
+      ],
+    })
+    setBusy(false)
+    if (!res.ok) {
       setError(res.error ?? 'Could not save the slicing settings.')
       return
     }
-    // The table comes back from the server, so what is on screen is what was
-    // stored rather than what the browser hoped was stored.
-    setRows(res.data.skus)
-    setPipelines(res.data.pipelines)
-    setSaved(`Saved ${mappings.length} ${mappings.length === 1 ? 'mapping' : 'mappings'}.`)
+    setSaved(n => n + 1)
+    // Re-read rather than patching local state: what is on screen should be
+    // what was stored, not what the browser hoped was stored.
+    await refresh()
   }
 
-  function setOne(sku: string, family: string, raw: string): void {
-    void save([
-      { sku, machine_family: family, pipeline_id: raw === CLASS_DEFAULT ? 0 : Number(raw) },
-    ])
-  }
-
-  function setMany(family: string, raw: string): void {
-    if (chosen.length === 0) return
-    void save(
-      chosen.map(sku => ({
-        sku,
-        machine_family: family,
-        pipeline_id: raw === CLASS_DEFAULT ? 0 : Number(raw),
-      })),
-    )
-  }
-
-  if (loading) {
-    return <p className="text-muted-foreground text-sm">Reading the SKUs…</p>
+  if (data === null && error === null) {
+    return <p className="text-muted-foreground text-sm">Reading the products…</p>
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-muted-foreground text-sm">
-        Which slicing settings each SKU prints with, per machine class. A SKU with no choice uses
-        whatever that class defaults to. Several SKUs may share one pipeline — those keep printing
-        on the same bed; SKUs set to different pipelines are batched apart, because a plate is
-        sliced once with one process preset.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="relative flex min-w-64 flex-1 items-center">
-          <Search className="text-muted-foreground absolute left-2.5 size-3.5" aria-hidden />
-          <Input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search a SKU or product"
-            aria-label="Search SKUs"
-            className="pl-8"
-          />
-        </label>
-        {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-      </div>
-
-      {chosen.length > 0 ? (
-        <BulkBar
-          count={chosen.length}
-          families={families}
-          pipelines={pipelines}
-          onApply={setMany}
-          onClear={() => setChosen([])}
-        />
-      ) : null}
-
+    <div className="flex flex-col gap-6">
       {error ? (
-        <p role="alert" className="text-danger text-sm">
+        <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
         </p>
       ) : null}
-      {saved ? (
-        <p role="status" className="text-muted-foreground text-xs">
-          {saved}
-        </p>
+
+      {data ? (
+        <>
+          <TargetTable
+            title="Products"
+            blurb="Set once on the product — every SKU sold under it prints the same way."
+            rows={data.products}
+            families={data.families}
+            pipelines={data.pipelines}
+            busy={busy}
+            onSet={set}
+          />
+
+          {data.loose.length > 0 ? (
+            <TargetTable
+              title="SKUs with no product"
+              blurb="These print but belong to no registry product, so there is no parent to set. Import the product and they move to the table above."
+              rows={data.loose}
+              families={data.families}
+              pipelines={data.pipelines}
+              busy={busy}
+              onSet={set}
+            />
+          ) : null}
+        </>
       ) : null}
 
-      <div className="border-border max-h-[32rem] overflow-y-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="bg-surface-muted sticky top-0">
-            <tr>
-              <th className="w-8 p-2" />
-              <th className="p-2 text-left font-medium">SKU</th>
-              <th className="p-2 text-left font-medium">Product</th>
-              {families.map(f => (
-                <th key={f} className="p-2 text-left font-medium">
-                  {f}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map(row => (
-              <tr key={row.sku} className="border-border border-t">
-                <td className="p-2">
-                  <input
-                    type="checkbox"
-                    checked={chosen.includes(row.sku)}
-                    aria-label={`Select ${row.sku}`}
-                    onChange={() =>
-                      setChosen(prev =>
-                        prev.includes(row.sku)
-                          ? prev.filter(s => s !== row.sku)
-                          : [...prev, row.sku],
-                      )
-                    }
-                  />
-                </td>
-                <td className="p-2 font-mono text-xs tabular-nums">{row.sku}</td>
-                <td className="text-muted-foreground max-w-64 truncate p-2 text-xs">
-                  {row.product_name || row.product_code}
-                </td>
-                {families.map(family => (
-                  <td key={family} className="p-2">
-                    <PipelineCell
-                      row={row}
-                      family={family}
-                      pipelines={pipelines}
-                      disabled={pending}
-                      onChange={raw => setOne(row.sku, family, raw)}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {shown.length === 0 ? (
-          <p className="text-muted-foreground p-4 text-center text-sm">
-            No SKU matches “{query.trim()}”.
-          </p>
-        ) : null}
+      {saved > 0 ? (
+        <p role="status" className="text-success text-sm">
+          Saved.
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+interface TargetTableProps {
+  title: string
+  blurb: string
+  rows: PipelineTarget[]
+  families: string[]
+  pipelines: PipelineOption[]
+  busy: boolean
+  onSet: (target: PipelineTarget, family: string, raw: string) => void
+}
+
+function TargetTable({
+  title,
+  blurb,
+  rows,
+  families,
+  pipelines,
+  busy,
+  onSet,
+}: TargetTableProps): JSX.Element {
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex flex-col gap-0.5">
+        <h3 className="text-sm font-medium">{title}</h3>
+        <p className="text-muted-foreground text-xs">{blurb}</p>
       </div>
 
-      <p className="text-subtle-foreground text-xs">
-        {shown.length} of {rows.length} SKUs. The pipelines come from BambuBuddy; the settings
-        inside them are edited there.
-      </p>
-    </div>
+      {rows.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Nothing here yet.</p>
+      ) : (
+        <div className="border-border max-h-[32rem] overflow-auto rounded-md border">
+          <table className="w-full text-sm">
+            <thead className="bg-surface-muted sticky top-0">
+              <tr className="border-border border-b">
+                <th className="text-muted-foreground px-3 py-2 text-left font-normal">
+                  {title === 'Products' ? 'Product' : 'SKU'}
+                </th>
+                {families.map(f => (
+                  <th
+                    key={f}
+                    className="text-muted-foreground px-3 py-2 text-left font-normal whitespace-nowrap"
+                  >
+                    {f}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <tr
+                  key={row.shopify_product_id || row.product_code || row.sku}
+                  className="border-border/70 border-b last:border-0"
+                >
+                  <td className="px-3 py-2">
+                    <span className="font-medium">{row.name}</span>
+                    {row.product_code ? (
+                      <code className="text-muted-foreground ml-2 font-mono text-xs">
+                        {row.product_code}
+                      </code>
+                    ) : null}
+                    {/* How many colourways this one choice covers. The number
+                        is the whole argument for setting it on the parent. */}
+                    {row.sku_count > 0 ? (
+                      <span className="text-subtle-foreground ml-2 font-mono text-xs tabular-nums">
+                        {row.sku_count} SKU{row.sku_count === 1 ? '' : 's'}
+                      </span>
+                    ) : null}
+                  </td>
+                  {families.map(f => (
+                    <td key={f} className="px-3 py-2">
+                      <PipelineCell
+                        choice={row.pipelines[f]}
+                        family={f}
+                        pipelines={pipelines}
+                        busy={busy}
+                        onChange={raw => onSet(row, f, raw)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   )
 }
 
 interface PipelineCellProps {
-  row: SKUPipelineRow
+  choice: { pipeline_id: number; pipeline_name: string; missing: boolean } | undefined
   family: string
   pipelines: PipelineOption[]
-  disabled: boolean
+  busy: boolean
   onChange: (raw: string) => void
 }
 
 function PipelineCell({
-  row,
+  choice,
   family,
   pipelines,
-  disabled,
+  busy,
   onChange,
 }: PipelineCellProps): JSX.Element {
-  const current = row.pipelines[family]
-  // Only this class's pipelines. A P2S pipeline filed under H2C would slice
-  // every plate on the SKU for a bed the machine does not have, and the
-  // backend refuses it — so it is not offered in the first place.
-  const options = pipelines.filter(
+  // Only this class's pipelines: one targeted at another would slice every
+  // plate for the wrong bed, and the backend refuses it for the same reason.
+  const forFamily = pipelines.filter(
     p => p.machine_family === '' || p.machine_family.toUpperCase() === family.toUpperCase(),
   )
+  const value = choice ? String(choice.pipeline_id) : CLASS_DEFAULT
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-0.5">
       <Select
-        value={current ? String(current.pipeline_id) : CLASS_DEFAULT}
-        disabled={disabled}
-        aria-label={`${row.sku} on ${family}`}
+        value={value}
+        disabled={busy}
+        aria-label={`Pipeline for ${family}`}
+        className="w-48"
         onChange={e => onChange(e.target.value)}
       >
         <option value={CLASS_DEFAULT}>Class default</option>
-        {options.map(p => (
+        {forFamily.map(p => (
           <option key={p.id} value={String(p.id)}>
             {p.name}
           </option>
         ))}
-        {/* A mapping whose pipeline has gone still has to be selectable, or the
-            dropdown would silently show "Class default" for a SKU that is not
-            on the default and cannot slice. */}
-        {current && !options.some(p => p.id === current.pipeline_id) ? (
-          <option value={String(current.pipeline_id)}>{current.pipeline_name}</option>
+        {/* A pipeline that has gone from BambuBuddy stays selectable, or the
+            cell would silently read as the class default. */}
+        {choice && !forFamily.some(p => p.id === choice.pipeline_id) ? (
+          <option value={String(choice.pipeline_id)}>{choice.pipeline_name}</option>
         ) : null}
       </Select>
-      {current?.missing ? (
+      {choice?.missing ? (
         <span className="text-danger text-xs">
-          {current.pipeline_name} is gone from BambuBuddy — this bed will refuse to slice
+          BambuBuddy no longer lists this &mdash; a bed would refuse to slice.
         </span>
       ) : null}
-    </div>
-  )
-}
-
-interface BulkBarProps {
-  count: number
-  families: string[]
-  pipelines: PipelineOption[]
-  onApply: (family: string, raw: string) => void
-  onClear: () => void
-}
-
-/**
- * Setting one pipeline on many SKUs at once — the reason this is a table.
- *
- * One save for the whole selection rather than one per row: twenty requests
- * could each fail on their own and leave the floor half-configured.
- */
-function BulkBar({ count, families, pipelines, onApply, onClear }: BulkBarProps): JSX.Element {
-  const [family, setFamily] = useState(families[0] ?? '')
-  const options = pipelines.filter(
-    p => p.machine_family === '' || p.machine_family.toUpperCase() === family.toUpperCase(),
-  )
-
-  return (
-    <div className="border-border bg-surface-muted flex flex-wrap items-end gap-2 rounded-md border p-2">
-      <span className="text-sm">
-        {count} {count === 1 ? 'SKU' : 'SKUs'} selected — set
-      </span>
-      <Select
-        value={family}
-        onChange={e => setFamily(e.target.value)}
-        aria-label="Machine class to set"
-        className="w-28"
-      >
-        {families.map(f => (
-          <option key={f} value={f}>
-            {f}
-          </option>
-        ))}
-      </Select>
-      <span className="text-sm">to</span>
-      <Select
-        value={CLASS_DEFAULT}
-        aria-label="Pipeline to apply"
-        onChange={e => onApply(family, e.target.value)}
-        className="min-w-56"
-      >
-        <option value={CLASS_DEFAULT}>Choose a pipeline…</option>
-        {options.map(p => (
-          <option key={p.id} value={String(p.id)}>
-            {p.name}
-          </option>
-        ))}
-      </Select>
-      <Button type="button" variant="ghost" size="sm" onClick={onClear}>
-        Clear selection
-      </Button>
     </div>
   )
 }

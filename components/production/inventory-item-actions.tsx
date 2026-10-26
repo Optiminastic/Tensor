@@ -1,10 +1,11 @@
 'use client'
 
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Hammer, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, type JSX } from 'react'
 
 import { deleteInventoryItem } from '@/app/dashboard/[brand]/production/inventory-actions'
+import { ComponentSourceDialog } from '@/components/production/component-source-dialog'
 import { InventoryItemDialog } from '@/components/production/inventory-item-dialog'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -30,6 +31,7 @@ export function InventoryItemActions({ brand, item }: InventoryItemActionsProps)
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [sourcing, setSourcing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -110,6 +112,17 @@ export function InventoryItemActions({ brand, item }: InventoryItemActionsProps)
               </button>
               <button
                 type="button"
+                className="hover:bg-surface-muted flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
+                onClick={() => {
+                  setOpen(false)
+                  setSourcing(true)
+                }}
+              >
+                <Hammer className="size-3.5" aria-hidden />
+                How it&rsquo;s made
+              </button>
+              <button
+                type="button"
                 className="text-danger hover:bg-danger-subtle flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
                 onClick={() => setConfirming(true)}
               >
@@ -124,6 +137,14 @@ export function InventoryItemActions({ brand, item }: InventoryItemActionsProps)
       {/* Outside the Popover: closing the menu to open the dialog would unmount
           the dialog with it. */}
       <InventoryItemDialog brand={brand} item={item} open={editing} onOpenChange={setEditing} />
+      {sourcing ? (
+        <ComponentSourceDialog
+          brand={brand}
+          item={item}
+          open={sourcing}
+          onOpenChange={setSourcing}
+        />
+      ) : null}
     </>
   )
 }

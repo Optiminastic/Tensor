@@ -110,6 +110,15 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     permission: 'design:read',
     items: [
       { label: 'All Designs', href: '/designs', icon: LayoutGrid },
+      // Authoring the catalogue sits with the designs it points at: a product
+      // links to a design file, and a component carries one of its own.
+      // Production keeps the two tabs the floor reads.
+      {
+        label: 'Registry',
+        href: '/designs/registry',
+        icon: Library,
+        permission: 'registry:read',
+      },
       {
         label: 'Non-DNP',
         href: '/designs/non-dnp',
@@ -186,14 +195,15 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
       // Below Inventory on purpose: the Registry is what Inventory is ABOUT.
       // Inventory says how many LED strips are on the shelf; the Registry says
       // which products need them, and what one costs.
-      // registry:read, not config:read. The Registry is a Production page and
-      // an Operator needs it - which parts a SKU takes is what assembling one
-      // requires - while config:read also opens cost assumptions, which that
-      // role never sees. The backend splits the same way, and withholds
-      // parts_cost/line_cost from anyone without config:read.
+      // registry:read, not config:read. An Operator needs this page - which
+      // file a SKU prints from is what running a bed requires - while
+      // config:read also opens cost assumptions, which that role never sees.
+      //
+      // Only the two tabs the floor reads: the design files and the slicer
+      // settings. Products and components are authored under Designs.
       {
-        label: 'Registry',
-        href: '/production/registry',
+        label: 'Slicing settings',
+        href: '/production/slicing-settings',
         icon: Library,
         permission: 'registry:read',
       },
