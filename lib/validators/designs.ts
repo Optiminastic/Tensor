@@ -136,31 +136,13 @@ export const PersonalisationEstimateSchema = z.object({
 })
 export type PersonalisationEstimate = z.infer<typeof PersonalisationEstimateSchema>
 
-// The AI optimization advisor's report returned by POST /designs/:id/optimize:
-// an overall verdict plus nozzle-aware filament, support, and ranked improvements.
-export const OptimizationRecommendationSchema = z.object({
-  title: z.string(),
-  detail: z.string(),
-  category: z.string(),
-  impact: z.string(),
-})
-export const DesignOptimizationSchema = z.object({
-  verdict: z.enum(['green', 'yellow', 'red']),
-  summary: z.string(),
-  filament: z.object({
-    material: z.string(),
-    recommended_preset: z.string(),
-    rationale: z.string(),
-  }),
-  support: z.object({
-    needed: z.boolean(),
-    strategy: z.string(),
-    material: z.string(),
-    rationale: z.string(),
-  }),
-  recommendations: OptimizationRecommendationSchema.array(),
-})
-export type DesignOptimization = z.infer<typeof DesignOptimizationSchema>
+// The optimization advisor's report lives in its own file; re-exported here
+// so every existing import keeps working.
+export {
+  DesignOptimizationSchema,
+  OptimizationRecommendationSchema,
+  type DesignOptimization,
+} from '@/lib/validators/design-optimization'
 
 export const DesignLifecycleSchema = z.enum([
   'queued',
