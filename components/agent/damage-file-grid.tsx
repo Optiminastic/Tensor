@@ -2,6 +2,27 @@ import type { JSX } from 'react'
 
 import type { DamageFile } from '@/lib/validators/whatsapp-damage'
 
+/**
+ * What a browser will actually draw in an <img>.
+ *
+ * NOT "image/*". An iPhone saves photos as HEIC, and it reaches Tensor as
+ * image/heic - which uploads fine, stores fine, and renders as a broken tile
+ * in every browser except Safari. A damage report whose evidence is a broken
+ * image is worse than one that admits it cannot show it, because the first
+ * looks like the photo was lost.
+ */
+const DISPLAYABLE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
+
+function isDisplayable(contentType: string): boolean {
+  return DISPLAYABLE.includes(contentType.split(';')[0].trim().toLowerCase())
+}
+
+/** A short name for a format a browser will not draw, e.g. "HEIC photo". */
+function formatName(contentType: string): string {
+  const subtype = contentType.split('/')[1]?.split(';')[0]?.trim().toUpperCase() ?? 'file'
+  return contentType.startsWith('video/') ? 'video' : `${subtype} photo`
+}
+
 interface DamageFileGridProps {
   brand: string
   reportId: string
@@ -52,20 +73,27 @@ function Attachment({
     `/api/damage/${encodeURIComponent(brand)}/${encodeURIComponent(reportId)}` +
     `/files/${encodeURIComponent(file.id)}`
 
-  if (!file.content_type.startsWith('image/')) {
+  if (!isDisplayable(file.content_type)) {
     return (
-      <div className="bg-surface-muted flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg">
+      <div className="bg-surface-muted flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg px-2 text-center">
         <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent text-xs underline-offset-4 hover:underline"
         >
-          Open video
+          Open {formatName(file.content_type)}
         </a>
         <span className="text-subtle-foreground font-mono text-[11px] tabular-nums">
           {megabytes(file.size_bytes)}
         </span>
+        {/* Said rather than left as a mystery: the file is here and intact,
+            the browser simply will not draw it. */}
+        {!file.content_type.startsWith('video/') ? (
+          <span className="text-subtle-foreground text-[11px] text-pretty">
+            Your browser cannot show this format
+          </span>
+        ) : null}
       </div>
     )
   }

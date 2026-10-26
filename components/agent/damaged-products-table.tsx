@@ -55,7 +55,7 @@ interface DamagedProductsTableProps {
   brand: string
   reports: DamageReport[]
   counts: Record<string, number>
-  canUpdate: boolean
+  canResolve: boolean
   onChanged: () => void
 }
 
@@ -63,15 +63,25 @@ export function DamagedProductsTable({
   brand,
   reports,
   counts,
-  canUpdate,
+  canResolve,
   onChanged,
 }: DamagedProductsTableProps): JSX.Element {
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('')
-  // The drawer keeps the last report while closing, so it slides out whole
-  // rather than emptying first.
-  const [selected, setSelected] = useState<DamageReport | null>(null)
+  // THE ID, NOT THE ROW. The drawer used to be handed the report object
+  // copied out of the list when the row was clicked, and a copy never
+  // changes: deciding an outcome inside the drawer refreshed the list behind
+  // it and left the drawer showing the form that made the decision, with no
+  // way through to the steps that follow it. Reading the row back out of the
+  // list on every render is what makes a refresh reach the open drawer.
+  const [selectedID, setSelectedID] = useState<string | null>(null)
+  // Kept only so the sheet still has something to draw while it slides shut -
+  // the live row is gone from under it the moment the drawer is closed.
+  const [lastSelected, setLastSelected] = useState<DamageReport | null>(null)
   const [open, setOpen] = useState(false)
+
+  const live = selectedID ? (reports.find(r => r.id === selectedID) ?? null) : null
+  const selected = live ?? lastSelected
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
@@ -131,7 +141,8 @@ export function DamagedProductsTable({
           onRowAction={key => {
             const report = reports.find(r => r.id === key)
             if (!report) return
-            setSelected(report)
+            setSelectedID(report.id)
+            setLastSelected(report)
             setOpen(true)
           }}
         >
@@ -194,8 +205,11 @@ export function DamagedProductsTable({
         brand={brand}
         report={selected}
         open={open}
-        canUpdate={canUpdate}
-        onClose={() => setOpen(false)}
+        canResolve={canResolve}
+        onClose={() => {
+          setOpen(false)
+          setSelectedID(null)
+        }}
         onChanged={onChanged}
       />
     </div>

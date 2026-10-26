@@ -112,7 +112,12 @@ export function DesignPartEditor({
           configuration at all: the renderer painted PART="base" white and
           PART="text" the customer's colour, full stop. */}
       <div className="border-border/70 border-t pt-4">
-        <ColourPartsPanel brand={brand} productCode={product.code} role={part.role} />
+        <ColourPartsPanel
+          brand={brand}
+          productCode={product.code}
+          role={part.role}
+          variants={product.variants}
+        />
       </div>
 
       <Readiness fields={fields} />

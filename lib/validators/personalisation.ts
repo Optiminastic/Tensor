@@ -10,6 +10,20 @@ export const PersonalisationFieldSchema = z.object({
    * change which product is made.
    */
   editable: z.boolean(),
+  /**
+   * How many characters this product's design fits here.
+   *
+   * Sent by the server because it differs per product - the plank fits
+   * twelve, the lotus holder sixteen - and the page used to have the plank's
+   * number typed into it. Nullish for an older response, where twelve was
+   * the only answer there was.
+   */
+  max_length: z
+    .number()
+    .int()
+    .positive()
+    .nullish()
+    .transform(v => v ?? 12),
 })
 
 export const PersonalisationItemSchema = z.object({

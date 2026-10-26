@@ -60,6 +60,17 @@ export const RegistryVariantSchema = z.object({
   // Null when any part has no recorded price: a total that treated unknown as
   // zero would read as a real figure.
   parts_cost: z.number().nullish(),
+  /**
+   * Whether this SKU's customer is asked to confirm before it prints.
+   *
+   * Off skips the personalisation link AND the thirty-minute hold, so the job
+   * renders and batches straight away. Defaults true for an older response,
+   * because true is how every SKU behaved before the switch existed.
+   */
+  personalisation_link: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? true),
 })
 
 /**
@@ -233,7 +244,12 @@ export const ObservedPropertySchema = z.object({
 export const FieldMapSchema = z.object({
   property_key: z.string(),
   scad_variable: z.string(),
-  value_type: z.enum(['string', 'number']),
+  /** 'count' reads a number out of the storefront's WORDING: the shop does not
+   *  sell "1", it sells "1 RED HEART", and renames it to "2 PINK HEARTS"
+   *  whenever the catalogue changes. Without it a heart option could only be
+   *  mapped as a string — reaching OpenSCAD as side_hearts="1 RED HEART",
+   *  which is not a number — or as a number, which refuses it outright. */
+  value_type: z.enum(['string', 'number', 'count']),
   /** Which design file this row feeds. 'body' for a product printing one. */
   role: z.string(),
   /** Whether an order that does not answer it holds the job. False means the
@@ -242,6 +258,14 @@ export const FieldMapSchema = z.object({
   /** A value that does not come from the order. Set on a row that says
    *  "always 200" rather than "whatever the customer typed". */
   fixed_value: z.string().nullish(),
+  /** What an OPTIONAL field passes when the order does not answer it.
+   *
+   *  Different from fixed_value, which ignores the order entirely: this is the
+   *  answer for a SILENT order, not for every order. The heart count is why it
+   *  exists — the 2-STEP plank sells no heart option at all, and without a
+   *  default of 0 every one of those planks would take the template's own
+   *  side_hearts = 1 and grow a heart nobody bought. */
+  default_value: z.string().nullish(),
   position: z.number(),
 })
 
@@ -264,7 +288,16 @@ export const FieldMapWriteSchema = z
      * wrong product, successfully.
      */
     fixed_value: z.string().trim().max(120).optional(),
-    value_type: z.enum(['string', 'number']),
+    /**
+     * What an optional field passes when the order is silent.
+     *
+     * Not the same as fixed_value: the order is still consulted first. A
+     * default on a REQUIRED field is refused by the API, because a required
+     * field that goes unanswered holds the job and the default could never be
+     * reached.
+     */
+    default_value: z.string().trim().max(120).optional(),
+    value_type: z.enum(['string', 'number', 'count']),
     /**
      * Absent means required, so the rule a product was configured under does not
      * change because a newer client stopped sending the flag.
@@ -425,10 +458,75 @@ export const SKUPipelinesSchema = z.object({
 })
 export type SKUPipelines = z.infer<typeof SKUPipelinesSchema>
 
+/**
+ * One thing slicer settings can be assigned to.
+ *
+ * A PRODUCT, whose SKUs all inherit them - the Lotus prints the same way in
+ * three colours and the plank in forty-four - or a lone SKU belonging to no
+ * registry product, which has no parent to inherit from.
+ */
+export const PipelineTargetSchema = z.object({
+  /** The Shopify product every SKU under it inherits from. */
+  shopify_product_id: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  product_code: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  name: z.string(),
+  sku: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  sku_count: z
+    .number()
+    .nullish()
+    .transform(v => v ?? 0),
+  pipelines: z
+    .record(z.string(), SKUPipelineChoiceSchema)
+    .nullish()
+    .transform(v => v ?? {}),
+})
+export type PipelineTarget = z.infer<typeof PipelineTargetSchema>
+
+export const PipelineTargetsSchema = z.object({
+  products: PipelineTargetSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  /**
+   * SKUs belonging to no registry product.
+   *
+   * Listed on their own because nothing can stand for them: most of what
+   * prints today matches no variant row, so a page showing only products
+   * would quietly leave the busiest SKUs unmappable.
+   */
+  loose: PipelineTargetSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  pipelines: PipelineOptionSchema.array()
+    .nullish()
+    .transform(v => v ?? []),
+  families: z
+    .string()
+    .array()
+    .nullish()
+    .transform(v => v ?? []),
+})
+export type PipelineTargets = z.infer<typeof PipelineTargetsSchema>
+
 export const SKUPipelineWriteSchema = z.object({
-  sku: z.string().min(1).max(128),
+  /**
+   * Exactly one of these three. The Slicing page sends a Shopify product -
+   * the parent every SKU already has - and the others exist for the narrower
+   * statements the backend still understands.
+   */
+  shopify_product_id: z.string().max(64).optional(),
+  sku: z.string().max(128).optional(),
+  product_code: z.string().max(32).optional(),
   machine_family: z.string().min(1).max(16),
-  /** Zero clears the mapping, returning the SKU to the class default. */
+  /** Zero clears the mapping, returning it to the class default. */
   pipeline_id: z.number().int().min(0),
 })
 
@@ -455,7 +553,40 @@ export const ColourPartSchema = z.object({
   part_name: z.string(),
   colour_hex: z.string(),
   position: z.number(),
+  /**
+   * The colourway this piece belongs to, or "" for the product's own scheme -
+   * what every variant prints from until it declares something of its own.
+   *
+   * Nullish because an older backend does not send it, and a missing field
+   * reading as "the product's scheme" is the answer that was true before
+   * per-variant schemes existed.
+   */
+  variant_sku: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
 })
+
+/** One piece on its way to the backend: a name, and a colour or the customer's. */
+export const ColourSchemePartSchema = z.object({
+  part_name: z.string().min(1),
+  colour_hex: z.string(),
+  /**
+   * The shop's word for the colour, preferred over the hex when both are sent.
+   *
+   * A name is resolved against this shop's spools on the backend; a hex is
+   * taken literally. Sending the name is what keeps a fixed piece on the
+   * filament the shop actually holds rather than the catalogue's idea of it.
+   */
+  colour_name: z.string().optional(),
+})
+
+export const ColourSchemeWriteSchema = z.object({
+  variant_sku: z.string(),
+  parts: ColourSchemePartSchema.array().min(1),
+})
+
+export type ColourSchemeWriteInput = z.infer<typeof ColourSchemeWriteSchema>
 
 export const ColourPartsResponseSchema = z.object({ items: z.array(ColourPartSchema) })
 

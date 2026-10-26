@@ -4,18 +4,24 @@ import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState, type JSX } from 'react'
 
 import { DesignFieldsPanel } from '@/components/production/design-fields-panel'
+import { PreviewDesignPanel } from '@/components/production/preview-design-panel'
+import { ProductComponentsPanel } from '@/components/production/product-components-panel'
 import { ProductDeleteDialog } from '@/components/production/product-delete-dialog'
 import { ProductFormDialog } from '@/components/production/product-form-dialog'
 import { ProductImportDialog } from '@/components/production/product-import-dialog'
+import { SKUReadinessPanel } from '@/components/production/sku-readiness-panel'
 import { VariantTable } from '@/components/production/variant-table'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import type { InventoryItem } from '@/lib/validators/inventory'
 import type { RegistryProductDetail } from '@/lib/validators/registry'
 
 interface ProductRegistryPanelProps {
   brand: string
   products: RegistryProductDetail[]
+  /** The shelf, passed through to the components list on each product. */
+  components: InventoryItem[]
 }
 
 const FIGURE = 'font-mono tabular-nums'
@@ -33,7 +39,11 @@ const FIGURE = 'font-mono tabular-nums'
  * used to live in Go constants and three embedded .scad files, so changing it
  * meant a developer, a recompile and a deploy.
  */
-export function ProductRegistryPanel({ brand, products }: ProductRegistryPanelProps): JSX.Element {
+export function ProductRegistryPanel({
+  brand,
+  products,
+  components,
+}: ProductRegistryPanelProps): JSX.Element {
   const [selected, setSelected] = useState(products[0]?.code ?? '')
   const product = useMemo(
     () => products.find(p => p.code === selected) ?? products[0],
@@ -99,7 +109,7 @@ export function ProductRegistryPanel({ brand, products }: ProductRegistryPanelPr
         {addProductButton}
       </div>
 
-      {product ? <ProductDetail brand={brand} product={product} /> : null}
+      {product ? <ProductDetail brand={brand} product={product} components={components} /> : null}
     </div>
   )
 }
@@ -107,14 +117,19 @@ export function ProductRegistryPanel({ brand, products }: ProductRegistryPanelPr
 interface ProductDetailProps {
   brand: string
   product: RegistryProductDetail
+  /** The shelf, for the components picker. */
+  components: InventoryItem[]
 }
 
-function ProductDetail({ brand, product }: ProductDetailProps): JSX.Element {
+function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.Element {
   // Design and fields open by default: it is the only thing on this card
   // somebody can act on, and a product that renders nothing says so there.
   // The SKU list is closed, because it can be sixty-four rows long and
   // reading it is checking work rather than doing it.
   const [showDesign, setShowDesign] = useState(true)
+  const [showComponents, setShowComponents] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [showReadiness, setShowReadiness] = useState(false)
   const [showVariants, setShowVariants] = useState(false)
 
   return (
@@ -161,6 +176,44 @@ function ProductDetail({ brand, product }: ProductDetailProps): JSX.Element {
         onToggle={() => setShowDesign(open => !open)}
       >
         <DesignFieldsPanel brand={brand} product={product} />
+      </Disclosure>
+
+      {/* The pieces that are NOT printed per order: made to stock or bought
+          in, and attached at the bench. Closed by default - it is reference
+          rather than the thing somebody opened this card to do. */}
+      <Disclosure
+        label="Components"
+        open={showComponents}
+        onToggle={() => setShowComponents(open => !open)}
+      >
+        <ProductComponentsPanel brand={brand} productCode={product.code} components={components} />
+      </Disclosure>
+
+      {/* The file the customer approves, which is not the file that prints.
+          Below Components because it is configuration somebody sets once and
+          reads rarely, and the SKU list below it is what the card is usually
+          opened for. */}
+      <Disclosure
+        label="Personalisation preview"
+        open={showPreview}
+        onToggle={() => setShowPreview(open => !open)}
+      >
+        <PreviewDesignPanel
+          brand={brand}
+          productCode={product.code}
+          variantSkus={product.variants.flatMap(v => (v.sku ? [v.sku] : []))}
+        />
+      </Disclosure>
+
+      {/* The same questions an arriving order will ask, asked now. Without
+          it the answer arrives hours later as a held job, attached to a
+          customer's order. */}
+      <Disclosure
+        label="Ready to make"
+        open={showReadiness}
+        onToggle={() => setShowReadiness(open => !open)}
+      >
+        <SKUReadinessPanel brand={brand} productCode={product.code} />
       </Disclosure>
 
       <Disclosure

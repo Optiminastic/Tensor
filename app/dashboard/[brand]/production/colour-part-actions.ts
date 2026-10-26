@@ -3,11 +3,12 @@
 import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
-import type { ColourPart } from '@/lib/validators/registry'
+import type { ColourPart, ColourSchemeWriteInput } from '@/lib/validators/registry'
 import {
   RegistryServiceError,
   clearColourParts,
   listColourParts,
+  putColourScheme,
   setColourPartColour,
   uploadColourReference,
 } from '@/services/registry.service'
@@ -64,10 +65,32 @@ export async function uploadColourReferenceAction(
   if (!t) return { ok: false, error }
   try {
     const parts = await uploadColourReference(t, { code, role }, form)
-    revalidatePath(`/dashboard/${brand}/production/registry`)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
     return { ok: true, data: parts }
   } catch (err) {
     return { ok: false, error: describe(err, 'Could not read that 3MF.') }
+  }
+}
+
+/**
+ * Replaces one design file's pieces for one colourway, typed out by hand.
+ *
+ * The route in for a product with no reference 3MF, and the only way to say
+ * that a product's palette differs between its variants.
+ */
+export async function saveColourSchemeAction(
+  target: { brand: string; code: string; role: string },
+  input: ColourSchemeWriteInput,
+): Promise<ActionResult<ColourPart[]>> {
+  const { brand, code, role } = target
+  const { token: t, error } = await token()
+  if (!t) return { ok: false, error }
+  try {
+    const parts = await putColourScheme(t, { code, role }, input)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: parts }
+  } catch (err) {
+    return { ok: false, error: describe(err, 'Could not save the colour scheme.') }
   }
 }
 
@@ -81,7 +104,7 @@ export async function setColourPartColourAction(
   if (!t) return { ok: false, error }
   try {
     const part = await setColourPartColour(t, id, colourHex)
-    revalidatePath(`/dashboard/${brand}/production/registry`)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
     return { ok: true, data: part }
   } catch (err) {
     return { ok: false, error: describe(err, 'Could not update the colour part.') }
@@ -89,16 +112,18 @@ export async function setColourPartColourAction(
 }
 
 /** Returns one design file to the default white-base, coloured-lettering pair. */
-export async function clearColourPartsAction(
-  brand: string,
-  code: string,
-  role: string,
-): Promise<ActionResult<null>> {
+export async function clearColourPartsAction(target: {
+  brand: string
+  code: string
+  role: string
+  variantSKU?: string
+}): Promise<ActionResult<null>> {
+  const { brand, code, role, variantSKU } = target
   const { token: t, error } = await token()
   if (!t) return { ok: false, error }
   try {
-    await clearColourParts(t, code, role)
-    revalidatePath(`/dashboard/${brand}/production/registry`)
+    await clearColourParts(t, { code, role, variantSKU })
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
     return { ok: true, data: null }
   } catch (err) {
     return { ok: false, error: describe(err, 'Could not clear the colour parts.') }

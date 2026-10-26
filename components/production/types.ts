@@ -224,7 +224,7 @@ export interface OrderRecord {
    * 'done' (it closed), 'not_sent' (the message refused), or null when this
    * order was never asked.
    */
-  personalisation: 'open' | 'done' | 'not_sent' | null
+  personalisation: 'open' | 'done' | 'not_sent' | 'changed' | null
   /** When the window closes, ISO-8601. Set only while it is open. */
   personalisationWindowEndsAt: string | null
   /**

@@ -39,7 +39,7 @@ import type { ActionResult } from './actions'
  * disabled select that produced it.
  */
 function revalidateRegistry(brand: string): void {
-  revalidatePath(`/dashboard/${brand}/production/registry`)
+  revalidatePath(`/dashboard/${brand}/designs/registry`)
 }
 
 function failure(error: unknown, fallback: string): ActionResult<never> {

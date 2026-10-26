@@ -1,12 +1,16 @@
 'use client'
 
+import { Hammer } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, type JSX, type ReactNode } from 'react'
 
+import { setComponentSourceAction } from '@/app/dashboard/[brand]/production/component-actions'
 import {
   addInventoryItem,
   editInventoryItem,
 } from '@/app/dashboard/[brand]/production/inventory-actions'
+import { loadShopifyCatalogue } from '@/app/dashboard/[brand]/production/registry-actions'
+import { ComponentSourceDialog } from '@/components/production/component-source-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,8 +22,10 @@ import {
 } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { INVENTORY_UNITS, type InventoryItem, type InventoryUnit } from '@/lib/validators/inventory'
+import type { ShopifyProduct } from '@/lib/validators/shopify-products'
 
 interface InventoryItemDialogProps {
   brand: string
@@ -71,6 +77,10 @@ export function InventoryItemDialog({
   const [code, setCode] = useState(item?.code ?? '')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The live Shopify catalogue, so a part can be declared for a product
+  // nobody has imported into the registry yet.
+  const [catalogue, setCatalogue] = useState<ShopifyProduct[] | null>(null)
+  const [productGID, setProductGID] = useState(item?.shopify_product_gid ?? '')
 
   // Re-seed when the dialog reopens: the row behind it may have changed since
   // this component mounted, and an edit form showing stale figures would write
@@ -84,8 +94,14 @@ export function InventoryItemDialog({
       item?.unit_price === null || item?.unit_price === undefined ? '' : String(item.unit_price),
     )
     setCode(item?.code ?? '')
+    setProductGID(item?.shopify_product_gid ?? '')
     setError(null)
-  }, [open, item])
+    void loadShopifyCatalogue(brand).then(res => {
+      setCatalogue(res.ok && res.data ? res.data : [])
+    })
+  }, [open, item, brand])
+
+  const [created, setCreated] = useState<InventoryItem | null>(null)
 
   async function save(): Promise<void> {
     setError(null)
@@ -111,94 +127,187 @@ export function InventoryItemDialog({
     }
     setOpen(false)
     router.refresh()
+
+    // STRAIGHT ON TO HOW IT IS MADE, for a part just created.
+    //
+    // The two live on different endpoints behind different permissions - the
+    // shelf is filament:manage, binding a design file is config:manage - and a
+    // file cannot be attached to a row that does not exist yet, so they cannot
+    // be one request. They are still one job, and splitting them across a
+    // dialog and a row menu meant nobody found the second half.
+    if (!item && res.data) {
+      // The product link is persisted NOW rather than waiting for the next
+      // step, so closing that step does not silently lose the choice already
+      // made here. Source stays whatever it was; the next step is where that
+      // is decided.
+      if (productGID !== '') {
+        await setComponentSourceAction(
+          { brand, id: res.data.id },
+          {
+            source: 'bought',
+            shopify_product_gid: productGID,
+            shopify_product_title: (catalogue ?? []).find(p => p.id === productGID)?.title,
+          },
+        )
+      }
+      setCreated({
+        ...res.data,
+        shopify_product_gid: productGID,
+        shopify_product_title: (catalogue ?? []).find(p => p.id === productGID)?.title ?? null,
+      })
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{item ? 'Edit item' : 'Add item'}</DialogTitle>
-          <DialogDescription>
-            {item
-              ? 'Change what is on the shelf, or what one costs.'
-              : 'Anything on the shelf that is not filament. Adding a name that already exists updates that item rather than creating a second one.'}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <Field label="Item" htmlFor="i-name">
-            <Input
-              id="i-name"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Gift box - small"
-            />
-          </Field>
-          {/* Optional, and last of the identifying fields: a part only needs a
-              code once something references it. Upper-cased on save so
-              "led-001" and "LED-001" cannot become two parts. */}
-          <Field label="Part code (optional)" htmlFor="i-code">
-            <Input
-              id="i-code"
-              value={code}
-              onChange={e => setCode(e.target.value)}
-              placeholder="e.g. LED-10CM"
-            />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Quantity" htmlFor="i-quantity">
-              <Input
-                id="i-quantity"
-                type="number"
-                step="0.001"
-                min="0"
-                data-numeric="true"
-                value={quantity}
-                onChange={e => setQuantity(e.target.value)}
-                placeholder="0"
-              />
-            </Field>
-            <Field label="Unit" htmlFor="i-unit">
+    <>
+      {created ? (
+        <ComponentSourceDialog
+          brand={brand}
+          item={created}
+          open
+          onOpenChange={next => {
+            if (!next) setCreated(null)
+          }}
+        />
+      ) : null}
+      <Dialog open={open} onOpenChange={setOpen}>
+        {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{item ? 'Edit item' : 'Add item'}</DialogTitle>
+            <DialogDescription>
+              {item
+                ? 'Change what is on the shelf, or what one costs.'
+                : 'Anything on the shelf that is not filament. Adding a name that already exists updates that item rather than creating a second one.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="component-product">Product this part belongs to</Label>
               <Select
-                id="i-unit"
-                value={unit}
-                onChange={e => setUnit(e.target.value as InventoryUnit)}
+                id="component-product"
+                value={productGID}
+                disabled={pending || catalogue === null}
+                onChange={e => {
+                  const gid = e.target.value
+                  setProductGID(gid)
+                  // Fills the name, and stays editable: a product may have more
+                  // than one part, and "Royal" twice would be two shelf rows
+                  // nobody could tell apart.
+                  const chosen = (catalogue ?? []).find(p => p.id === gid)
+                  if (chosen && name.trim() === '') setName(chosen.title)
+                }}
               >
-                {INVENTORY_UNITS.map(u => (
-                  <option key={u} value={u}>
-                    {u}
+                <option value="">
+                  {catalogue === null ? 'Reading Shopify…' : 'Not tied to a product'}
+                </option>
+                {(catalogue ?? []).map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                    {p.variants && p.variants.length > 0 ? ` — ${p.variants.length} SKUs` : ''}
                   </option>
                 ))}
               </Select>
+              <p className="text-muted-foreground text-xs">
+                Its SKUs become the rows you attach print files to, one per machine.
+              </p>
+            </div>
+
+            <Field label="Item" htmlFor="i-name">
+              <Input
+                id="i-name"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="e.g. Gift box - small"
+              />
             </Field>
+            {/* Optional, and last of the identifying fields: a part only needs a
+              code once something references it. Upper-cased on save so
+              "led-001" and "LED-001" cannot become two parts. */}
+            <Field label="Part code (optional)" htmlFor="i-code">
+              <Input
+                id="i-code"
+                value={code}
+                onChange={e => setCode(e.target.value)}
+                placeholder="e.g. LED-10CM"
+              />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Quantity" htmlFor="i-quantity">
+                <Input
+                  id="i-quantity"
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  data-numeric="true"
+                  value={quantity}
+                  onChange={e => setQuantity(e.target.value)}
+                  placeholder="0"
+                />
+              </Field>
+              <Field label="Unit" htmlFor="i-unit">
+                <Select
+                  id="i-unit"
+                  value={unit}
+                  onChange={e => setUnit(e.target.value as InventoryUnit)}
+                >
+                  {INVENTORY_UNITS.map(u => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <Field label="Price per unit (₹)" htmlFor="i-price" hint="Optional">
+              <Input
+                id="i-price"
+                type="number"
+                step="0.01"
+                min="0"
+                data-numeric="true"
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                placeholder="Leave blank if not recorded"
+              />
+            </Field>
+            {error ? (
+              <p
+                role="alert"
+                className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm"
+              >
+                {error}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {item ? (
+                <Button
+                  variant="ghost"
+                  className="mr-auto"
+                  disabled={pending}
+                  onClick={() => {
+                    setOpen(false)
+                    setCreated(item)
+                  }}
+                >
+                  <Hammer className="size-3.5" aria-hidden />
+                  Design file &amp; plates
+                </Button>
+              ) : (
+                <span className="text-subtle-foreground mr-auto text-xs">
+                  Save first, then choose its design file.
+                </span>
+              )}
+              <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
+                Cancel
+              </Button>
+              <Button onClick={() => void save()} disabled={pending || name.trim() === ''}>
+                {pending ? 'Saving…' : item ? 'Save changes' : 'Save item'}
+              </Button>
+            </div>
           </div>
-          <Field label="Price per unit (₹)" htmlFor="i-price" hint="Optional">
-            <Input
-              id="i-price"
-              type="number"
-              step="0.01"
-              min="0"
-              data-numeric="true"
-              value={price}
-              onChange={e => setPrice(e.target.value)}
-              placeholder="Leave blank if not recorded"
-            />
-          </Field>
-          {error ? (
-            <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
-              {error}
-            </p>
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
-              Cancel
-            </Button>
-            <Button onClick={() => void save()} disabled={pending || name.trim() === ''}>
-              {pending ? 'Saving…' : item ? 'Save changes' : 'Save item'}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

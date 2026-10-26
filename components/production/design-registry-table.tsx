@@ -3,6 +3,7 @@
 import type { JSX } from 'react'
 
 import { DesignAddDialog } from '@/components/production/design-add-dialog'
+import { TemplateDownloadButton } from '@/components/production/template-download-button'
 import { TemplateUploadButton } from '@/components/production/template-upload-button'
 import { TonePill } from '@/components/production/tone-pill'
 import { Card } from '@/components/ui/card'
@@ -108,11 +109,17 @@ export function DesignRegistryTable({ brand, templates }: DesignRegistryTablePro
                   {when(template.created_at)}
                 </TableCell>
                 <TableCell className="py-2 text-right">
-                  <TemplateUploadButton
-                    brand={brand}
-                    templateKey={template.key}
-                    label={template.source === 'uploaded' ? 'Replace' : 'Upload'}
-                  />
+                  {/* Download first: reading a template is what somebody does
+                      before replacing one, and the destructive action should
+                      not be the one under the thumb. */}
+                  <div className="flex items-center justify-end gap-1">
+                    <TemplateDownloadButton templateKey={template.key} />
+                    <TemplateUploadButton
+                      brand={brand}
+                      templateKey={template.key}
+                      label={template.source === 'uploaded' ? 'Replace' : 'Upload'}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

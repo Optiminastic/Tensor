@@ -68,6 +68,7 @@ export function FieldMapEditor({
       value_type: m.value_type,
       optional: !m.required,
       fixed_value: m.fixed_value ?? '',
+      default_value: m.default_value ?? '',
     })),
   )
   const [pending, setPending] = useState(false)
@@ -89,6 +90,7 @@ export function FieldMapEditor({
         value_type: 'string' as const,
         optional: false,
         fixed_value: '',
+        default_value: '',
       },
     ])
   }
@@ -98,7 +100,14 @@ export function FieldMapEditor({
     setPending(true)
     const res = await saveFieldMaps(brand, productCode, {
       role,
-      maps: rows.map(r => ({ ...r, fixed_value: (r.fixed_value ?? '').trim() })),
+      maps: rows.map(r => ({
+        ...r,
+        fixed_value: (r.fixed_value ?? '').trim(),
+        // Only an optional field can reach its default, and the API refuses a
+        // default on a required one. Cleared here rather than refused, so
+        // flipping a row back to "hold the job" is not a dead end.
+        default_value: r.optional === true ? (r.default_value ?? '').trim() : '',
+      })),
     })
     setPending(false)
     if (!res.ok) {
@@ -192,6 +201,10 @@ export function FieldMapEditor({
                 >
                   <option value="string">Text</option>
                   <option value="number">Number</option>
+                  {/* The storefront sells "1 RED HEART", not "1". Count reads
+                      the number out of that wording, and out of "NO HEART",
+                      so an option the shop renames keeps working. */}
+                  <option value="count">Count in words</option>
                 </Select>
               </label>
 
@@ -214,6 +227,21 @@ export function FieldMapEditor({
                   <option value="required">{isFixed(row) ? 'always set' : 'Hold the job'}</option>
                   <option value="optional">Leave it out</option>
                 </Select>
+              </label>
+
+              {/* What an unanswered optional field passes instead.
+                  Without it the template's own default stands, which is right
+                  for a rose nobody named and wrong for a heart count: the
+                  2-STEP plank sells no heart option at all, and the joinery
+                  template defaults side_hearts to 1. */}
+              <label className="flex w-28 flex-col gap-1">
+                <span className="text-muted-foreground text-xs">Use instead</span>
+                <Input
+                  value={row.default_value ?? ''}
+                  disabled={isFixed(row) || row.optional !== true}
+                  placeholder={row.optional === true ? "template's own" : '—'}
+                  onChange={e => edit(index, { default_value: e.target.value })}
+                />
               </label>
 
               <Button

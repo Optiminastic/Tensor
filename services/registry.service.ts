@@ -22,6 +22,8 @@ import {
   type ProductDesignWriteInput,
   type ProductWriteInput,
   type RegistryProduct,
+  type PipelineTargets,
+  PipelineTargetsSchema,
   type RegistryProductDetail,
   RegistryProductDetailSchema,
   RegistryProductSchema,
@@ -31,6 +33,7 @@ import {
   type ColourPart,
   ColourPartSchema,
   ColourPartsResponseSchema,
+  type ColourSchemeWriteInput,
 } from '@/lib/validators/registry'
 
 const log = createLogger('RegistryService')
@@ -117,6 +120,38 @@ export async function getVariantBom(token: string, variantId: string): Promise<B
   )
 }
 
+/** The bill of materials every variant of a product inherits. */
+export async function getProductBom(token: string, code: string): Promise<BomLine[]> {
+  return call(
+    `/registry/products/${encodeURIComponent(code)}/bom`,
+    { headers: { Authorization: `Bearer ${token}` } },
+    data => BomLineSchema.array().parse(data),
+  )
+}
+
+/**
+ * Replaces a product's bill of materials, whole.
+ *
+ * The list every SKU inherits. A SKU that declares one of its own replaces it
+ * entirely rather than adding to it - so an upgraded box does not arrive
+ * alongside the standard one.
+ */
+export async function saveProductBom(
+  token: string,
+  code: string,
+  lines: { item_id: string; quantity: number }[],
+): Promise<BomLine[]> {
+  return call(
+    `/registry/products/${encodeURIComponent(code)}/bom`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines }),
+    },
+    data => BomLineSchema.array().parse(data),
+  )
+}
+
 /**
  * Replaces a variant's bill of materials, whole.
  *
@@ -159,6 +194,44 @@ export async function uploadDesignTemplate(
     { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form },
     data => DesignTemplateSchema.parse(data),
   )
+}
+
+/**
+ * Streams the .scad a template key renders from.
+ *
+ * Returns the raw Response so a proxy route can pipe the body straight through
+ * without buffering, the same shape as files.service.ts#fetchFile. The bearer
+ * token is minted server-side, so the browser never handles it.
+ *
+ * Tensor-Core answers with what the RENDERER would use: the uploaded override
+ * where one exists, the embedded copy otherwise. That is the point of
+ * downloading it - a key nobody has replaced is exactly the one somebody needs
+ * a copy of before they start editing.
+ */
+export async function fetchDesignTemplateFile(token: string, key: string): Promise<Response> {
+  let response: Response
+  try {
+    response = await fetch(
+      `${env.TENSOR_CORE_URL}/registry/templates/${encodeURIComponent(key)}/file`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      },
+    )
+  } catch (error) {
+    log.error({ key, err: error }, 'Tensor-Core is unreachable')
+    throw new RegistryServiceError('Tensor-Core is unreachable. Is the backend running?')
+  }
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((body: { detail?: string }) => body.detail)
+      .catch(() => undefined)
+    log.warn({ key, status: response.status, detail }, 'Tensor-Core rejected the request')
+    throw new RegistryServiceError(detail ?? `Request failed (${response.status})`)
+  }
+  return response
 }
 
 /**
@@ -349,6 +422,15 @@ export async function listSKUPipelines(token: string): Promise<SKUPipelines> {
  * Returns the whole table back, so the page renders what was actually stored
  * rather than what it hoped it stored.
  */
+/** The products slicer settings are assigned to, and the SKUs with no parent. */
+export async function listPipelineTargets(token: string): Promise<PipelineTargets> {
+  return call(
+    '/registry/pipeline-targets',
+    { headers: { Authorization: `Bearer ${token}` } },
+    data => PipelineTargetsSchema.parse(data),
+  )
+}
+
 export async function saveSKUPipelines(
   token: string,
   input: SKUPipelineWriteInput,
@@ -407,10 +489,45 @@ export async function setColourPartColour(
   )
 }
 
-/** Returns one design file to the default white-base, coloured-lettering pair. */
-export async function clearColourParts(token: string, code: string, role: string): Promise<void> {
+/**
+ * Replaces one design file's pieces for one colourway, typed out rather than
+ * read from a 3MF.
+ *
+ * The 3MF route above is still the better one where a reference file exists.
+ * This is for the product that has none, and for the product whose palette is
+ * designed per variant - a pink outline on the purple one, gold on the red -
+ * which a single file cannot state.
+ */
+export async function putColourScheme(
+  token: string,
+  target: { code: string; role: string },
+  input: ColourSchemeWriteInput,
+): Promise<ColourPart[]> {
+  return call(
+    `/registry/products/${encodeURIComponent(target.code)}/colour-parts/${encodeURIComponent(target.role)}`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+    data => ColourPartsResponseSchema.parse(data).items,
+  )
+}
+
+/**
+ * Returns one design file to the default white-base, coloured-lettering pair.
+ *
+ * With a SKU, drops only that colourway's override, leaving the product's own
+ * scheme - which that variant then falls back to - in place.
+ */
+export async function clearColourParts(
+  token: string,
+  target: { code: string; role: string; variantSKU?: string },
+): Promise<void> {
+  const { code, role, variantSKU } = target
+  const scope = variantSKU ? `?variant_sku=${encodeURIComponent(variantSKU)}` : ''
   await call(
-    `/registry/products/${encodeURIComponent(code)}/colour-parts/${encodeURIComponent(role)}`,
+    `/registry/products/${encodeURIComponent(code)}/colour-parts/${encodeURIComponent(role)}${scope}`,
     { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
     () => null,
   )
