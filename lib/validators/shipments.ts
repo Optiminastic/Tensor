@@ -32,7 +32,59 @@ export const ShipmentScanSchema = z.object({
   location: z.string(),
   status_code: z.string(),
   scan_type: z.string(),
+
+  /**
+   * What the driver can show for a failed delivery.
+   *
+   * A failed delivery is the carrier's word against the customer's, and these
+   * are the only evidence either way: where the van actually was, and whether
+   * anybody rang. They are what decides re-attempt versus a wrong address, so
+   * the NDR page shows them beside the row rather than burying them.
+   */
+  geofence: z
+    .object({ lat: z.number(), long: z.number() })
+    .nullish()
+    .transform(g => g ?? null),
+  call_attempted: z
+    .boolean()
+    .nullish()
+    .transform(v => v ?? false),
+  /** Zero when nobody rang AND when the phone rang out - call_attempted separates them. */
+  call_seconds: z
+    .number()
+    .nullish()
+    .transform(v => v ?? 0),
 })
+
+/**
+ * What the courier can be asked to do about an undelivered parcel.
+ *
+ * DELHIVERY'S OWN LIST, which is shorter than its dashboard's. Return to
+ * origin is not here: it appears in third-party wrappers around this API, not
+ * in the API, so a Return button would be one that does nothing. The page
+ * links out to Delhivery for that instead of pretending.
+ */
+export const NdrActSchema = z.enum(['reattempt', 'defer', 'edit'])
+export type NdrAct = z.infer<typeof NdrActSchema>
+
+/**
+ * What came back from asking.
+ *
+ * `submitted`, NOT `done`. Delhivery takes these instructions asynchronously:
+ * it answers with an upload id and acts on the parcel out of band. A screen
+ * that read this as "re-attempt booked" would be making the same promise that
+ * left a customer waiting for a payment message nobody sent.
+ */
+export const NdrActionResultSchema = z.object({
+  waybill: z.string(),
+  act: z.string(),
+  upload_id: z
+    .string()
+    .nullish()
+    .transform(v => v ?? ''),
+  submitted: z.boolean(),
+})
+export type NdrActionResult = z.infer<typeof NdrActionResultSchema>
 
 /**
  * One parcel the store has shipped, whatever became of it.

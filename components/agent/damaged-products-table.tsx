@@ -56,6 +56,7 @@ interface DamagedProductsTableProps {
   reports: DamageReport[]
   counts: Record<string, number>
   canResolve: boolean
+  canDelete: boolean
   onChanged: () => void
 }
 
@@ -64,6 +65,7 @@ export function DamagedProductsTable({
   reports,
   counts,
   canResolve,
+  canDelete,
   onChanged,
 }: DamagedProductsTableProps): JSX.Element {
   const [search, setSearch] = useState('')
@@ -206,6 +208,7 @@ export function DamagedProductsTable({
         report={selected}
         open={open}
         canResolve={canResolve}
+        canDelete={canDelete}
         onClose={() => {
           setOpen(false)
           setSelectedID(null)

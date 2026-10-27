@@ -197,3 +197,22 @@ export async function bookDamagePickup(input: {
   })
   return DamagePickupResultSchema.parse(await response.json())
 }
+
+/**
+ * Removes a report from the board, and its timeline with it.
+ *
+ * ADMIN ONLY, and the backend is what enforces that - hiding the button is
+ * UX. Support decides what the shop does about a complaint; erasing the
+ * record that a customer complained is a different act.
+ *
+ * REFUSED WHEN A COURIER IS ALREADY BOOKED, with the waybill in the message,
+ * because this report is the only place that number is written down.
+ */
+export async function deleteDamageReport(input: {
+  token: string
+  brand: string
+  id: string
+}): Promise<void> {
+  const { token, brand, id } = input
+  await call(token, `${reportsPath(brand)}/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}

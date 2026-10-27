@@ -1,6 +1,12 @@
 import { env } from '@/lib/env'
 import { createLogger } from '@/lib/logger'
-import { type ShipmentsResponse, ShipmentsResponseSchema } from '@/lib/validators/shipments'
+import {
+  type NdrAct,
+  type NdrActionResult,
+  NdrActionResultSchema,
+  type ShipmentsResponse,
+  ShipmentsResponseSchema,
+} from '@/lib/validators/shipments'
 
 const log = createLogger('ShipmentsService')
 
@@ -58,4 +64,62 @@ export async function listShipments(
   }
 
   return ShipmentsResponseSchema.parse(await response.json())
+}
+
+/**
+ * Tells the courier what to do about a parcel it could not deliver.
+ *
+ * A WRITE, unlike everything else in this file. It sends a van out again, or
+ * changes where somebody's parcel goes, so the backend gates it on
+ * dispatch:manage rather than the order:read the list runs on.
+ *
+ * SUBMITTED IS NOT DONE. Delhivery takes the instruction asynchronously and
+ * answers with an upload id; the parcel has not moved. Callers must say
+ * "asked" rather than "re-attempt booked" - the same mistake that left a
+ * customer waiting for a payment message nobody sent.
+ */
+export async function actOnNdr(input: {
+  token: string
+  brand: string
+  waybill: string
+  act: NdrAct
+  date?: string
+  name?: string
+  address?: string
+  phone?: string
+}): Promise<NdrActionResult> {
+  const { token, brand, waybill, ...body } = input
+  const path =
+    `/brands/${encodeURIComponent(brand)}/shipments/` + `${encodeURIComponent(waybill)}/ndr`
+
+  let response: Response
+  try {
+    response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+      // The courier's own timeout, not the 45s the list needs: this is one
+      // small write, and a slow one means something is wrong at Delhivery.
+      signal: AbortSignal.timeout(15_000),
+    })
+  } catch (error) {
+    log.error({ err: error }, 'Tensor-Core is unreachable')
+    throw new ShipmentsServiceError('Tensor-Core is unreachable. Is the backend running?')
+  }
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((b: { detail?: string }) => b.detail)
+      .catch(() => undefined)
+    log.warn({ status: response.status, waybill }, 'the courier refused an NDR instruction')
+    // Delhivery's refusals name the parcel's state - "waybill not in a
+    // pending state" tells an operator the attempt already happened.
+    throw new ShipmentsServiceError(detail ?? `Request failed (${response.status})`)
+  }
+  return NdrActionResultSchema.parse(await response.json())
 }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { type JSX, useEffect, useState } from 'react'
 
 import { loadDamageReportAction } from '@/app/dashboard/[brand]/agent/damaged-products/actions'
+import { DamageDeleteControl } from '@/components/agent/damage-delete-control'
 import { DamageFileGrid } from '@/components/agent/damage-file-grid'
 import { DamageResolutionControl } from '@/components/agent/damage-resolution-control'
 import { DAMAGE_STATUS_CONFIG } from '@/components/agent/damage-status-config'
@@ -30,6 +31,7 @@ interface DamageDetailSheetProps {
   report: DamageReport | null
   open: boolean
   canResolve: boolean
+  canDelete: boolean
   onClose: () => void
   onChanged: () => void
 }
@@ -51,6 +53,7 @@ export function DamageDetailSheet({
   report,
   open,
   canResolve,
+  canDelete,
   onClose,
   onChanged,
 }: DamageDetailSheetProps): JSX.Element {
@@ -65,6 +68,8 @@ export function DamageDetailSheet({
             brand={brand}
             report={report}
             canResolve={canResolve}
+            canDelete={canDelete}
+            onClose={onClose}
             onChanged={onChanged}
           />
         ) : null}
@@ -79,6 +84,9 @@ interface DrawerContentsProps {
   brand: string
   report: DamageReport
   canResolve: boolean
+  canDelete: boolean
+  /** Closed by a delete: the row it was showing is gone. */
+  onClose: () => void
   onChanged: () => void
 }
 
@@ -86,6 +94,8 @@ function DrawerContents({
   brand,
   report,
   canResolve,
+  canDelete,
+  onClose,
   onChanged,
 }: DrawerContentsProps): JSX.Element {
   const [view, setView] = useState<View>('photos')
@@ -168,6 +178,20 @@ function DrawerContents({
             {/* Below the control, because it is the record of what the
                 control did - and what it has not managed yet. */}
             {detail.data ? <DamageTimeline stages={detail.data.stages} /> : null}
+            {/* Last, and below the record of what was done - so the way to
+                erase a report sits after everything that argues against it. */}
+            <DamageDeleteControl
+              brand={brand}
+              report={report}
+              canDelete={canDelete}
+              onDeleted={() => {
+                // The list refreshes and the drawer closes: leaving it open
+                // on a row that no longer exists is how a second delete
+                // gets attempted against a gone id.
+                onChanged()
+                onClose()
+              }}
+            />
           </div>
         ) : (
           <OrderTab brand={brand} report={report} />

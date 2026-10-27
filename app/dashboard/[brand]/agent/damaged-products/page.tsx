@@ -31,6 +31,9 @@ export default async function DamagedProductsPage({
   // Deciding the OUTCOME is a different permission from moving a report along:
   // admin and customer support hold it, and nobody else does.
   const canResolve = can(authz, 'damage:resolve')
+  // Separate from resolve on purpose: deciding what the shop does about a
+  // complaint is the job, erasing the record that it happened is not.
+  const canDelete = can(authz, 'damage:delete')
 
   let reports: DamageReports = EMPTY
   let error: string | null = null
@@ -57,7 +60,12 @@ export default async function DamagedProductsPage({
           {error}
         </p>
       ) : (
-        <DamagedProducts brand={brand} initial={reports} canResolve={canResolve} />
+        <DamagedProducts
+          brand={brand}
+          initial={reports}
+          canResolve={canResolve}
+          canDelete={canDelete}
+        />
       )}
     </main>
   )

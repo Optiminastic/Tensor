@@ -11,6 +11,7 @@ interface DamagedProductsProps {
   brand: string
   initial: DamageReports
   canResolve: boolean
+  canDelete: boolean
 }
 
 /**
@@ -24,7 +25,12 @@ interface DamagedProductsProps {
  */
 const POLL_MS = 30_000
 
-export function DamagedProducts({ brand, initial, canResolve }: DamagedProductsProps): JSX.Element {
+export function DamagedProducts({
+  brand,
+  initial,
+  canResolve,
+  canDelete,
+}: DamagedProductsProps): JSX.Element {
   const { data, refetch } = useQuery({
     queryKey: ['damage-reports', brand],
     queryFn: async () => {
@@ -42,6 +48,7 @@ export function DamagedProducts({ brand, initial, canResolve }: DamagedProductsP
       reports={data.items}
       counts={data.counts}
       canResolve={canResolve}
+      canDelete={canDelete}
       onChanged={() => void refetch()}
     />
   )

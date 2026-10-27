@@ -16,6 +16,7 @@ import {
   DamageServiceError,
   bookDamagePickup,
   confirmDamagePayment,
+  deleteDamageReport,
   getDamageReport,
   listDamageReports,
   resolveDamageReport,
@@ -147,6 +148,27 @@ export async function bookDamagePickupAction(input: {
   if (!token) return { ok: false, error }
   try {
     return { ok: true, data: await bookDamagePickup({ token, ...input }) }
+  } catch (err) {
+    return failure(err)
+  }
+}
+
+/**
+ * Deletes a report and its history.
+ *
+ * NOT UNDOABLE, which is why the screen asks twice before calling this. The
+ * backend refuses when a courier is already booked and says which waybill to
+ * cancel first; that refusal is passed straight through.
+ */
+export async function deleteDamageReportAction(input: {
+  brand: string
+  id: string
+}): Promise<ActionResult> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    await deleteDamageReport({ token, ...input })
+    return { ok: true }
   } catch (err) {
     return failure(err)
   }

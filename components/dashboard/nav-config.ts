@@ -255,7 +255,13 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
     // phone number. The roles that may see orders are exactly the roles that
     // would ring somebody about a delivery that failed.
     permission: 'order:read',
-    items: [{ label: 'Deliveries', href: '/shipping/deliveries', icon: PackageSearch }],
+    items: [
+      { label: 'Deliveries', href: '/shipping/deliveries', icon: PackageSearch },
+      // Under Deliveries, because it is the subset of it that is somebody's
+      // work: Deliveries answers "where is everything", NDR answers "what is
+      // stuck and whose move is it".
+      { label: 'NDR', href: '/shipping/ndr', icon: PackageX },
+    ],
   },
 ]
 
