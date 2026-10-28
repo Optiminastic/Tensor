@@ -52,7 +52,10 @@ export default async function AccountsReportPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    // The same wrapper as Workspace, Brand and Integrations. Settings reads as
+    // one area, and a page that runs to the window edge while its siblings sit
+    // in a measured column reads as a different product.
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:px-6">
       <SettingsHeader
         title="Accounts report"
         description="A daily sales register, mailed as the spreadsheet your accountant files from. One row per line item, covering noon to noon."
@@ -68,6 +71,6 @@ export default async function AccountsReportPage({
       ) : report ? (
         <AccountsReportForm brand={context.profile.slug} initial={report} />
       ) : null}
-    </div>
+    </main>
   )
 }
