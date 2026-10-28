@@ -8,11 +8,12 @@ import {
 } from '@/components/production/packaging-station-tabs'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { DispatchReadyOrder } from '@/components/production/types'
-import { can, currentAuthz, requirePermission } from '@/lib/authz'
+import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Batch } from '@/lib/validators/batches'
 import type { DispatchOrder } from '@/lib/validators/dispatch'
 import type { Order, ProductionJob } from '@/lib/validators/production'
+import type { StationIssuesByJob } from '@/lib/validators/station-issues'
 import { listBatches } from '@/services/batches.service'
 import { DispatchServiceError, listDispatchOrders } from '@/services/dispatch.service'
 import {
@@ -20,6 +21,7 @@ import {
   listProductionJobs,
   ProductionServiceError,
 } from '@/services/production.service'
+import { listStationIssues } from '@/services/station-issues.service'
 
 export const metadata: Metadata = { title: 'Packaging' }
 
@@ -38,9 +40,6 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
   // production:read; each tab's write actions are gated separately by the
   // backend (assembly:submit / qc:submit / packaging:submit / dispatch:manage).
   await requirePermission('production:read', `/dashboard/${brand}`)
-  // production:catchup is ADMIN-only. Hiding the control is convenience; the
-  // backend refuses the call regardless of what this renders.
-  const canCatchUp = can(await currentAuthz(), 'production:catchup')
 
   let jobs: ProductionJob[] = []
   let batches: Batch[] = []
@@ -51,6 +50,8 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
     orderNumbers: {},
     error: null,
   }
+
+  let issues: StationIssuesByJob = {}
 
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
@@ -69,6 +70,14 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
       // Dispatch reads two more permissions (dispatch:read, order:read) than
       // the station queues do, so it carries its own error for the same reason.
       dispatch = await loadDispatch(token, jobs)
+      // WHAT THE FLOOR FLAGGED. Its own try/catch, like the two above: a
+      // failure here costs the red tags, not the queues. An operator with no
+      // issue markers can still move work; an operator with no board cannot.
+      try {
+        issues = await listStationIssues(token, brand)
+      } catch {
+        issues = {}
+      }
     }
   }
 
@@ -91,7 +100,7 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
         </p>
       ) : (
         <PackagingStationTabs
-          canCatchUp={canCatchUp}
+          issues={issues}
           brand={brand}
           queues={{
             // Everything off the printer and not yet assembled. A job counts as

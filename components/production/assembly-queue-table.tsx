@@ -1,14 +1,17 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useState, type JSX } from 'react'
+import type { JSX } from 'react'
 
-import { skipJobAssembly } from '@/app/dashboard/[brand]/production/actions'
-import { AssemblyCheckDialog } from '@/components/production/assembly-check-dialog'
 import { batchLabel, type BatchNumbers } from '@/components/production/batch-label'
 import { ReprintDialog } from '@/components/production/reprint-dialog'
-import { StationIssueDialog } from '@/components/production/station-issue-dialog'
-import { Button } from '@/components/ui/button'
+import {
+  AdvanceArrow,
+  leavingClasses,
+  RowCheckbox,
+  SelectionBar,
+} from '@/components/production/station-row-controls'
+import { TablePagination } from '@/components/production/table-pagination'
+import { useStationAdvance } from '@/components/production/use-station-advance'
 import { Card } from '@/components/ui/card'
 import {
   Table,
@@ -18,6 +21,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/ui/table'
+import { usePagination } from '@/hooks/use-pagination'
 import { dateTime } from '@/lib/format'
 import type { ProductionJob } from '@/lib/validators/production'
 
@@ -29,109 +33,120 @@ interface AssemblyQueueTableProps {
   batchNumbers: BatchNumbers
 }
 
-/** Jobs that came off the printer and are waiting on the assembly checklist -
- * assembly_status = pending, and either the job itself or the batch it was
- * printed in has finished (see the Packaging page's Assembly tab). */
+/**
+ * Jobs that came off the printer and are waiting on assembly.
+ *
+ * NO ISSUE DIALOG HERE, only reprint. At assembly a bad part is a part to
+ * print again, not a note to leave on a job somebody else will pick up - and
+ * the reprint already takes a reason, so raising an issue as well recorded the
+ * same problem twice in two places. The later stations keep both, because by
+ * then a problem may be worth flagging without scrapping the part.
+ *
+ * THE ARROW REPLACED THE CHECKLIST DIALOG as the ordinary way through. Most of
+ * this shop's work does not need four fields filled in per job - somebody
+ * finishes a tray and moves the tray on - and a dialog that has to be
+ * dismissed hundreds of times a day stops being filled in honestly, which is
+ * worse than not having it. The issue and reprint paths are still here for
+ * when something is actually wrong.
+ */
 export function AssemblyQueueTable({
   brand,
   jobs,
   batchNumbers,
 }: AssemblyQueueTableProps): JSX.Element {
+  // PAGED, because this queue reached fifteen hundred rows on the live shop
+  // and the browser rendered every one of them. Client-side: the jobs are
+  // already here, so this is about what the DOM carries rather than what the
+  // network does.
+  const page = usePagination(jobs)
+  // Selection is scoped to the page on screen. "Select all" reaching rows
+  // somebody cannot see is how a tray of twenty becomes two hundred.
+  const advance = useStationAdvance(brand, 'assembly', page.items)
+
   return (
-    <Card>
-      <Table>
-        <TableHead>
-          <TableRow>
-            {COLUMNS.map(column => (
-              <TableHeaderCell key={column}>{column}</TableHeaderCell>
+    <div className="flex flex-col gap-3">
+      <SelectionBar
+        count={advance.selected.size}
+        nextStation="Finishing"
+        busy={advance.busy}
+        onAdvance={() => void advance.advanceSelected()}
+        onClear={advance.clear}
+      />
+
+      {advance.error ? (
+        <p role="alert" className="text-danger text-sm text-pretty">
+          {advance.error}
+        </p>
+      ) : null}
+
+      <Card>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell className="w-10">
+                <RowCheckbox
+                  checked={advance.allSelected}
+                  onChange={advance.toggleAll}
+                  label="Select every job shown"
+                />
+              </TableHeaderCell>
+              {COLUMNS.map(column => (
+                <TableHeaderCell key={column}>{column}</TableHeaderCell>
+              ))}
+              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {page.items.map(job => (
+              <TableRow key={job.id} className={leavingClasses(advance.leaving.has(job.id))}>
+                <TableCell>
+                  <RowCheckbox
+                    checked={advance.selected.has(job.id)}
+                    onChange={() => advance.toggle(job.id)}
+                    label={`Select ${job.job_number}`}
+                  />
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <span className="font-mono text-sm">{job.job_number}</span>
+                </TableCell>
+                <TableCell className="text-muted-foreground font-mono text-sm whitespace-nowrap">
+                  {batchLabel(job.batch_id, batchNumbers)}
+                </TableCell>
+                <TableCell>{job.description}</TableCell>
+                <TableCell numeric>{job.quantity}</TableCell>
+                <TableCell className="text-muted-foreground">{job.customer_name ?? '—'}</TableCell>
+                <TableCell className="text-muted-foreground whitespace-nowrap">
+                  {dateTime(job.created_at)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    {/* Assembly is where a bad part is usually first handled,
+                        so the reprint belongs here rather than only on the
+                        machine board. Same /fail path as everywhere else: the
+                        reason is recorded and the clone re-enters normal
+                        batching at urgent priority. */}
+                    <ReprintDialog
+                      brand={brand}
+                      job={{
+                        id: job.id,
+                        jobNumber: job.job_number,
+                        productName: job.product_name ?? null,
+                        printFileID: job.print_file_id ?? null,
+                      }}
+                    />
+                    <AdvanceArrow
+                      onClick={() => void advance.advanceOne(job.id)}
+                      disabled={advance.busy}
+                      label={`Move ${job.job_number} on to Finishing`}
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
             ))}
-            <TableHeaderCell className="text-right">Actions</TableHeaderCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {jobs.map(job => (
-            <AssemblyQueueRow
-              key={job.id}
-              brand={brand}
-              job={job}
-              batchNumber={batchLabel(job.batch_id, batchNumbers)}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  )
-}
-
-interface AssemblyQueueRowProps {
-  brand: string
-  job: ProductionJob
-  batchNumber: string
-}
-
-function AssemblyQueueRow({ brand, job, batchNumber }: AssemblyQueueRowProps): JSX.Element {
-  const router = useRouter()
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function skip(): Promise<void> {
-    setPending(true)
-    setError(null)
-    const res = await skipJobAssembly(brand, job.id)
-    setPending(false)
-    if (!res.ok) {
-      setError(res.error ?? 'Could not skip assembly.')
-      return
-    }
-    router.refresh()
-  }
-
-  return (
-    <TableRow>
-      <TableCell className="font-mono text-sm whitespace-nowrap">{job.job_number}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-sm whitespace-nowrap">
-        {batchNumber}
-      </TableCell>
-      <TableCell>{job.description}</TableCell>
-      <TableCell numeric>{job.quantity}</TableCell>
-      <TableCell className="text-muted-foreground">{job.customer_name ?? '—'}</TableCell>
-      <TableCell className="text-muted-foreground whitespace-nowrap">
-        {dateTime(job.created_at)}
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex justify-end gap-2">
-            <Button variant="soft-muted" size="sm" disabled={pending} onClick={() => void skip()}>
-              Skip
-            </Button>
-            <StationIssueDialog
-              brand={brand}
-              stage="assembly"
-              job={{ id: job.id, jobNumber: job.job_number, quantity: job.quantity }}
-            />
-            {/* Assembly is where a bad part is usually first handled, so the
-                reprint belongs here rather than only on the machine board.
-                Same dialog and same /fail path as everywhere else: the reason
-                is always recorded and the clone re-enters normal batching at
-                urgent priority - it never bypasses the planner. */}
-            <ReprintDialog
-              brand={brand}
-              job={{
-                id: job.id,
-                jobNumber: job.job_number,
-                productName: job.product_name ?? null,
-                printFileID: job.print_file_id ?? null,
-              }}
-            />
-            <AssemblyCheckDialog brand={brand} jobId={job.id} jobNumber={job.job_number} />
-          </div>
-          {error ? (
-            <p role="alert" className="text-danger text-xs">
-              {error}
-            </p>
-          ) : null}
-        </div>
-      </TableCell>
-    </TableRow>
+          </TableBody>
+        </Table>
+        <TablePagination page={page} noun="jobs" />
+      </Card>
+    </div>
   )
 }
