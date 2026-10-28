@@ -266,6 +266,12 @@ export const FieldMapSchema = z.object({
    *  default of 0 every one of those planks would take the template's own
    *  side_hearts = 1 and grow a heart nobody bought. */
   default_value: z.string().nullish(),
+  /** How many characters this product's text box fits, or null for no limit.
+   *
+   *  The personalisation page enforces it in the form, so a customer is told
+   *  their name is too long while they are typing rather than by a model that
+   *  renders with the text overflowing the plate. */
+  max_runes: z.number().int().nullish(),
   position: z.number(),
 })
 
@@ -307,6 +313,14 @@ export const FieldMapWriteSchema = z
      * the customer chose to leave blank.
      */
     optional: z.boolean().optional(),
+    /**
+     * The character limit the design's text box fits, or absent for none.
+     *
+     * Saved with the rest of the mapping because the backend clears and
+     * rewrites the whole list: a limit left out of the save is a limit
+     * deleted. 120 is the table's own ceiling.
+     */
+    max_runes: z.number().int().min(1).max(120).optional(),
   })
   // One source or the other, matching the CHECK on the table. A row naming
   // neither leaves its variable unset, which OpenSCAD accepts in silence.

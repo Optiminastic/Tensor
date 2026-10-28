@@ -69,6 +69,7 @@ export function FieldMapEditor({
       optional: !m.required,
       fixed_value: m.fixed_value ?? '',
       default_value: m.default_value ?? '',
+      max_runes: m.max_runes ?? undefined,
     })),
   )
   const [pending, setPending] = useState(false)
@@ -91,6 +92,7 @@ export function FieldMapEditor({
         optional: false,
         fixed_value: '',
         default_value: '',
+        max_runes: undefined,
       },
     ])
   }
@@ -107,6 +109,10 @@ export function FieldMapEditor({
         // default on a required one. Cleared here rather than refused, so
         // flipping a row back to "hold the job" is not a dead end.
         default_value: r.optional === true ? (r.default_value ?? '').trim() : '',
+        // A fixed value is written here, not typed by a customer, so there is
+        // no form to enforce a limit in and the API refuses the pair. Cleared
+        // rather than refused, for the same reason as the default above.
+        max_runes: isFixed(r) ? undefined : r.max_runes,
       })),
     })
     setPending(false)
@@ -241,6 +247,33 @@ export function FieldMapEditor({
                   disabled={isFixed(row) || row.optional !== true}
                   placeholder={row.optional === true ? "template's own" : '—'}
                   onChange={e => edit(index, { default_value: e.target.value })}
+                />
+              </label>
+
+              {/* How many characters the design's text box fits.
+                  SAVED WITH THE REST because the backend clears the mapping
+                  and writes it again: before this control existed the limit
+                  could only be set in SQL, and every save made from this page
+                  deleted it. Blank means no limit, which is what the column
+                  holds for a product whose design does not state one. */}
+              <label className="flex w-28 flex-col gap-1">
+                <span className="text-muted-foreground text-xs">Max characters</span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={120}
+                  inputMode="numeric"
+                  className="font-mono tabular-nums"
+                  value={row.max_runes ?? ''}
+                  disabled={isFixed(row)}
+                  placeholder={isFixed(row) ? '—' : 'no limit'}
+                  onChange={e => {
+                    const raw = e.target.value.trim()
+                    const n = Number(raw)
+                    edit(index, {
+                      max_runes: raw === '' || !Number.isFinite(n) ? undefined : Math.trunc(n),
+                    })
+                  }}
                 />
               </label>
 
