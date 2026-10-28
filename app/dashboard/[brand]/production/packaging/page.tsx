@@ -8,7 +8,7 @@ import {
 } from '@/components/production/packaging-station-tabs'
 import { ProductionPageHeader } from '@/components/production/production-page-header'
 import type { DispatchReadyOrder } from '@/components/production/types'
-import { requirePermission } from '@/lib/authz'
+import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { Batch } from '@/lib/validators/batches'
 import type { DispatchOrder } from '@/lib/validators/dispatch'
@@ -38,6 +38,9 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
   // production:read; each tab's write actions are gated separately by the
   // backend (assembly:submit / qc:submit / packaging:submit / dispatch:manage).
   await requirePermission('production:read', `/dashboard/${brand}`)
+  // production:catchup is ADMIN-only. Hiding the control is convenience; the
+  // backend refuses the call regardless of what this renders.
+  const canCatchUp = can(await currentAuthz(), 'production:catchup')
 
   let jobs: ProductionJob[] = []
   let batches: Batch[] = []
@@ -88,6 +91,7 @@ export default async function PackagingPage({ params }: PackagingPageProps): Pro
         </p>
       ) : (
         <PackagingStationTabs
+          canCatchUp={canCatchUp}
           brand={brand}
           queues={{
             // Everything off the printer and not yet assembled. A job counts as

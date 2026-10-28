@@ -1,9 +1,11 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useMemo, useState, type JSX } from 'react'
 
 import { AssemblyQueueTable } from '@/components/production/assembly-queue-table'
 import type { BatchNumbers } from '@/components/production/batch-label'
+import { CatchUpControl } from '@/components/production/catch-up-control'
 import {
   ALL_TIME_PERIOD,
   isWithinDateRange,
@@ -49,6 +51,8 @@ interface PackagingStationTabsProps {
   // back to a short batch id.
   batchNumbers: BatchNumbers
   dispatch: DispatchPanelData
+  /** production:catchup - ADMIN alone. Hides the bulk control for everyone else. */
+  canCatchUp: boolean
 }
 
 function matchesJobSearch(job: ProductionJob, search: string): boolean {
@@ -78,8 +82,10 @@ export function PackagingStationTabs({
   queues,
   batchNumbers,
   dispatch,
+  canCatchUp,
 }: PackagingStationTabsProps): JSX.Element {
   const [tab, setTab] = useQueryTab<TabValue>('tab', 'assembly', PACKAGING_TABS)
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [period, setPeriod] = useState<PeriodValue>(ALL_TIME_PERIOD)
 
@@ -128,6 +134,11 @@ export function PackagingStationTabs({
         period={datable ? period : undefined}
         onPeriodChange={datable ? setPeriod : undefined}
       />
+
+      {/* ABOVE THE QUEUES, not buried under them: it concerns everything on
+          the page, and somebody looking at a board of work that was finished
+          weeks ago should meet the explanation before the list. */}
+      <CatchUpControl brand={brand} canCatchUp={canCatchUp} onDone={() => router.refresh()} />
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === 'assembly' ? (
           <AssemblyQueueTable brand={brand} jobs={visible.assembly} batchNumbers={batchNumbers} />
