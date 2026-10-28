@@ -294,6 +294,16 @@ export const WORKSPACE_SECTIONS: WorkspaceSection[] = [
       { label: 'Workspace', href: '/dashboard/settings', icon: Building2 },
       { label: 'Brand', href: '/dashboard/settings/brand', icon: Store },
       { label: 'Integrations', href: '/dashboard/settings/integrations', icon: Plug },
+      // accounts:manage, which ADMIN alone holds. Separable from the area's
+      // own brand:manage gate on purpose: the recipient list is an outbound
+      // channel for every sale the shop has made, and that is a narrower
+      // thing to hand out than the workspace.
+      {
+        label: 'Accounts report',
+        href: '/dashboard/settings/accounts-report',
+        icon: FileSpreadsheet,
+        permission: 'accounts:manage',
+      },
     ],
   },
 ]
