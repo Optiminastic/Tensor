@@ -5,8 +5,10 @@ import { PageHeading } from '@/components/dashboard/page-heading'
 import { PRODUCTION_TABS, RegistryTabs } from '@/components/production/registry-tabs'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
+import type { PartFile } from '@/lib/validators/part-files'
 import type { DesignTemplate } from '@/lib/validators/registry'
-import { listDesignTemplates } from '@/services/registry.service'
+import { listDesignTemplates } from '@/services/design-templates.service'
+import { listPartFiles } from '@/services/part-files.service'
 
 export const metadata: Metadata = { title: 'Slicing settings' }
 
@@ -26,9 +28,10 @@ interface RegistryPageProps {
  * Same endpoints and the same guard as the full page: a narrower view, not a
  * second copy, so nothing can drift between them.
  *
- * It fetches only the templates. The Products and Components tabs are not
- * here, so the per-product detail calls behind them are not made either -
- * which is the point of narrowing a page rather than hiding its tabs.
+ * It fetches the templates and the part files - both of which the Designs tab
+ * lists. The Products and Components tabs are not here, so the per-product
+ * detail calls behind them are not made either, which is the point of
+ * narrowing a page rather than hiding its tabs.
  *
  * Guarded on registry:read, as before. An Operator needs this page: which file
  * a SKU prints from is what running a bed requires.
@@ -40,12 +43,14 @@ export default async function SlicingSettingsPage({
   await requirePermission('registry:read', `/dashboard/${brand}`)
 
   let templates: DesignTemplate[] = []
+  let partFiles: PartFile[] = []
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
   } else {
     try {
+      partFiles = await listPartFiles(token).catch(() => [])
       templates = await listDesignTemplates(token)
     } catch {
       // The Designs tab renders empty rather than failing the page, and
@@ -77,6 +82,7 @@ export default async function SlicingSettingsPage({
             components={[]}
             products={[]}
             templates={templates}
+            partFiles={partFiles}
             only={PRODUCTION_TABS}
           />
         </>

@@ -7,18 +7,21 @@ import {
   loadProductBom,
   saveProductBomAction,
 } from '@/app/dashboard/[brand]/production/component-actions'
+import { ComponentFilesPanel } from '@/components/production/component-files-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Tag } from '@/components/ui/tag'
 import type { InventoryItem } from '@/lib/validators/inventory'
-import type { BomLine } from '@/lib/validators/registry'
+import type { BomLine, RegistryVariant } from '@/lib/validators/registry'
 
 interface ProductComponentsPanelProps {
   brand: string
   productCode: string
   /** The shelf, for the picker. */
   components: InventoryItem[]
+  /** This product's SKUs, which are the rows of a per-SKU file grid. */
+  variants: RegistryVariant[]
 }
 
 interface DraftLine {
@@ -43,6 +46,7 @@ export function ProductComponentsPanel({
   brand,
   productCode,
   components,
+  variants,
 }: ProductComponentsPanelProps): JSX.Element {
   const [lines, setLines] = useState<DraftLine[] | null>(null)
   const [saved, setSaved] = useState<BomLine[]>([])
@@ -198,6 +202,23 @@ export function ProductComponentsPanel({
         Stock counts are kept by hand on the Components tab — nothing is deducted automatically when
         a job is assembled.
       </p>
+
+      {/* The files, below the list that decides which parts there are.
+          Driven by SAVED lines rather than the draft: a part being typed into
+          the picker has nothing to upload against yet, and a grid appearing
+          under a half-chosen row reads as a file that is already attached. */}
+      <div className="border-border/70 flex flex-col gap-3 border-t pt-4">
+        <h3 className="text-sm font-medium">Part files</h3>
+        <ComponentFilesPanel
+          brand={brand}
+          parts={saved.flatMap(line => {
+            const item = components.find(c => c.id === line.item_id)
+            return item ? [item] : []
+          })}
+          variants={variants}
+          disabled={busy}
+        />
+      </div>
 
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">

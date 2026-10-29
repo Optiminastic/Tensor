@@ -7,8 +7,6 @@ import {
   SKUPipelinesSchema,
   type BomLine,
   BomLineSchema,
-  type DesignTemplate,
-  DesignTemplateSchema,
   type FieldMap,
   FieldMapSchema,
   type FieldMapWriteInput,
@@ -27,8 +25,6 @@ import {
   type RegistryProductDetail,
   RegistryProductDetailSchema,
   RegistryProductSchema,
-  type TemplateParam,
-  TemplateParamSchema,
   type VariantDesignWriteInput,
   type ColourPart,
   ColourPartSchema,
@@ -50,6 +46,16 @@ const TIMEOUT_MS = 15_000
  */
 export class RegistryServiceError extends Error {}
 
+/**
+ * What a refusal says when Tensor-Core gives no detail of its own.
+ *
+ * Most calls through here read something, so it reads that way - but a 404
+ * from a route this build does not have reaches a WRITE with the same words,
+ * and "could not load" is then simply untrue. Exported so a write can
+ * recognise it and say what actually failed.
+ */
+export const REGISTRY_READ_FAILED = 'Could not load the registry.'
+
 async function call<T>(path: string, init: RequestInit, parse: (data: unknown) => T): Promise<T> {
   let response: Response
   try {
@@ -69,7 +75,7 @@ async function call<T>(path: string, init: RequestInit, parse: (data: unknown) =
       .then((body: { detail?: string }) => body.detail)
       .catch(() => undefined)
     log.warn({ path, status: response.status, detail }, 'Tensor-Core rejected the request')
-    throw new RegistryServiceError(detail ?? 'Could not load the registry.')
+    throw new RegistryServiceError(detail ?? REGISTRY_READ_FAILED)
   }
 
   const body = response.status === 204 ? undefined : await response.json()
@@ -172,68 +178,6 @@ export async function saveVariantBom(
   )
 }
 
-export async function listDesignTemplates(token: string): Promise<DesignTemplate[]> {
-  return call('/registry/templates', { headers: jsonHeaders(token) }, data =>
-    DesignTemplateSchema.array().parse(data),
-  )
-}
-
-/**
- * Replaces the .scad a template key renders from.
- *
- * Multipart, so the Content-Type header is left for fetch to set with its own
- * boundary - jsonHeaders here would produce a body the backend cannot parse.
- */
-export async function uploadDesignTemplate(
-  token: string,
-  key: string,
-  form: FormData,
-): Promise<DesignTemplate> {
-  return call(
-    `/registry/templates/${encodeURIComponent(key)}`,
-    { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form },
-    data => DesignTemplateSchema.parse(data),
-  )
-}
-
-/**
- * Streams the .scad a template key renders from.
- *
- * Returns the raw Response so a proxy route can pipe the body straight through
- * without buffering, the same shape as files.service.ts#fetchFile. The bearer
- * token is minted server-side, so the browser never handles it.
- *
- * Tensor-Core answers with what the RENDERER would use: the uploaded override
- * where one exists, the embedded copy otherwise. That is the point of
- * downloading it - a key nobody has replaced is exactly the one somebody needs
- * a copy of before they start editing.
- */
-export async function fetchDesignTemplateFile(token: string, key: string): Promise<Response> {
-  let response: Response
-  try {
-    response = await fetch(
-      `${env.TENSOR_CORE_URL}/registry/templates/${encodeURIComponent(key)}/file`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      },
-    )
-  } catch (error) {
-    log.error({ key, err: error }, 'Tensor-Core is unreachable')
-    throw new RegistryServiceError('Tensor-Core is unreachable. Is the backend running?')
-  }
-  if (!response.ok) {
-    const detail = await response
-      .json()
-      .then((body: { detail?: string }) => body.detail)
-      .catch(() => undefined)
-    log.warn({ key, status: response.status, detail }, 'Tensor-Core rejected the request')
-    throw new RegistryServiceError(detail ?? `Request failed (${response.status})`)
-  }
-  return response
-}
-
 /**
  * Corrects a product already registered.
  *
@@ -289,22 +233,6 @@ export async function setVariantDesign(
     `/registry/variants/${encodeURIComponent(id)}/design`,
     { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify(input) },
     () => undefined,
-  )
-}
-
-/**
- * The variables a template declares, read from the file a render would use.
- *
- * The right-hand side of the mapping editor. Resolved through the renderer
- * rather than the upload table, so what the dropdown offers is what actually
- * prints - the uploaded override where one exists, the embedded copy where
- * none does.
- */
-export async function listTemplateParams(token: string, key: string): Promise<TemplateParam[]> {
-  return call(
-    `/registry/templates/${encodeURIComponent(key)}/params`,
-    { headers: jsonHeaders(token) },
-    data => TemplateParamSchema.array().parse(data),
   )
 }
 
@@ -532,3 +460,8 @@ export async function clearColourParts(
     () => null,
   )
 }
+
+// Shared with design-templates.service.ts, which speaks to the same service
+// with the same error type - one client, so a refusal reads the same wherever
+// it came from.
+export { call as coreCall, jsonHeaders as coreHeaders }

@@ -4,7 +4,10 @@ import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
-import { uploadDesignTemplateAction } from '@/app/dashboard/[brand]/production/design-template-actions'
+import {
+  setTemplateSectionAction,
+  uploadDesignTemplateAction,
+} from '@/app/dashboard/[brand]/production/design-template-actions'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,6 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 
 interface DesignAddDialogProps {
   brand: string
@@ -42,6 +46,9 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
   const [open, setOpen] = useState(false)
   const [key, setKey] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  // Where it will be filed. '' is automatic: the heading its use implies,
+  // which for a file nothing links to yet is Other.
+  const [section, setSection] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,6 +56,7 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
     if (!open) return
     setKey('')
     setFile(null)
+    setSection('')
     setError(null)
   }, [open])
 
@@ -65,11 +73,31 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
     const form = new FormData()
     form.set('file', file)
     const result = await uploadDesignTemplateAction(brand, normalised, form)
-    setPending(false)
     if (!result.ok) {
+      setPending(false)
       setError(result.error ?? 'Could not add the design file.')
       return
     }
+
+    // FILED AFTER THE UPLOAD, and a failure here does not undo it. The file is
+    // in - that is the part that took a decision - and a label that did not
+    // stick is a dropdown to change, not an upload to do again. Saying so is
+    // better than rolling back the thing somebody wanted.
+    if (section !== '') {
+      const filed = await setTemplateSectionAction(brand, normalised, section)
+      if (!filed.ok) {
+        setPending(false)
+        setError(
+          `${normalised} was added, but could not be filed under that section: ${
+            filed.error ?? 'the request was refused'
+          }. Set it from its row.`,
+        )
+        router.refresh()
+        return
+      }
+    }
+
+    setPending(false)
     setOpen(false)
     router.refresh()
   }
@@ -123,6 +151,26 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
                 Choose .scad
               </Button>
             </div>
+          </Field>
+
+          {/* Where it lands on this page. Not what it is FOR - that is
+              decided by which product links it, on the product. */}
+          <Field
+            label="Section"
+            htmlFor="t-section"
+            hint="Where it is filed on this page. It does not decide what the file is used for."
+          >
+            <Select
+              id="t-section"
+              value={section}
+              disabled={pending}
+              onChange={e => setSection(e.target.value)}
+            >
+              <option value="">Automatic — by what links to it</option>
+              <option value="print">Printing files</option>
+              <option value="preview">Personalisation preview</option>
+              <option value="other">Other</option>
+            </Select>
           </Field>
 
           {taken ? (

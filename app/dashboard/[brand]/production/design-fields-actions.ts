@@ -12,6 +12,7 @@ import {
   type ProductPart,
   type TemplateParam,
 } from '@/lib/validators/registry'
+import { listTemplateParams } from '@/services/design-templates.service'
 import {
   clearPreviewDesign,
   listPreviewDesigns,
@@ -23,7 +24,6 @@ import {
   getProductFieldMaps,
   listObservedProperties,
   listProductParts,
-  listTemplateParams,
   RegistryServiceError,
   saveProductFieldMaps,
   setProductDesign,

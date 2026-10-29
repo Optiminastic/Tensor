@@ -13,6 +13,7 @@ import { SKUReadinessPanel } from '@/components/production/sku-readiness-panel'
 import { VariantTable } from '@/components/production/variant-table'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Disclosure } from '@/components/ui/disclosure'
 import { cn } from '@/lib/utils'
 import type { InventoryItem } from '@/lib/validators/inventory'
 import type { RegistryProductDetail } from '@/lib/validators/registry'
@@ -178,21 +179,11 @@ function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.
         <DesignFieldsPanel brand={brand} product={product} />
       </Disclosure>
 
-      {/* The pieces that are NOT printed per order: made to stock or bought
-          in, and attached at the bench. Closed by default - it is reference
-          rather than the thing somebody opened this card to do. */}
-      <Disclosure
-        label="Components"
-        open={showComponents}
-        onToggle={() => setShowComponents(open => !open)}
-      >
-        <ProductComponentsPanel brand={brand} productCode={product.code} components={components} />
-      </Disclosure>
-
       {/* The file the customer approves, which is not the file that prints.
-          Below Components because it is configuration somebody sets once and
-          reads rarely, and the SKU list below it is what the card is usually
-          opened for. */}
+          Beside the design file rather than below the parts: a product has
+          three kinds of file - the one that prints, the one the customer is
+          shown, and the ones its parts are made from - and they read as three
+          when they are in that order. */}
       <Disclosure
         label="Personalisation preview"
         open={showPreview}
@@ -202,6 +193,22 @@ function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.
           brand={brand}
           productCode={product.code}
           variantSkus={product.variants.flatMap(v => (v.sku ? [v.sku] : []))}
+        />
+      </Disclosure>
+
+      {/* The pieces that are NOT printed per order: made to stock or bought
+          in, and attached at the bench. Closed by default - it is reference
+          rather than the thing somebody opened this card to do. */}
+      <Disclosure
+        label="Components"
+        open={showComponents}
+        onToggle={() => setShowComponents(open => !open)}
+      >
+        <ProductComponentsPanel
+          brand={brand}
+          productCode={product.code}
+          components={components}
+          variants={product.variants}
         />
       </Disclosure>
 
@@ -228,35 +235,4 @@ function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.
   )
 }
 
-interface DisclosureProps {
-  label: string
-  /** Omitted where there is nothing to count - the design panel is one thing. */
-  count?: number
-  open: boolean
-  onToggle: () => void
-  children: JSX.Element
-}
-
 /** A titled, optionally counted section that opens in place. */
-function Disclosure({ label, count, open, onToggle, children }: DisclosureProps): JSX.Element {
-  return (
-    <div className="border-border flex flex-col border-t pt-3">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 text-left"
-      >
-        <ChevronRight
-          className={cn('size-4 shrink-0 transition-transform', open && 'rotate-90')}
-          aria-hidden
-        />
-        <span className="text-sm font-medium">{label}</span>
-        {count === undefined ? null : (
-          <span className={`text-muted-foreground text-xs ${FIGURE}`}>{count}</span>
-        )}
-      </button>
-      {open ? children : null}
-    </div>
-  )
-}

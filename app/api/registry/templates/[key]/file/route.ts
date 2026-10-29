@@ -1,7 +1,8 @@
 import type { NextRequest } from 'next/server'
 
 import { resolveBackendToken } from '@/lib/backend-token'
-import { fetchDesignTemplateFile, RegistryServiceError } from '@/services/registry.service'
+import { fetchDesignTemplateFile } from '@/services/design-templates.service'
+import { RegistryServiceError } from '@/services/registry.service'
 
 interface RouteContext {
   params: Promise<{ key: string }>

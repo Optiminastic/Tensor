@@ -80,6 +80,16 @@ export const RegistryVariantSchema = z.object({
  * changed by a deploy; "uploaded" means somebody has replaced it and that file
  * is what prints. That distinction is the whole reason it is shown.
  */
+/** One product's use of one design file. */
+export const TemplateUseSchema = z.object({
+  product_code: z.string(),
+  product_name: z.string(),
+  /** 'body' prints; 'preview' is drawn for the customer and never put on a bed. */
+  role: z.string(),
+  skus: z.number(),
+})
+export type TemplateUse = z.infer<typeof TemplateUseSchema>
+
 export const DesignTemplateSchema = z.object({
   key: z.string(),
   version: z.number(),
@@ -89,6 +99,16 @@ export const DesignTemplateSchema = z.object({
   notes: z.string().nullish(),
   created_at: z.string(),
   source: z.string(),
+  /** Every product and role this file serves. Nullish so an older backend
+   *  that does not send it renders the row rather than failing the page. */
+  used_by: TemplateUseSchema.array().nullish(),
+  /** Which heading somebody filed this file under: 'print', 'preview' or
+   *  'other'. Empty when nobody has, and then the screen sorts it by what
+   *  used_by says it is actually for.
+   *
+   *  A LABEL. Nothing in the render path reads it — what a file is FOR is
+   *  decided by which product links it, in which role. */
+  section: z.string().nullish(),
 })
 
 export type DesignTemplate = z.infer<typeof DesignTemplateSchema>

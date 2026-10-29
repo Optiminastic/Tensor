@@ -10,6 +10,7 @@ import { SKUPipelinePanel } from '@/components/production/sku-pipeline-panel'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import { useQueryTab } from '@/hooks/use-query-tab'
 import type { InventoryItem } from '@/lib/validators/inventory'
+import type { PartFile } from '@/lib/validators/part-files'
 import type { DesignTemplate, RegistryProductDetail } from '@/lib/validators/registry'
 
 interface RegistryTabsProps {
@@ -17,6 +18,8 @@ interface RegistryTabsProps {
   components: InventoryItem[]
   products: RegistryProductDetail[]
   templates: DesignTemplate[]
+  /** The stored part files, shown as the Designs tab’s third section. */
+  partFiles?: PartFile[]
   /**
    * Which tabs this page carries. All four when omitted.
    *
@@ -61,6 +64,7 @@ export function RegistryTabs({
   components,
   products,
   templates,
+  partFiles,
   only,
 }: RegistryTabsProps): JSX.Element {
   const all: TabItem[] = [
@@ -97,7 +101,9 @@ export function RegistryTabs({
         ) : null}
       </DesignTemplatesProvider>
 
-      {active === DESIGNS_TAB ? <DesignRegistryTable brand={brand} templates={templates} /> : null}
+      {active === DESIGNS_TAB ? (
+        <DesignRegistryTable brand={brand} templates={templates} partFiles={partFiles ?? []} />
+      ) : null}
 
       {/* Its own tab, not a control inside each product: the job is usually
           "these twenty SKUs all print with DNP-H2C", which a per-product panel

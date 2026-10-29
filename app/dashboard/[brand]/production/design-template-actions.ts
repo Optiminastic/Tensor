@@ -4,7 +4,12 @@ import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { DesignTemplate } from '@/lib/validators/registry'
-import { RegistryServiceError, uploadDesignTemplate } from '@/services/registry.service'
+import {
+  deleteDesignTemplate,
+  setTemplateSection,
+  uploadDesignTemplate,
+} from '@/services/design-templates.service'
+import { RegistryServiceError } from '@/services/registry.service'
 
 import type { ActionResult } from './actions'
 
@@ -51,6 +56,62 @@ export async function uploadDesignTemplateAction(
     return {
       ok: false,
       error: err instanceof RegistryServiceError ? err.message : 'Could not upload the template.',
+    }
+  }
+}
+
+/**
+ * Removes an uploaded design file.
+ *
+ * The backend decides whether it may go: it refuses while a product still
+ * renders from the key and names which, and that sentence is what the dialog
+ * shows. Checking it here as well would be a second rule to keep in step with
+ * the first, and the one that matters is the one next to the database.
+ */
+export async function deleteDesignTemplateAction(
+  brand: string,
+  key: string,
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) {
+    return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+  }
+  try {
+    await deleteDesignTemplate(token, key)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof RegistryServiceError ? err.message : 'Could not remove the design file.',
+    }
+  }
+}
+
+/**
+ * Files a design file under a heading on the Designs tab.
+ *
+ * Sorting a list, not changing a product. Which file a product prints from is
+ * set on that product, and nothing here touches it.
+ */
+export async function setTemplateSectionAction(
+  brand: string,
+  key: string,
+  section: string,
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) {
+    return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+  }
+  try {
+    await setTemplateSection(token, key, section)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof RegistryServiceError ? err.message : 'Could not file that file.',
     }
   }
 }

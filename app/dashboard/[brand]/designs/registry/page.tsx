@@ -6,11 +6,13 @@ import { RegistryTabs } from '@/components/production/registry-tabs'
 import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { InventoryItem } from '@/lib/validators/inventory'
+import type { PartFile } from '@/lib/validators/part-files'
 import type { DesignTemplate, RegistryProductDetail } from '@/lib/validators/registry'
+import { listDesignTemplates } from '@/services/design-templates.service'
 import { InventoryServiceError, listInventoryItems } from '@/services/inventory.service'
+import { listPartFiles } from '@/services/part-files.service'
 import {
   getRegistryProduct,
-  listDesignTemplates,
   listRegistryProducts,
   RegistryServiceError,
 } from '@/services/registry.service'
@@ -51,6 +53,7 @@ export default async function DesignRegistryPage({
   let components: InventoryItem[] = []
   let products: RegistryProductDetail[] = []
   let templates: DesignTemplate[] = []
+  let partFiles: PartFile[] = []
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
@@ -60,6 +63,13 @@ export default async function DesignRegistryPage({
       components = await listInventoryItems(token)
     } catch (err) {
       error = err instanceof InventoryServiceError ? err.message : 'Could not load the parts list.'
+    }
+    try {
+      partFiles = await listPartFiles(token)
+    } catch {
+      // Same reasoning as the templates below: one missing list is no reason
+      // to hide the rest of the registry.
+      partFiles = []
     }
     try {
       templates = await listDesignTemplates(token)
@@ -100,6 +110,7 @@ export default async function DesignRegistryPage({
             components={components}
             products={products}
             templates={templates}
+            partFiles={partFiles}
           />
         </>
       )}
