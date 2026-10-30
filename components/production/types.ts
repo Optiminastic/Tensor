@@ -103,7 +103,15 @@ export interface ProductionJobQueueItem {
 }
 
 /** Where a job's geometry comes from and whether it has arrived. */
-export type ModelStatus = 'ready' | 'generating' | 'failed' | 'approval_required'
+export type ModelStatus =
+  | 'ready'
+  | 'generating'
+  | 'failed'
+  | 'approval_required'
+  /** Tensor builds this and is deliberately not building it yet: the customer
+   *  still has a say. Distinct from 'generating', which claims work is
+   *  happening — a job said that for its whole thirty-minute window. */
+  | 'awaiting_customer'
 
 export type FilamentQuantityUnit = 'kg' | 'count'
 

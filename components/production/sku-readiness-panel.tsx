@@ -23,17 +23,39 @@ export function SKUReadinessPanel({ brand, productCode }: SKUReadinessPanelProps
   const [rows, setRows] = useState<SKUReadiness[]>([])
   const [error, setError] = useState('')
 
+  // POLLED ONLY WHILE SOMETHING IS RENDERING, and this panel is why that
+  // distinction matters: configuration does not change by itself, so a poll
+  // that ran regardless would be a request every few seconds for a page
+  // somebody left open. A render does finish on its own, and watching it is
+  // the one reason to look again - the same rule model-generating-panel
+  // follows for one job.
+  const [rendering, setRendering] = useState(false)
+
   useEffect(() => {
     let live = true
-    void loadSKUReadiness(brand, productCode).then(result => {
-      if (!live) return
-      if (result.ok) setRows(result.data ?? [])
-      else setError(result.error ?? 'Could not check these SKUs.')
-    })
+    const read = (): void => {
+      void loadSKUReadiness(brand, productCode).then(result => {
+        if (!live) return
+        if (!result.ok) {
+          setError(result.error ?? 'Could not check these SKUs.')
+          return
+        }
+        const next = result.data ?? []
+        setRows(next)
+        setRendering(next.some(r => r.rendering > 0))
+      })
+    }
+    read()
+    if (!rendering)
+      return () => {
+        live = false
+      }
+    const timer = setInterval(read, 5000)
     return () => {
       live = false
+      clearInterval(timer)
     }
-  }, [brand, productCode])
+  }, [brand, productCode, rendering])
 
   if (error) return <p className="text-danger text-sm">{error}</p>
   if (rows.length === 0) {
@@ -70,7 +92,19 @@ function ReadinessRow({ row }: { row: SKUReadiness }): JSX.Element {
         />
         <span className="font-mono text-sm whitespace-nowrap">{row.sku}</span>
         <span className="text-muted-foreground text-sm">{row.name}</span>
-        <span className={`ml-auto text-xs ${row.ready ? 'text-success' : 'text-warning'}`}>
+        {/* What is HAPPENING, beside what is configured. A SKU can be
+            perfectly set up and still have nothing moving, and after setting
+            a product up that is the question somebody actually has. */}
+        {row.rendering > 0 ? (
+          <span className="text-accent ml-auto text-xs whitespace-nowrap">
+            Building {row.rendering === 1 ? 'a model' : `${row.rendering} models`}…
+          </span>
+        ) : null}
+        <span
+          className={`text-xs ${row.rendering > 0 ? '' : 'ml-auto'} ${
+            row.ready ? 'text-success' : 'text-warning'
+          }`}
+        >
           {row.ready ? 'Ready' : 'Not ready'}
         </span>
       </div>

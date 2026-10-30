@@ -40,6 +40,21 @@ export const SKUReadinessSchema = z.object({
     .array(z.string())
     .nullish()
     .transform(v => v ?? []),
+  /** How many of this SKU's jobs are building their model right now.
+   *
+   *  The rest of this says whether a SKU is CONFIGURED; these say whether
+   *  anything configured is MOVING — the question somebody has straight after
+   *  setting a product up. Nullish so an older backend renders the panel as it
+   *  read before, rather than failing it. */
+  rendering: z
+    .number()
+    .nullish()
+    .transform(v => v ?? 0),
+  render_failed: z
+    .number()
+    .nullish()
+    .transform(v => v ?? 0),
+  last_render_error: z.string().nullish(),
 })
 
 export const SKUReadinessResponseSchema = z.object({

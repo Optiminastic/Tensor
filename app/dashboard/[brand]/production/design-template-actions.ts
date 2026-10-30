@@ -7,6 +7,7 @@ import type { DesignTemplate } from '@/lib/validators/registry'
 import {
   deleteDesignTemplate,
   setTemplateSection,
+  setTemplateSelfColour,
   uploadDesignTemplate,
 } from '@/services/design-templates.service'
 import { RegistryServiceError } from '@/services/registry.service'
@@ -112,6 +113,35 @@ export async function setTemplateSectionAction(
     return {
       ok: false,
       error: err instanceof RegistryServiceError ? err.message : 'Could not file that file.',
+    }
+  }
+}
+
+/**
+ * Marks a design file as stating its own colours, or stops it being one.
+ *
+ * A property of the FILE, not of a product: one file assigned to five SKUs
+ * paints itself in all five. The backend's refusals - a file that declares no
+ * colours, or clearing one nothing has pieces configured for - come back as
+ * they are, because both name what to go and do.
+ */
+export async function setTemplateSelfColourAction(
+  brand: string,
+  key: string,
+  selfColoured: boolean,
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) {
+    return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+  }
+  try {
+    await setTemplateSelfColour(token, key, selfColoured)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof RegistryServiceError ? err.message : 'Could not change that file.',
     }
   }
 }

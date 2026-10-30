@@ -3,12 +3,19 @@
 import { Plus } from 'lucide-react'
 import { useCallback, useEffect, useState, type JSX } from 'react'
 
-import { loadProductParts } from '@/app/dashboard/[brand]/production/design-fields-actions'
+import {
+  loadPreviewDesigns,
+  loadProductParts,
+} from '@/app/dashboard/[brand]/production/design-fields-actions'
 import { DesignPartEditor } from '@/components/production/design-part-editor'
 import { PartAddDialog } from '@/components/production/part-add-dialog'
+import { VariantDesignRows } from '@/components/production/variant-design-rows'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { ProductPart, RegistryProductDetail } from '@/lib/validators/registry'
+
+/** The role a product has when it prints one thing - designRoleBody in the API. */
+const designRoleBody = 'body'
 
 interface DesignFieldsPanelProps {
   brand: string
@@ -35,6 +42,21 @@ export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): J
   const [parts, setParts] = useState<ProductPart[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [chosen, setChosen] = useState('')
+  // Which file each SKU's customer preview is drawn from, by SKU. Read once
+  // for the product: a row asking for itself would be one request per
+  // colourway, and this panel shows every colourway at once.
+  const [previewBySKU, setPreviewBySKU] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    void loadPreviewDesigns(brand, product.code).then(res => {
+      if (cancelled || !res.ok || !res.data) return
+      setPreviewBySKU(Object.fromEntries(res.data.map(d => [d.variant_sku, d.template_key])))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [brand, product.code])
 
   const refresh = useCallback(async (): Promise<void> => {
     const res = await loadProductParts(brand, product.code)
@@ -83,13 +105,36 @@ export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): J
   )
 
   if (parts.length === 0) {
+    // A PRODUCT JUST IMPORTED FROM SHOPIFY LANDS HERE, with its child SKUs
+    // and nothing else. Showing only "add a design file" hid them entirely -
+    // you imported ten colourways and the panel named none of them - and the
+    // per-SKU rows below are the whole point of opening it.
+    //
+    // The rows are offered for the body role, which is the role a product has
+    // when it has one file. Choosing a file for a SKU creates that role, so
+    // the ordinary first step from here is the same gesture as every later
+    // one rather than a different screen.
     return (
-      <div className="mt-3 flex flex-col items-start gap-3">
-        <p className="text-muted-foreground text-sm">
-          Nothing prints this product yet. Add a design file — one for most products, one each for a
-          combo&rsquo;s parts.
-        </p>
-        {addButton}
+      <div className="mt-3 flex flex-col items-start gap-4">
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-muted-foreground text-sm text-pretty">
+            Nothing prints this product yet. Give every SKU the same file with{' '}
+            <span className="font-medium">Add a design file</span>, or name one per SKU below —
+            which is what a product whose colourways are different shapes needs.
+          </p>
+          {addButton}
+        </div>
+        <div className="border-border/70 w-full border-t pt-4">
+          <VariantDesignRows
+            brand={brand}
+            productCode={product.code}
+            role={designRoleBody}
+            variants={product.variants}
+            previewBySKU={previewBySKU}
+            productTemplate=""
+            onChanged={() => void refresh()}
+          />
+        </div>
       </div>
     )
   }
@@ -133,6 +178,7 @@ export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): J
           // Remounts on a part change, so the mapping editor's own draft state
           // cannot carry the rose's rows into the keychain.
           key={part.role}
+          previewBySKU={previewBySKU}
           brand={brand}
           product={product}
           part={part}

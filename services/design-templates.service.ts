@@ -151,3 +151,27 @@ export async function setTemplateSection(
     throw err
   }
 }
+
+/**
+ * Marks a design file as stating its own colours, or stops it being one.
+ *
+ * The backend refuses a file that declares none - it would silently fall back
+ * to the configured scheme and look like a flag doing nothing - and refuses
+ * clearing one that nothing has pieces configured for. Both sentences come
+ * back as they are.
+ */
+export async function setTemplateSelfColour(
+  token: string,
+  key: string,
+  selfColoured: boolean,
+): Promise<void> {
+  await coreCall(
+    `/registry/templates/${encodeURIComponent(key)}/self-colour`,
+    {
+      method: 'PATCH',
+      headers: coreHeaders(token),
+      body: JSON.stringify({ self_coloured: selfColoured }),
+    },
+    () => undefined,
+  )
+}

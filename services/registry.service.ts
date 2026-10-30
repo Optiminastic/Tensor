@@ -465,3 +465,70 @@ export async function clearColourParts(
 // with the same error type - one client, so a refusal reads the same wherever
 // it came from.
 export { call as coreCall, jsonHeaders as coreHeaders }
+
+/**
+ * One SKU's own mapping of one design file.
+ *
+ * Read whole and saved whole, like the product's: fieldMapsFor returns a SKU's
+ * override entire or not at all, never merged with the product's - a
+ * half-override is a mapping that exists in neither place.
+ */
+export async function getVariantFieldMaps(
+  token: string,
+  variantId: string,
+  role: string,
+): Promise<FieldMap[]> {
+  return call(
+    `/registry/variants/${encodeURIComponent(variantId)}/field-maps?role=${encodeURIComponent(role)}`,
+    { headers: jsonHeaders(token) },
+    data => FieldMapSchema.array().parse(data),
+  )
+}
+
+export async function saveVariantFieldMaps(
+  token: string,
+  variantId: string,
+  input: { role: string; maps: FieldMapWriteInput[] },
+): Promise<void> {
+  await call(
+    `/registry/variants/${encodeURIComponent(variantId)}/field-maps` +
+      `?role=${encodeURIComponent(input.role)}`,
+    { method: 'PUT', headers: jsonHeaders(token), body: JSON.stringify({ maps: input.maps }) },
+    () => undefined,
+  )
+}
+
+/** Drops the override, so this SKU follows the product's mapping again. */
+export async function clearVariantFieldMaps(
+  token: string,
+  variantId: string,
+  role: string,
+): Promise<void> {
+  await call(
+    `/registry/variants/${encodeURIComponent(variantId)}/field-maps?role=${encodeURIComponent(role)}`,
+    { method: 'DELETE', headers: jsonHeaders(token) },
+    () => undefined,
+  )
+}
+
+/**
+ * Turns a whole product's personalisation link on or off.
+ *
+ * One call rather than one per SKU: the column is per variant because a
+ * variant is what an order resolves to, but the decision is about the product.
+ *
+ * Off does NOT release an order whose customer already has the page open.
+ * Tensor-Core checks for a live link first and lets that window finish, so the
+ * switch decides whether to start holding, never whether to release.
+ */
+export async function setProductPersonalisationLink(
+  token: string,
+  code: string,
+  enabled: boolean,
+): Promise<void> {
+  await call(
+    `/registry/products/${encodeURIComponent(code)}/personalisation-link`,
+    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ enabled }) },
+    () => undefined,
+  )
+}

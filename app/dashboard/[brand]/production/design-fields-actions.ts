@@ -8,6 +8,7 @@ import {
   FieldMapsWriteSchema,
   ProductDesignWriteSchema,
   type FieldMap,
+  type FieldMapWriteInput,
   type ObservedProperty,
   type ProductPart,
   type TemplateParam,
@@ -17,16 +18,20 @@ import {
   clearPreviewDesign,
   listPreviewDesigns,
   listSKUReadiness,
+  PreviewDesignServiceError,
   setPreviewDesign,
-  setVariantPersonalisationLink,
 } from '@/services/preview-design.service'
 import {
+  clearVariantFieldMaps,
   getProductFieldMaps,
+  getVariantFieldMaps,
   listObservedProperties,
   listProductParts,
   RegistryServiceError,
   saveProductFieldMaps,
+  saveVariantFieldMaps,
   setProductDesign,
+  setProductPersonalisationLink,
 } from '@/services/registry.service'
 
 import type { ActionResult } from './actions'
@@ -55,8 +60,24 @@ export interface DesignFields {
   maps: FieldMap[]
 }
 
+/**
+ * The refusal in the operator's words, not ours.
+ *
+ * EVERY SERVICE THIS FILE CALLS, which is the bug this replaces. It checked
+ * RegistryServiceError alone while three services are reached from here, so
+ * every refusal from the preview-design one was swallowed and shown as
+ * "Could not assign the preview file." Tensor-Core had in fact named the
+ * variable the chosen file does not declare and where to map it - the one
+ * sentence that makes the refusal actionable - and the operator saw none of
+ * it. design-templates.service throws RegistryServiceError by design, so two
+ * classes cover all three.
+ *
+ * Still not a bare instanceof Error: a TypeError from a bug in here would
+ * then reach the screen dressed as advice from Tensor-Core.
+ */
 function failure(error: unknown, fallback: string): ActionResult<never> {
-  return { ok: false, error: error instanceof RegistryServiceError ? error.message : fallback }
+  const known = error instanceof RegistryServiceError || error instanceof PreviewDesignServiceError
+  return { ok: false, error: known ? error.message : fallback }
 }
 
 /**
@@ -240,29 +261,6 @@ export async function removePreviewDesign(
   }
 }
 
-/**
- * Turns one SKU's personalisation link on or off.
- *
- * Off means its customer is not asked and the job is not held for thirty
- * minutes: it renders and batches straight away.
- */
-export async function toggleVariantPersonalisationLink(
-  brand: string,
-  variantId: string,
-  enabled: boolean,
-): Promise<ActionResult<null>> {
-  const { token, error } = await resolveBackendToken()
-  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
-
-  try {
-    await setVariantPersonalisationLink(token, variantId, enabled)
-    revalidatePath(`/dashboard/${brand}/designs/registry`)
-    return { ok: true, data: null }
-  } catch (err) {
-    return failure(err, 'Could not change that setting.')
-  }
-}
-
 /** What each child SKU still needs before an order can be made from it. */
 export async function loadSKUReadiness(
   brand: string,
@@ -275,5 +273,89 @@ export async function loadSKUReadiness(
     return { ok: true, data: await listSKUReadiness(token, code) }
   } catch (err) {
     return failure(err, 'Could not check what these SKUs still need.')
+  }
+}
+
+/**
+ * One SKU's own mapping of one design file.
+ *
+ * Loaded on demand, when somebody opens that SKU's mapping - a product has a
+ * handful of colourways and most of them inherit, so reading every override
+ * with the page would be work for rows nobody opens.
+ */
+export async function loadVariantFieldMaps(
+  variantId: string,
+  role: string,
+): Promise<ActionResult<FieldMap[]>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+  try {
+    return { ok: true, data: await getVariantFieldMaps(token, variantId, role) }
+  } catch (err) {
+    return failure(err, "Could not read this SKU's mapping.")
+  }
+}
+
+/**
+ * Saves one SKU's override, whole.
+ *
+ * The backend refuses an empty list rather than storing it: stored, it would
+ * read back as "no override" - the same state as never having set one - so it
+ * would mean the opposite of what it looks like. Removing the override is the
+ * way to say that, and has its own action below.
+ */
+export async function saveVariantFieldMapsAction(
+  brand: string,
+  variantId: string,
+  input: { role: string; maps: FieldMapWriteInput[] },
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+  try {
+    await saveVariantFieldMaps(token, variantId, input)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, "Could not save this SKU's mapping.")
+  }
+}
+
+/** Drops the override, so this SKU follows the product's mapping again. */
+export async function removeVariantFieldMaps(
+  brand: string,
+  variantId: string,
+  role: string,
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+  try {
+    await clearVariantFieldMaps(token, variantId, role)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, "Could not remove this SKU's mapping.")
+  }
+}
+
+/**
+ * Turns a whole product's personalisation link on or off.
+ *
+ * Nothing is said about orders already held: a customer mid-window finishes
+ * it, because the sender checks for a live link before it consults this. The
+ * setting decides whether to START holding, never whether to release.
+ */
+export async function toggleProductPersonalisationLink(
+  brand: string,
+  code: string,
+  enabled: boolean,
+): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+  try {
+    await setProductPersonalisationLink(token, code, enabled)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, 'Could not change that setting.')
   }
 }

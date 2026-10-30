@@ -9,6 +9,7 @@ import { ProductComponentsPanel } from '@/components/production/product-componen
 import { ProductDeleteDialog } from '@/components/production/product-delete-dialog'
 import { ProductFormDialog } from '@/components/production/product-form-dialog'
 import { ProductImportDialog } from '@/components/production/product-import-dialog'
+import { ProductPersonalisationToggle } from '@/components/production/product-personalisation-toggle'
 import { SKUReadinessPanel } from '@/components/production/sku-readiness-panel'
 import { VariantTable } from '@/components/production/variant-table'
 import { Button } from '@/components/ui/button'
@@ -146,7 +147,14 @@ function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.
             {product.status === 'active' ? '' : ` · ${product.status}`}
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-3">
+          {/* One decision for the product, not one per colourway - see
+              ProductPersonalisationToggle for why it moved up here. */}
+          <ProductPersonalisationToggle
+            brand={brand}
+            productCode={product.code}
+            variants={product.variants}
+          />
           <ProductFormDialog
             brand={brand}
             product={product}

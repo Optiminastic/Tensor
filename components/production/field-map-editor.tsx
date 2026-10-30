@@ -24,6 +24,15 @@ interface FieldMapEditorProps {
   maps: FieldMap[]
   /** Called after a save, so the parts list can re-read what is configured. */
   onSaved: () => void
+  /**
+   * Where the mapping is written. The product's, when omitted.
+   *
+   * ONLY THE TARGET IS SUBSTITUTABLE, never the rules: the five refusals this
+   * editor enforces are what make a mapping renderable, and a second editor
+   * for one SKU would be a second set of them to keep in step. So a per-SKU
+   * mapping reuses this whole component and changes only where it lands.
+   */
+  onSave?: (maps: FieldMapWriteInput[]) => Promise<{ ok: boolean; error?: string }>
 }
 
 const FIGURE = 'font-mono tabular-nums'
@@ -60,6 +69,7 @@ export function FieldMapEditor({
   params,
   maps,
   onSaved,
+  onSave,
 }: FieldMapEditorProps): JSX.Element {
   const [rows, setRows] = useState<FieldMapWriteInput[]>(() =>
     maps.map(m => ({
@@ -100,21 +110,21 @@ export function FieldMapEditor({
   async function save(): Promise<void> {
     setError(null)
     setPending(true)
-    const res = await saveFieldMaps(brand, productCode, {
-      role,
-      maps: rows.map(r => ({
-        ...r,
-        fixed_value: (r.fixed_value ?? '').trim(),
-        // Only an optional field can reach its default, and the API refuses a
-        // default on a required one. Cleared here rather than refused, so
-        // flipping a row back to "hold the job" is not a dead end.
-        default_value: r.optional === true ? (r.default_value ?? '').trim() : '',
-        // A fixed value is written here, not typed by a customer, so there is
-        // no form to enforce a limit in and the API refuses the pair. Cleared
-        // rather than refused, for the same reason as the default above.
-        max_runes: isFixed(r) ? undefined : r.max_runes,
-      })),
-    })
+    const mapped = rows.map(r => ({
+      ...r,
+      fixed_value: (r.fixed_value ?? '').trim(),
+      // Only an optional field can reach its default, and the API refuses a
+      // default on a required one. Cleared here rather than refused, so
+      // flipping a row back to "hold the job" is not a dead end.
+      default_value: r.optional === true ? (r.default_value ?? '').trim() : '',
+      // A fixed value is written here, not typed by a customer, so there is
+      // no form to enforce a limit in and the API refuses the pair. Cleared
+      // rather than refused, for the same reason as the default above.
+      max_runes: isFixed(r) ? undefined : r.max_runes,
+    }))
+    const res = onSave
+      ? await onSave(mapped)
+      : await saveFieldMaps(brand, productCode, { role, maps: mapped })
     setPending(false)
     if (!res.ok) {
       setError(res.error ?? 'Could not save the mapped fields.')

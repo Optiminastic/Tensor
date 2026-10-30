@@ -102,6 +102,13 @@ export const DesignTemplateSchema = z.object({
   /** Every product and role this file serves. Nullish so an older backend
    *  that does not send it renders the row rather than failing the page. */
   used_by: TemplateUseSchema.array().nullish(),
+  /** This file names its pieces and paints them itself, so nothing about
+   *  colour is configured for a SKU printing from it. Its pieces come from
+   *  its own <PIECE>_COLOR declarations.
+   *
+   *  It still renders one pass per piece: OpenSCAD's STL carries no colour, so
+   *  a file rendered once as one object would come out a single colour. */
+  self_coloured: z.boolean().nullish(),
   /** Which heading somebody filed this file under: 'print', 'preview' or
    *  'other'. Empty when nobody has, and then the screen sorts it by what
    *  used_by says it is actually for.
@@ -201,7 +208,16 @@ export const VariantWriteSchema = z.object({
 export const DESIGN_ROLES = ['body', 'base'] as const
 
 export const VariantDesignWriteSchema = z.object({
-  role: z.enum(DESIGN_ROLES),
+  /**
+   * Free text, matching the product-level route.
+   *
+   * It was an enum of body/base, from when a per-variant design was only ever
+   * the escape hatch for an uploaded 3MF. Now that a SKU may name its own file
+   * for any of its product’s roles, an enum here refuses a combo’s "rose" or
+   * "keychain" on a SKU while the product-wide route accepts it — two doors
+   * to one table disagreeing about what may go through.
+   */
+  role: z.string().trim().min(1).max(24),
   template_key: z.string().trim().max(64).nullish(),
   design_id: z.string().trim().nullish(),
 })

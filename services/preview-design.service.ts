@@ -108,25 +108,6 @@ export async function clearPreviewDesign(
   )
 }
 
-/**
- * Turns one SKU's personalisation link on or off.
- *
- * Off does NOT release an order whose customer already has the page open:
- * Tensor-Core checks for a live link first and lets that window finish. The
- * switch decides whether to start holding, never whether to release.
- */
-export async function setVariantPersonalisationLink(
-  token: string,
-  variantId: string,
-  enabled: boolean,
-): Promise<void> {
-  await call(
-    `/registry/variants/${encodeURIComponent(variantId)}/personalisation-link`,
-    { method: 'PATCH', headers: jsonHeaders(token), body: JSON.stringify({ enabled }) },
-    () => null,
-  )
-}
-
 /** What each child SKU still needs before an order can be made from it. */
 export async function listSKUReadiness(token: string, code: string): Promise<SKUReadiness[]> {
   return call(

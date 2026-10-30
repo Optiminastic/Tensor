@@ -8,6 +8,7 @@ import { RegistrySectionCard } from '@/components/production/registry-section-ca
 import { TemplateDeleteDialog } from '@/components/production/template-delete-dialog'
 import { TemplateDownloadButton } from '@/components/production/template-download-button'
 import { TemplateSectionSelect } from '@/components/production/template-section-select'
+import { TemplateSelfColourToggle } from '@/components/production/template-self-colour-toggle'
 import { TemplateUploadButton } from '@/components/production/template-upload-button'
 import { TonePill } from '@/components/production/tone-pill'
 import {
@@ -18,6 +19,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@/components/ui/table'
+import { sitsInSection, type TemplateSection } from '@/lib/template-sections'
 import type { PartFile } from '@/lib/validators/part-files'
 import type { DesignTemplate } from '@/lib/validators/registry'
 
@@ -83,30 +85,11 @@ export function DesignRegistryTable({
   const toggle = (id: string): void => setOpen(current => ({ ...current, [id]: !current[id] }))
   const keys = templates.map(t => t.key)
 
-  // WHERE A FILE SITS: the label somebody filed it under, and failing that the
-  // heading its actual use implies. Automatic is right for every correctly
-  // wired file and needs nobody to maintain it; the dropdown is for the rest -
-  // a part's mesh, a test piece, a file whose use the screen cannot see.
-  //
-  // A FILED file sits under exactly ONE heading. An automatic one may sit
-  // under two, because the same .scad can print a product and draw its
-  // preview - which is true of this shop's lotus holder, and the reason the
-  // heading is not a property of the file.
-  function sits(template: DesignTemplate, section: string): boolean {
-    const filed = (template.section ?? '').trim()
-    if (filed !== '') return filed === section
-    const roles = (template.used_by ?? []).map(u => u.role)
-    if (section === 'print') return roles.includes('body')
-    if (section === 'preview') return roles.includes('preview')
-    return roles.length === 0
-  }
-
-  /** What the dropdown shows beside "Automatic", so the choice reads as a change. */
-  function effectiveSection(template: DesignTemplate): string {
-    if (sits(template, 'print')) return 'print'
-    if (sits(template, 'preview')) return 'preview'
-    return 'other'
-  }
+  // Where a file sits, and what the dropdown shows beside "Automatic".
+  // Shared with the per-SKU pickers - see lib/template-sections.
+  const sits = (t: DesignTemplate, section: TemplateSection): boolean => sitsInSection(t, section)
+  const effectiveSection = (t: DesignTemplate): string =>
+    sits(t, 'print') ? 'print' : sits(t, 'preview') ? 'preview' : 'other'
 
   const sections = [
     {
@@ -149,11 +132,13 @@ export function DesignRegistryTable({
             <Table dense>
               <TableHead>
                 <TableRow>
-                  {['Template', 'Section', 'Used for', 'Source', 'Updated'].map(column => (
-                    <TableHeaderCell key={column} className="whitespace-nowrap">
-                      {column}
-                    </TableHeaderCell>
-                  ))}
+                  {['Template', 'Section', 'Own colours', 'Used for', 'Source', 'Updated'].map(
+                    column => (
+                      <TableHeaderCell key={column} className="whitespace-nowrap">
+                        {column}
+                      </TableHeaderCell>
+                    ),
+                  )}
                   <TableHeaderCell className="w-40 text-right">
                     <span className="sr-only">Actions</span>
                   </TableHeaderCell>
@@ -179,6 +164,13 @@ export function DesignRegistryTable({
                         template={template}
                         effective={effectiveSection(template)}
                       />
+                    </TableCell>
+                    {/* Whether the pieces and colours come from the file
+                        itself. Beside the section because both are things
+                        somebody sets once about a file, and neither is about
+                        any one product. */}
+                    <TableCell>
+                      <TemplateSelfColourToggle brand={brand} template={template} />
                     </TableCell>
                     <TableCell className="text-muted-foreground max-w-56 text-sm text-balance">
                       {usedFor(template) || '—'}

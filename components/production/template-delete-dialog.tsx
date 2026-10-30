@@ -79,21 +79,26 @@ export function TemplateDeleteDialog({ brand, template }: TemplateDeleteDialogPr
           </DialogDescription>
         </DialogHeader>
 
-        {usedBy.length > 0 ? (
-          // Said before the attempt as well as after it. The backend refuses
-          // either way, but a dialog that lets somebody press a button that
-          // cannot work is a dialog that taught them to ignore it.
-          <p className="bg-warning-subtle text-warning rounded-2xl px-4 py-3 text-sm text-pretty">
-            {usedBy.map(u => u.product_code).join(', ')} still{' '}
-            {usedBy.length === 1 ? 'renders' : 'render'} from this file. Point{' '}
-            {usedBy.length === 1 ? 'it' : 'them'} at another file first — this will be refused until
-            then.
-          </p>
-        ) : null}
+        {/* ONE refusal, not two. The backend says the same thing after the
+            click, and showing both left the dialog repeating itself in two
+            colours — so the pre-flight gives way once the real answer is in.
 
+            Said before the attempt because a dialog that lets somebody press a
+            button that cannot work is a dialog that taught them to ignore it,
+            and it names the way out, which it did not: a design can now be
+            unassigned, so "point it at another file" is something you can
+            actually do. */}
         {error ? (
           <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
             {error}
+          </p>
+        ) : usedBy.length > 0 ? (
+          <p className="bg-warning-subtle text-warning rounded-2xl px-4 py-3 text-sm text-pretty">
+            {usedBy.map(u => u.product_code).join(', ')} still{' '}
+            {usedBy.length === 1 ? 'renders' : 'render'} from this file, so this will be refused. On
+            that product&rsquo;s <span className="font-medium">Design &amp; fields</span>, choose
+            another file — or <span className="font-medium">Nothing prints this</span> — and then
+            remove it here.
           </p>
         ) : null}
 

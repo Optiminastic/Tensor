@@ -62,7 +62,9 @@ export const ProductionJobSchema = z.object({
   // Where this job's geometry comes from and whether it has arrived.
   // Computed by the backend because it turns on the SKU rule for generated
   // products; a second copy of that rule here would drift.
-  model_status: z.enum(['ready', 'generating', 'failed', 'approval_required']).nullish(),
+  model_status: z
+    .enum(['ready', 'generating', 'failed', 'approval_required', 'awaiting_customer'])
+    .nullish(),
   // Why a generated model could not be built, in the renderer's own words.
   // Null unless model_status is 'failed'.
   model_error: z.string().nullish(),

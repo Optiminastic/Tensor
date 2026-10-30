@@ -5,6 +5,16 @@ import { type JSX, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
+/** Front first, then round each side - the order the button steps through. */
+const VIEWS = ['front', 'left', 'right'] as const
+type View = (typeof VIEWS)[number]
+
+const ALT: Record<View, string> = {
+  front: 'as it will be made',
+  left: 'from the left',
+  right: 'from the right',
+}
+
 interface ItemPictureProps {
   token: string
   jobId: string
@@ -23,10 +33,15 @@ interface ItemPictureProps {
  * never finished loading at all: the card sat on "Loading preview…". The
  * picture is 12KB and arrives with the rest of the page.
  *
- * TWO VIEWS, because a Dual Name Plank carries one name read from each end -
- * a single picture shows a customer half of what they bought. Both are
- * fetched eagerly: they are 12KB each, and the second one hidden behind a
- * network round trip is the one nobody waits for.
+ * THE FRONT FIRST, then each side. Somebody opening this page is asking "is
+ * this the thing I bought", and the answer to that is the front of it; the
+ * three-quarters answer the second question, which is whether the lettering
+ * is right. A Dual Name Plank carries one name read from each END, so those
+ * two views are not a nicety there - they are the difference between checking
+ * your order and checking half of it.
+ *
+ * All three are fetched eagerly: they are 12KB each, and a view hidden behind
+ * a network round trip is the one nobody waits for.
  */
 export function ItemPicture({
   token,
@@ -35,10 +50,10 @@ export function ItemPicture({
   productName,
   modelVersion,
 }: ItemPictureProps): JSX.Element {
-  const [view, setView] = useState<'left' | 'right'>('left')
+  const [view, setView] = useState<View>('front')
   const [failed, setFailed] = useState(false)
 
-  const src = (side: 'left' | 'right'): string =>
+  const src = (side: View): string =>
     `/api/p/${encodeURIComponent(token)}/items/${encodeURIComponent(jobId)}/picture` +
     `?view=${side}&v=${encodeURIComponent(modelVersion)}`
 
@@ -54,22 +69,18 @@ export function ItemPicture({
     <>
       {/* Both sides are in the DOM and one is hidden, so turning it over is
           instant rather than a second load with a flash of nothing. */}
-      {(['left', 'right'] as const).map(side => (
+      {VIEWS.map(side => (
         <img
           key={side}
           src={src(side)}
-          alt={
-            side === 'left'
-              ? `${productName}, as it will be made`
-              : `${productName}, from the other side`
-          }
+          alt={`${productName}, ${ALT[side]}`}
           onError={() => setFailed(true)}
           className={cn(
             'absolute inset-0 h-full w-full object-contain',
             side === view ? 'opacity-100' : 'opacity-0',
           )}
-          // The first picture is the point of the page; the second is one tap
-          // away, so neither waits for the browser to decide.
+          // The first picture is the point of the page; the others are one
+          // tap away, so none of them waits for the browser to decide.
           loading="eager"
           draggable={false}
         />
@@ -77,7 +88,7 @@ export function ItemPicture({
 
       <button
         type="button"
-        onClick={() => setView(v => (v === 'left' ? 'right' : 'left'))}
+        onClick={() => setView(v => VIEWS[(VIEWS.indexOf(v) + 1) % VIEWS.length])}
         className="bg-surface/90 text-muted-foreground hover:text-foreground absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs backdrop-blur"
       >
         <RotateCw className="size-3.5" aria-hidden />

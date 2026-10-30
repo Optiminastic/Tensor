@@ -42,8 +42,18 @@ function revalidateRegistry(brand: string): void {
   revalidatePath(`/dashboard/${brand}/designs/registry`)
 }
 
+/**
+ * The refusal in the operator's words, not ours.
+ *
+ * Both services this file calls. importShopifyProduct goes through here and
+ * throws the Shopify one, so a refusal naming the variant that has no SKU
+ * was being replaced with "Could not import that product." - true, and no
+ * help to the person who can go and fix it.
+ */
 function failure(error: unknown, fallback: string): ActionResult<never> {
-  return { ok: false, error: error instanceof RegistryServiceError ? error.message : fallback }
+  const known =
+    error instanceof RegistryServiceError || error instanceof ShopifyProductsServiceError
+  return { ok: false, error: known ? error.message : fallback }
 }
 
 /**

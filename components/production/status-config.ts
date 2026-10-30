@@ -224,6 +224,11 @@ export const MODEL_STATUS_CONFIG: Record<ModelStatus, { label: string; tone: Pil
   ready: { label: 'Done', tone: 'success' },
   // Being rendered right now. Clears on its own; nobody need do anything.
   generating: { label: 'Creating', tone: 'warning' },
+  // Held for its customer, which is NOT being built. It read as 'Creating'
+  // for the whole thirty-minute window, so an operator watching a job claim
+  // it was being made concluded something had jammed - while the
+  // Personalisation column beside it said awaiting_customer.
+  awaiting_customer: { label: 'Waiting on customer', tone: 'muted' },
   // The render will not succeed on its own. Distinct from 'creating' because
   // the job looks identical otherwise, and the difference is whether anyone
   // has to act.

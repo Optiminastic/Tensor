@@ -12,6 +12,7 @@ import { ColourPartsPanel } from '@/components/production/colour-parts-panel'
 import { useDesignTemplates } from '@/components/production/design-templates-context'
 import { FieldMapEditor } from '@/components/production/field-map-editor'
 import { TemplateUploadButton } from '@/components/production/template-upload-button'
+import { VariantDesignRows } from '@/components/production/variant-design-rows'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import type { ProductPart, RegistryProductDetail } from '@/lib/validators/registry'
@@ -20,6 +21,10 @@ interface DesignPartEditorProps {
   brand: string
   product: RegistryProductDetail
   part: ProductPart
+  /** Which file each SKU's customer preview is drawn from, by SKU. Passed in
+   *  rather than read here: the panel above shows every colourway at once and
+   *  already asked for it. */
+  previewBySKU: Record<string, string>
   /** Called after a change the parts list needs to reflect. */
   onChanged: () => void
 }
@@ -36,6 +41,7 @@ export function DesignPartEditor({
   brand,
   product,
   part,
+  previewBySKU,
   onChanged,
 }: DesignPartEditorProps): JSX.Element {
   const [fields, setFields] = useState<DesignFields | null>(null)
@@ -112,6 +118,21 @@ export function DesignPartEditor({
           configuration at all: the renderer painted PART="base" white and
           PART="text" the customer's colour, full stop. */}
       <div className="border-border/70 border-t pt-4">
+        {/* Each SKU's own file and mapping, under the product-wide default
+            it overrides. Below rather than above, because the default is
+            what most products need and all a plank ever needs. */}
+        <div className="border-border/70 border-t pt-4">
+          <VariantDesignRows
+            brand={brand}
+            productCode={product.code}
+            role={part.role}
+            variants={product.variants}
+            previewBySKU={previewBySKU}
+            productTemplate={fields.template_key}
+            onChanged={onChanged}
+          />
+        </div>
+
         <ColourPartsPanel
           brand={brand}
           productCode={product.code}
@@ -134,11 +155,19 @@ interface TemplateSectionProps {
 }
 
 /**
- * The .scad this part prints from.
+ * The .scad this part prints from, for every SKU that does not name its own.
  *
- * Set for the whole product rather than per variant: every colour of a plank
- * prints from the same file and differs by filament, which is not geometry.
- * Choosing it twenty times, once per SKU, is nineteen chances to get one wrong.
+ * THE PRODUCT-WIDE DEFAULT, and it stays the default for the reason it was
+ * written: every colour of a plank prints from the same file and differs by
+ * filament, which is not geometry. Choosing it twenty times, once per SKU, is
+ * nineteen chances to get one wrong.
+ *
+ * What changed is that a SKU may now overrule it. A product whose colourways
+ * are genuinely different geometry - three Diwali holders whose back, outline,
+ * text and cup are three different palettes - gives each SKU its own file
+ * below, with its colours already in it, instead of expressing the difference
+ * as nine colour rows typed by hand. Setting a file here still points every
+ * SKU that has not overridden it.
  */
 function TemplateSection({
   brand,
@@ -197,7 +226,13 @@ function TemplateSection({
         <label className="flex min-w-56 flex-1 flex-col gap-1">
           <span className="text-muted-foreground text-xs">Prints from</span>
           <Select value={choice} onChange={e => setChoice(e.target.value)} disabled={pending}>
-            <option value="">Choose a template…</option>
+            {/* A REAL CHOICE, not a placeholder. Returning a product to
+                "nothing prints this" is what frees a design file to be
+                removed, and it is the state every freshly imported product is
+                already in. */}
+            <option value="">
+              {fields.template_key === '' ? 'Choose a template…' : 'Nothing prints this'}
+            </option>
             {templates.map(t => (
               <option key={t.key} value={t.key}>
                 {t.key}
@@ -208,10 +243,10 @@ function TemplateSection({
         </label>
         <Button
           size="sm"
-          disabled={pending || choice === '' || choice === fields.template_key}
+          disabled={pending || choice === fields.template_key}
           onClick={() => void link(choice)}
         >
-          {pending ? 'Saving…' : 'Use this file'}
+          {pending ? 'Saving…' : choice === '' ? 'Stop printing this' : 'Use this file'}
         </Button>
         {fields.template_key === '' ? null : (
           <TemplateUploadButton
