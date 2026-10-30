@@ -4,6 +4,7 @@ import type { FieldErrors, UseFormRegister } from 'react-hook-form'
 
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import type { SetPasswordInput } from '@/lib/validators/auth'
 
 interface SetPasswordFieldsProps {
@@ -68,9 +69,8 @@ export function SetPasswordFields({
         error={errors.password?.message}
         hint="At least 12 characters, with a capital, a number and a symbol"
       >
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="new-password"
           placeholder="••••••••••••"
           {...register('password')}
@@ -82,9 +82,8 @@ export function SetPasswordFields({
         htmlFor="confirmPassword"
         error={errors.confirmPassword?.message}
       >
-        <Input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           autoComplete="new-password"
           placeholder="••••••••••••"
           {...register('confirmPassword')}

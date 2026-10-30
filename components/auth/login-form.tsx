@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form'
 import { PillButton } from '@/components/landing/pill-button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { SignInSchema, type SignInInput } from '@/lib/validators/auth'
 import { signInWithEmail } from '@/services/auth.service'
 
@@ -56,9 +57,8 @@ export function LoginForm(): JSX.Element {
         />
       </Field>
       <Field label="Password" htmlFor="password" error={errors.password?.message}>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="current-password"
           placeholder="••••••••"
           {...register('password')}
