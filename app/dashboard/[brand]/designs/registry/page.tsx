@@ -40,7 +40,7 @@ interface RegistryPageProps {
  * render path reads the database through FindProductBySKU, never through a
  * screen, so moving the authoring does not move what prints.
  *
- * Guarded on registry:read. Writing it is still config:manage, and the backend
+ * Guarded on registry:read. Writing it is registry:manage, and the backend
  * withholds parts_cost/line_cost from a caller without config:read, so a role
  * that can open this page still cannot read prices off it.
  */

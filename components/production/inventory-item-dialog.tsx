@@ -131,7 +131,7 @@ export function InventoryItemDialog({
     // STRAIGHT ON TO HOW IT IS MADE, for a part just created.
     //
     // The two live on different endpoints behind different permissions - the
-    // shelf is filament:manage, binding a design file is config:manage - and a
+    // shelf is filament:manage, binding a design file is registry:manage - and a
     // file cannot be attached to a row that does not exist yet, so they cannot
     // be one request. They are still one job, and splitting them across a
     // dialog and a row menu meant nobody found the second half.

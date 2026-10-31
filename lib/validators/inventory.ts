@@ -91,7 +91,7 @@ export type ComponentSource = (typeof COMPONENT_SOURCES)[number]
  *
  * Separate from NewInventoryItemSchema because it is a separate endpoint with
  * a different guard: the shelf is filament:manage, binding a design file to a
- * part is config:manage.
+ * part is registry:manage.
  */
 export const ComponentSourceWriteSchema = z.object({
   source: z.enum(COMPONENT_SOURCES),
