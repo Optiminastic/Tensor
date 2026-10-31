@@ -63,7 +63,9 @@ export function AccountsReportSwitch({ brand, report }: AccountsReportSwitchProp
   return (
     <div className="flex flex-col items-end gap-1">
       <label className="flex items-center gap-2">
-        <span className="text-sm font-medium whitespace-nowrap">
+        <span
+          className={`text-sm font-medium whitespace-nowrap ${on ? '' : 'text-muted-foreground'}`}
+        >
           {on ? 'Sending daily' : 'Not sending'}
         </span>
         <Switch

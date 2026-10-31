@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 
 import { AccountsReportDialog } from '@/components/settings/accounts-report-dialog'
 import { AccountsReportRuns } from '@/components/settings/accounts-report-runs'
+import { AccountsReportSummary } from '@/components/settings/accounts-report-summary'
 import { AccountsReportSwitch } from '@/components/settings/accounts-report-switch'
 import {
   NoBrandChosen,
@@ -79,10 +80,10 @@ export default async function AccountsReportPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <SettingsHeader
           title="Accounts report"
-          description="A daily sales register, mailed as the spreadsheet your accountant files from. One row per line item, covering noon to noon."
+          description="One spreadsheet a day, noon to noon IST, mailed to your accountant."
         />
         {context.profile && report ? (
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex shrink-0 items-center gap-3">
             {/* The state that decides whether anything is ever sent, readable
                 without opening anything. */}
             <AccountsReportSwitch brand={context.profile.slug} report={report} />
@@ -99,7 +100,10 @@ export default async function AccountsReportPage({
           why="each brand has its own accountant and its own sales"
         />
       ) : report ? (
-        <AccountsReportRuns brand={context.profile.slug} runs={runs} />
+        <>
+          <AccountsReportSummary report={report} />
+          <AccountsReportRuns brand={context.profile.slug} runs={runs} enabled={report.enabled} />
+        </>
       ) : null}
     </main>
   )

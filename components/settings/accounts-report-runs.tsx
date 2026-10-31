@@ -16,6 +16,8 @@ import type { AccountsReportRun } from '@/lib/validators/accounts-report'
 interface AccountsReportRunsProps {
   brand: string
   runs: AccountsReportRun[]
+  /** Decides which single sentence the empty state shows. */
+  enabled: boolean
 }
 
 const FIGURE = 'font-mono tabular-nums'
@@ -31,18 +33,18 @@ const FIGURE = 'font-mono tabular-nums'
  * The spreadsheet hangs off each row because the alternative is asking the
  * person who received the mail to forward it back.
  */
-export function AccountsReportRuns({ brand, runs }: AccountsReportRunsProps): JSX.Element {
+export function AccountsReportRuns({ brand, runs, enabled }: AccountsReportRunsProps): JSX.Element {
   if (runs.length === 0) {
     return (
       <Card className="flex flex-col gap-2 p-6">
         <h2 className="text-base font-medium">Sent registers</h2>
-        {/* Says WHY it is empty. The commonest reason by far is that the
-            daily send has never been switched on, and a bare "no data" sends
-            somebody looking for a fault instead of a switch. */}
+        {/* ONE SENTENCE, and which one depends on the switch. The commonest
+            reason this is empty is that the daily send was never turned on,
+            and that is a different thing to tell somebody than "wait". */}
         <p className="text-muted-foreground text-sm text-pretty">
-          Nothing has been sent yet. A register goes out once per noon-to-noon window, shortly after
-          midday — but only while <span className="font-medium">Send the register daily</span> is
-          switched on. Until then this stays empty, and so does your accountant&apos;s inbox.
+          {enabled
+            ? 'Nothing sent yet. The first register goes out after noon.'
+            : 'Nothing sent yet. Switch on Sending daily to start.'}
         </p>
       </Card>
     )
