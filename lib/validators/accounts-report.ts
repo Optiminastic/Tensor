@@ -62,3 +62,44 @@ export interface AccountsReportInput {
   gst_percent: number
   seller_state: string
 }
+
+/**
+ * One register that went out, or failed trying.
+ *
+ * The settings above carry only the LAST of each - one row per brand,
+ * overwritten daily - which cannot answer "send me Tuesday's file" or "why did
+ * Thursday not arrive". This is the history that can.
+ */
+export const AccountsReportRunSchema = z.object({
+  id: z.string(),
+  /** The noon-to-noon window covered, not when it was mailed. */
+  window_start: z.string(),
+  window_end: z.string(),
+  sent_at: z.string(),
+  /** 'sent' or 'failed'. A failure is a row too, which is the point. */
+  status: z.string(),
+  /** The reason, when it failed. Empty otherwise. */
+  detail: z.string(),
+  rows: z.number(),
+  orders: z.number(),
+  /**
+   * Who it actually went to. Stored as sent, so editing the recipient list
+   * does not rewrite what last week's mail says it went to.
+   */
+  to: z.array(z.string()),
+  cc: z.array(z.string()),
+  bcc: z.array(z.string()),
+  /** 'scheduled' or 'manual', so a test send is not read as the day's. */
+  source: z.string(),
+  /**
+   * False for a failure, and for any register sent before this history
+   * existed. The row is still worth showing; only the download is not.
+   */
+  has_file: z.boolean(),
+  filename: z.string(),
+  size_bytes: z.number(),
+})
+
+export const AccountsReportRunsSchema = z.object({ items: z.array(AccountsReportRunSchema) })
+
+export type AccountsReportRun = z.infer<typeof AccountsReportRunSchema>

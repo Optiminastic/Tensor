@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type { AccountsReport } from '@/lib/validators/accounts-report'
 
@@ -114,16 +113,19 @@ export function AccountsReportForm({ brand, initial }: AccountsReportFormProps):
       ) : null}
 
       <Card className="flex flex-col gap-5 p-5">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <h2 className="text-foreground text-base font-medium">Send the register daily</h2>
-            <p className="text-muted-foreground mt-1 max-w-prose text-sm text-pretty">
-              One spreadsheet per day, covering <span className="font-medium">noon to noon</span>{' '}
-              IST — the shop&apos;s own day, because the floor works past midnight and a calendar
-              day would split one evening across two reports.
-            </p>
-          </div>
-          <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Send daily" />
+        {/* THE SWITCH LIVES ON THE PAGE, not here. Two of them meant two
+            readings of one fact, and the one inside a dialog is the one
+            nobody finds - which is how the register sat switched off while
+            the settings looked complete. The current value is still SENT on
+            save, so editing recipients never silently flips it. */}
+        <div>
+          <h2 className="text-foreground text-base font-medium">Send the register daily</h2>
+          <p className="text-muted-foreground mt-1 max-w-prose text-sm text-pretty">
+            One spreadsheet per day, covering <span className="font-medium">noon to noon</span> IST
+            &mdash; the shop&apos;s own day, because the floor works past midnight and a calendar
+            day would split one evening across two reports. Switch it on from the page behind this
+            dialog.
+          </p>
         </div>
 
         <Field

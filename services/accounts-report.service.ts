@@ -6,6 +6,8 @@ import {
   AccountsReportSchema,
   type AccountsReportSendResult,
   AccountsReportSendResultSchema,
+  type AccountsReportRun,
+  AccountsReportRunsSchema,
 } from '@/lib/validators/accounts-report'
 
 const log = createLogger('AccountsReportService')
@@ -132,4 +134,55 @@ export async function sendAccountsReportNow(
     throw new AccountsReportServiceError('Tensor-Core returned something unexpected.')
   }
   return parsed.data
+}
+
+/** The register's history: every send, and every failure, newest first. */
+export async function listAccountsReportRuns(
+  token: string,
+  brand: string,
+): Promise<AccountsReportRun[]> {
+  const path = `/brands/${encodeURIComponent(brand)}/accounts-report/runs`
+  let response: Response
+  try {
+    response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(READ_TIMEOUT_MS),
+      cache: 'no-store',
+    })
+  } catch (err) {
+    log.error({ err, path }, 'Tensor-Core is unreachable')
+    throw new AccountsReportServiceError('Could not reach Tensor-Core.')
+  }
+  if (!response.ok) {
+    const detail = await detailOf(response)
+    log.warn({ path, status: response.status, detail }, 'Tensor-Core rejected the request')
+    throw new AccountsReportServiceError(detail ?? "Could not read the register's history.")
+  }
+  return AccountsReportRunsSchema.parse(await response.json()).items
+}
+
+/**
+ * Streams one run's spreadsheet. Returned as the raw upstream response so the
+ * route can forward Content-Disposition, which is the only thing carrying the
+ * real filename to the browser.
+ */
+export async function fetchAccountsReportFile(
+  token: string,
+  brand: string,
+  runID: string,
+): Promise<Response> {
+  const path =
+    `/brands/${encodeURIComponent(brand)}/accounts-report` +
+    `/runs/${encodeURIComponent(runID)}/file`
+  const response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(READ_TIMEOUT_MS),
+    cache: 'no-store',
+  })
+  if (!response.ok) {
+    throw new AccountsReportServiceError(
+      (await detailOf(response)) ?? 'Could not read that spreadsheet.',
+    )
+  }
+  return response
 }
