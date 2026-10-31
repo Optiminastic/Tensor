@@ -104,6 +104,15 @@ export const AbandonedCheckoutSchema = z.object({
 export const AbandonedCheckoutsResponseSchema = z.object({
   items: z.array(AbandonedCheckoutSchema),
   shop: z.string(),
+  /**
+   * Per checkout id: 'ours', 'other' or 'unknown' - whether a recovery came
+   * back because of our outreach, decided from the discount code minted for
+   * that one customer.
+   *
+   * Optional, because a Tensor-Core that predates it sends no such field and
+   * the table simply shows no arrow.
+   */
+  attribution: z.record(z.string(), z.string()).optional(),
 })
 
 export type CheckoutAttribute = z.infer<typeof CheckoutAttributeSchema>

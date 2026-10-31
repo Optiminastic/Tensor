@@ -42,6 +42,7 @@ export default async function AbandonedCheckoutPage({
   await requirePermission('order:read', `/dashboard/${brand}`)
 
   let checkouts: AbandonedCheckout[] = []
+  let attribution: Record<string, string> = {}
   let error: string | null = null
   // Asked up front so a Call button is never offered that cannot work.
   let callingEnabled = false
@@ -67,7 +68,12 @@ export default async function AbandonedCheckoutPage({
     agent = agentData
     callingEnabled = voice?.configured ?? false
     if (typeof response === 'string') error = response
-    else checkouts = response.items
+    else {
+      checkouts = response.items
+      // Absent from a Tensor-Core that predates it; the table then
+      // simply shows no arrow rather than a wrong one.
+      attribution = response.attribution ?? {}
+    }
   }
 
   return (
@@ -93,6 +99,7 @@ export default async function AbandonedCheckoutPage({
       ) : (
         <AbandonedCheckoutsTable
           checkouts={checkouts}
+          attribution={attribution}
           agent={{ calls: agent.calls, messages: agent.messages }}
           context={{ brand, errors: agent.errors, template: agent.template, callingEnabled }}
         />

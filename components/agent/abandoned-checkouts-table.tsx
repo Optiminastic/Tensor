@@ -1,5 +1,6 @@
 'use client'
 
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import { type JSX, type ReactNode, type SyntheticEvent, useMemo, useState } from 'react'
 import type { SortDescriptor } from 'react-aria-components'
 
@@ -69,6 +70,12 @@ type Reachable = 'all' | 'phone' | 'no-phone' | 'recovered'
 
 interface AbandonedCheckoutsTableProps {
   checkouts: AbandonedCheckout[]
+  /**
+   * Per checkout id: 'ours', 'other' or 'unknown' - whether a recovery came
+   * back because of our call and message. Decided by the backend from the
+   * discount code minted for that one customer; see winback_attribution.go.
+   */
+  attribution?: Record<string, string>
   /** Every call and message the agent made; grouped by checkout here. */
   agent: { calls: CallLog[]; messages: MessageLog[] }
   context: DrawerContext
@@ -91,8 +98,42 @@ function itemSummary(checkout: AbandonedCheckout): string {
  * purpose is "find the row worth acting on", getting there without a mouse is
  * worth a second primitive.
  */
+/**
+ * Whether this recovery is ours, as one arrow.
+ *
+ * UP AND GREEN means the cart came back carrying the discount code we sent
+ * that customer - a code minted for their checkout alone, which reaches it
+ * only by them following our link. DOWN AND RED means it came back without
+ * it: a real sale that our outreach cannot claim.
+ *
+ * NOTHING AT ALL when no code was recorded, which is every checkout contacted
+ * before this existed. A red arrow there would read as "we failed to convert
+ * it" when the truth is "we cannot tell", and that would understate the
+ * campaign against its own history.
+ */
+function RecoveredBy({ state }: { state?: string }): JSX.Element | null {
+  if (state === 'ours') {
+    return (
+      <ArrowUp
+        className="text-success size-3.5 shrink-0"
+        aria-label="Recovered with the code we sent"
+      />
+    )
+  }
+  if (state === 'other') {
+    return (
+      <ArrowDown
+        className="text-danger size-3.5 shrink-0"
+        aria-label="Recovered without our code"
+      />
+    )
+  }
+  return null
+}
+
 export function AbandonedCheckoutsTable({
   checkouts,
+  attribution,
   agent,
   context,
 }: AbandonedCheckoutsTableProps): JSX.Element {
@@ -225,8 +266,13 @@ export function AbandonedCheckoutsTable({
                   <CheckoutStatusBadge checkout={checkout} />
                 </TableCell>
                 <TableCell>
-                  <span className="text-muted-foreground">
-                    {checkout.completed_at ? sinceWhen(checkout.completed_at) : '—'}
+                  <span className="inline-flex items-center gap-1.5">
+                    {checkout.completed_at ? (
+                      <RecoveredBy state={attribution?.[checkout.id]} />
+                    ) : null}
+                    <span className="text-muted-foreground">
+                      {checkout.completed_at ? sinceWhen(checkout.completed_at) : '—'}
+                    </span>
                   </span>
                 </TableCell>
                 <TableCell>
