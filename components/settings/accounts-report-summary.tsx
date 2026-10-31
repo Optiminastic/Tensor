@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 
 import { Card } from '@/components/ui/card'
+import { REPORT_ZONE } from '@/lib/report-zone'
 import type { AccountsReport } from '@/lib/validators/accounts-report'
 
 interface AccountsReportSummaryProps {
@@ -81,13 +82,14 @@ function Item({
 function day(value: string): string {
   const at = new Date(value)
   if (Number.isNaN(at.getTime())) return '—'
-  return at.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+  return at.toLocaleDateString('en-IN', { timeZone: REPORT_ZONE, day: '2-digit', month: 'short' })
 }
 
 function when(value: string): string {
   const at = new Date(value)
   if (Number.isNaN(at.getTime())) return '—'
   return at.toLocaleString('en-IN', {
+    timeZone: REPORT_ZONE,
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

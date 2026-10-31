@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tag } from '@/components/ui/tag'
+import { REPORT_ZONE } from '@/lib/report-zone'
 import type { AccountsReportRun } from '@/lib/validators/accounts-report'
 
 interface AccountsReportRunsProps {
@@ -148,13 +149,19 @@ function addresses(run: AccountsReportRun): string {
 function dayCovered(run: AccountsReportRun): string {
   const end = new Date(run.window_end)
   if (Number.isNaN(end.getTime())) return '—'
-  return end.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  return end.toLocaleDateString('en-IN', {
+    timeZone: REPORT_ZONE,
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 function when(value: string): string {
   const at = new Date(value)
   if (Number.isNaN(at.getTime())) return '—'
   return at.toLocaleString('en-IN', {
+    timeZone: REPORT_ZONE,
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
