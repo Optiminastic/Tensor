@@ -8,6 +8,10 @@ import {
   setTemplateSectionAction,
   uploadDesignTemplateAction,
 } from '@/app/dashboard/[brand]/production/design-template-actions'
+import {
+  DesignAddFileList,
+  type DesignUploadOutcome,
+} from '@/components/production/design-add-file-list'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,7 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
-import { templateKeyFromFileName } from '@/lib/template-key'
+import { planDesignUploads, type DesignUploadCandidate } from '@/lib/design-upload-plan'
 
 interface DesignAddDialogProps {
   brand: string
@@ -28,115 +32,146 @@ interface DesignAddDialogProps {
 }
 
 /**
- * Adds a design file, filed under its own name.
+ * Adds design files, each filed under its own name.
  *
- * The key is the name the renderer looks up and a variant links to, and it
- * used to be typed into a box beside the file picker. Typing it is the step
- * nobody should have to take: the designer already named the file, and that
- * name is what they will go looking for.
+ * TWO THINGS THIS USED TO ASK FOR AND NO LONGER DOES.
  *
- * The typed field was guarding against something real - a file called
- * "dnp_two_heart (2).scad" becoming a key nobody can type - so the name is
- * NORMALISED rather than trimmed, by templateKeyFromFileName, and the result
- * is SHOWN before the upload. Deriving it out of sight would be the same
- * hazard moved somewhere nobody can see it.
+ * The key was typed into a box beside the picker. The designer had already
+ * named the file, and that name is what they will go looking for, so it now
+ * comes from the file - normalised by templateKeyFromFileName, because the
+ * typed box was guarding against something real ("dnp_two_heart (2).scad")
+ * and dropping the box must not drop the guard. The derived key is SHOWN
+ * before the upload; deriving it out of sight would be the same hazard moved
+ * somewhere nobody can see it.
  *
- * Adding a key that already exists is still refused rather than silently
- * uploaded. The endpoint treats a repeat key as a new VERSION of that
- * template - correct for Replace, and wrong for someone who believes they are
- * adding a second design and has just overwritten the first.
+ * And it took one file. A product arrives as a FOLDER of .scad files - the
+ * Diwali holder is three colourways, the Soulmate combo three parts - and
+ * filing them one dialog at a time, retyping a key each time, is the manual
+ * effort this removes. The whole batch goes under one section.
+ *
+ * A BATCH MAKES ITS OWN MISTAKES POSSIBLE, so planDesignUploads judges every
+ * file before any of them is sent, and the list says what will happen to
+ * each. A key that already exists is still held back rather than silently
+ * uploaded: the endpoint treats a repeat key as a new VERSION, which is
+ * correct for Replace and wrong for someone who believes they are adding a
+ * second design and has just overwritten the first.
  */
 export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): JSX.Element {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
-  const [file, setFile] = useState<File | null>(null)
-  // Where it will be filed. '' is automatic: the heading its use implies,
+  const [files, setFiles] = useState<File[]>([])
+  // Where they will be filed. '' is automatic: the heading their use implies,
   // which for a file nothing links to yet is Other.
   const [section, setSection] = useState('')
   const [pending, setPending] = useState(false)
+  const [done, setDone] = useState(0)
+  const [outcomes, setOutcomes] = useState<Map<string, DesignUploadOutcome> | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
-    setFile(null)
+    setFiles([])
     setSection('')
+    setOutcomes(null)
+    setDone(0)
     setError(null)
   }, [open])
 
-  const normalised = file === null ? '' : templateKeyFromFileName(file.name)
-  const taken = existingKeys.some(k => k.toLowerCase() === normalised)
-  // A name with nothing usable in it - "___.scad", or a name that is only
-  // punctuation. Rare, and silently uploading it under "" would 422 from the
-  // backend with "Name the template", which names nothing the person can act
-  // on while looking at this dialog.
-  const unusable = file !== null && normalised === ''
+  const plan = planDesignUploads(files, existingKeys)
+
+  function choose(chosen: FileList | null): void {
+    if (chosen === null) return
+    setOutcomes(null)
+    setError(null)
+    // ADDED TO WHAT IS THERE, not replacing it. Picking twice is how somebody
+    // collects files from two folders, and a second pick that wiped the first
+    // would be a silent loss of work they have already done.
+    setFiles(current => {
+      const names = new Set(current.map(f => f.name))
+      return [...current, ...Array.from(chosen).filter(f => !names.has(f.name))]
+    })
+  }
 
   async function save(): Promise<void> {
-    if (!file) {
-      setError('Choose a .scad file.')
-      return
-    }
+    if (plan.ready.length === 0) return
     setError(null)
     setPending(true)
-    const form = new FormData()
-    form.set('file', file)
-    const result = await uploadDesignTemplateAction(brand, normalised, form)
-    if (!result.ok) {
-      setPending(false)
-      setError(result.error ?? 'Could not add the design file.')
-      return
-    }
+    setDone(0)
 
-    // FILED AFTER THE UPLOAD, and a failure here does not undo it. The file is
-    // in - that is the part that took a decision - and a label that did not
-    // stick is a dropdown to change, not an upload to do again. Saying so is
-    // better than rolling back the thing somebody wanted.
-    if (section !== '') {
-      const filed = await setTemplateSectionAction(brand, normalised, section)
-      if (!filed.ok) {
-        setPending(false)
-        setError(
-          `${normalised} was added, but could not be filed under that section: ${
-            filed.error ?? 'the request was refused'
-          }. Set it from its row.`,
-        )
-        router.refresh()
-        return
-      }
+    const results = new Map<string, DesignUploadOutcome>()
+    // ONE AT A TIME. Each is an upload of a file plus a second call to file
+    // it, and firing nine of those at once buys a second of wall clock for a
+    // much worse failure: a batch half-applied with no order to it, which
+    // nobody can read back off the table.
+    for (const candidate of plan.ready) {
+      results.set(candidate.key, await upload(brand, candidate, section))
+      setDone(n => n + 1)
+      setOutcomes(new Map(results))
     }
 
     setPending(false)
-    setOpen(false)
+    // The files that went in stay in, whatever happened to the rest, so the
+    // page is refreshed either way.
     router.refresh()
+
+    const failed = [...results.values()].filter(r => !r.ok)
+    if (failed.length === 0 && plan.skipped.length === 0) {
+      setOpen(false)
+      return
+    }
+    // Left open on anything less than a clean run, because the list IS the
+    // explanation and closing over it would leave somebody to work out from
+    // the table which of nine files are missing.
+    if (failed.length > 0) {
+      setError(`${failed.length} of ${plan.ready.length} could not be added. The rest are in.`)
+    }
   }
+
+  const label = pending
+    ? `Uploading ${done + 1} of ${plan.ready.length}…`
+    : addLabel(plan.ready.length)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="size-3.5" aria-hidden />
-          Add design file
+          Add design files
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add design file</DialogTitle>
+          <DialogTitle>Add design files</DialogTitle>
           <DialogDescription>
-            An OpenSCAD .scad file. It is filed under its own name, which is the key variants link
-            to.
+            OpenSCAD .scad files. Each is filed under its own name, which is the key variants link
+            to, and all of them under the section you choose.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
-          <Field label="File" htmlFor="t-file" hint={file ? file.name : 'No file chosen'}>
+          <Field
+            label="Files"
+            htmlFor="t-file"
+            hint={
+              files.length === 0
+                ? 'No files chosen — pick as many as you like'
+                : `${files.length} chosen, ${plan.ready.length} will be added`
+            }
+          >
             <div className="flex gap-2">
               <input
                 ref={inputRef}
                 id="t-file"
                 type="file"
                 accept=".scad"
+                multiple
                 className="hidden"
-                onChange={e => setFile(e.target.files?.[0] ?? null)}
+                onChange={e => {
+                  choose(e.target.files)
+                  // Cleared so choosing the SAME file again still fires a
+                  // change event, which is what happens after a removal.
+                  e.target.value = ''
+                }}
               />
               <Button
                 variant="secondary"
@@ -144,34 +179,29 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
                 onClick={() => inputRef.current?.click()}
                 disabled={pending}
               >
-                Choose .scad
+                Choose .scad files
               </Button>
+              {files.length > 0 && !pending ? (
+                <Button variant="ghost" size="sm" onClick={() => setFiles([])}>
+                  Clear
+                </Button>
+              ) : null}
             </div>
           </Field>
 
-          {/* SHOWN, NOT HIDDEN. The key is what a variant links to and what
-              somebody types when looking for this file later, so the name it
-              is actually getting is on screen before the upload - a derived
-              key nobody saw would be the old hazard moved out of sight. */}
-          {normalised !== '' ? (
-            <p className="text-muted-foreground text-xs">
-              Filed as <span className="text-foreground font-mono">{normalised}</span>
-            </p>
-          ) : null}
+          <DesignAddFileList
+            candidates={plan.candidates}
+            outcomes={outcomes}
+            disabled={pending}
+            onRemove={name => setFiles(current => current.filter(f => f.name !== name))}
+          />
 
-          {unusable ? (
-            <p className="text-warning text-xs">
-              There is nothing in that file&rsquo;s name to make a key from. Rename it to something
-              like dnp_three_heart.scad and choose it again.
-            </p>
-          ) : null}
-
-          {/* Where it lands on this page. Not what it is FOR - that is
-              decided by which product links it, on the product. */}
+          {/* Where they land on this page. Not what they are FOR - that is
+              decided by which product links them, on the product. */}
           <Field
             label="Section"
             htmlFor="t-section"
-            hint="Where it is filed on this page. It does not decide what the file is used for."
+            hint="Where they are filed on this page. It does not decide what the files are used for."
           >
             <Select
               id="t-section"
@@ -186,14 +216,6 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
             </Select>
           </Field>
 
-          {taken ? (
-            <p className="text-warning text-xs">
-              A design is already filed as <span className="font-mono">{normalised}</span>. Use
-              Replace on its row to upload a new version of it, or rename the file to add it as a
-              separate design.
-            </p>
-          ) : null}
-
           {error ? (
             <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
               {error}
@@ -202,19 +224,52 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
 
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
-              Cancel
+              {outcomes === null ? 'Cancel' : 'Close'}
             </Button>
-            <Button
-              onClick={() => void save()}
-              // normalised is '' both with no file chosen and with a file
-              // whose name has nothing usable in it, so it covers both.
-              disabled={pending || normalised === '' || taken}
-            >
-              {pending ? 'Uploading…' : 'Add design file'}
+            <Button onClick={() => void save()} disabled={pending || plan.ready.length === 0}>
+              {label}
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
   )
+}
+
+/**
+ * Uploads one file and files it under the section.
+ *
+ * FILED AFTER THE UPLOAD, and a failure there does not undo it. The file is
+ * in - that is the part that took a decision - and a label that did not stick
+ * is a dropdown to change, not an upload to do again.
+ */
+async function upload(
+  brand: string,
+  candidate: DesignUploadCandidate,
+  section: string,
+): Promise<DesignUploadOutcome> {
+  const form = new FormData()
+  form.set('file', candidate.file)
+
+  const added = await uploadDesignTemplateAction(brand, candidate.key, form)
+  if (!added.ok) {
+    return { key: candidate.key, ok: false, error: added.error ?? 'could not be added' }
+  }
+  if (section === '') return { key: candidate.key, ok: true }
+
+  const filed = await setTemplateSectionAction(brand, candidate.key, section)
+  if (!filed.ok) {
+    return {
+      key: candidate.key,
+      ok: true,
+      error: `added, but not filed under that section — set it from its row`,
+    }
+  }
+  return { key: candidate.key, ok: true }
+}
+
+function addLabel(count: number): string {
+  if (count === 0) return 'Add design files'
+  if (count === 1) return 'Add 1 design file'
+  return `Add ${count} design files`
 }
