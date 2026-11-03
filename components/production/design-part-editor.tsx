@@ -80,13 +80,22 @@ export function DesignPartEditor({
 
   return (
     <div className="border-border flex flex-col gap-4 rounded-md border p-3">
-      <TemplateSection
-        brand={brand}
-        productCode={product.code}
-        part={part}
-        fields={fields}
-        onChanged={onChanged}
-      />
+      {/* ONE PICKER, NOT BOTH. This showed the product-wide file AND a row
+          per SKU at the same time, for every part, and nothing on screen
+          said which of the two was meant to win - so a product configured
+          per SKU still displayed an empty "Prints from" above it reading
+          "Nothing prints this", which is not true and is the first thing
+          anybody looked at. The part now says which way it is organised and
+          the panel shows that one. */}
+      {part.per_variant ? null : (
+        <TemplateSection
+          brand={brand}
+          productCode={product.code}
+          part={part}
+          fields={fields}
+          onChanged={onChanged}
+        />
+      )}
 
       <div className="border-border flex flex-col gap-2 border-t pt-3">
         <div className="flex flex-col gap-0.5">
@@ -96,10 +105,18 @@ export function DesignPartEditor({
           </p>
         </div>
 
+        {/* Said in full, because until recently this was a dead end: the
+            dropdown is built from THIS product's own orders, so a design that
+            has not sold could not be mapped at all. Both ways out are named
+            here rather than left to be discovered. */}
         {fields.properties.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            No recent order has carried a personalisation field for this product&rsquo;s SKUs.
-            Either none needs one, or no order has matched it yet.
+            No recent order has carried a personalisation field for this product&rsquo;s SKUs —
+            either none needs one, or nothing has sold yet. You can still map it: choose{' '}
+            <span className="text-foreground">Type a field name…</span> and enter the
+            storefront&rsquo;s own wording, or add <span className="font-mono text-xs">@from</span>{' '}
+            comments to the <span className="font-mono text-xs">.scad</span> and press Suggest
+            mapping.
           </p>
         ) : null}
 
@@ -121,17 +138,19 @@ export function DesignPartEditor({
         {/* Each SKU's own file and mapping, under the product-wide default
             it overrides. Below rather than above, because the default is
             what most products need and all a plank ever needs. */}
-        <div className="border-border/70 border-t pt-4">
-          <VariantDesignRows
-            brand={brand}
-            productCode={product.code}
-            role={part.role}
-            variants={product.variants}
-            previewBySKU={previewBySKU}
-            productTemplate={fields.template_key}
-            onChanged={onChanged}
-          />
-        </div>
+        {part.per_variant ? (
+          <div className="border-border/70 border-t pt-4">
+            <VariantDesignRows
+              brand={brand}
+              productCode={product.code}
+              role={part.role}
+              variants={product.variants}
+              previewBySKU={previewBySKU}
+              productTemplate={fields.template_key}
+              onChanged={onChanged}
+            />
+          </div>
+        ) : null}
 
         <ColourPartsPanel
           brand={brand}

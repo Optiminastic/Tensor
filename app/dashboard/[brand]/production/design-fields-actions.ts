@@ -12,7 +12,9 @@ import {
   type ObservedProperty,
   type ProductPart,
   type TemplateParam,
+  PartWriteSchema,
 } from '@/lib/validators/registry'
+import type { FieldSuggestions } from '@/lib/validators/registry-suggest'
 import { listTemplateParams } from '@/services/design-templates.service'
 import {
   clearPreviewDesign,
@@ -21,6 +23,12 @@ import {
   PreviewDesignServiceError,
   setPreviewDesign,
 } from '@/services/preview-design.service'
+import {
+  createProductPart,
+  deleteProductPart,
+  updateProductPart,
+} from '@/services/registry-parts.service'
+import { fetchFieldSuggestions } from '@/services/registry-suggest.service'
 import {
   clearVariantFieldMaps,
   getProductFieldMaps,
@@ -357,5 +365,99 @@ export async function toggleProductPersonalisationLink(
     return { ok: true, data: null }
   } catch (err) {
     return failure(err, 'Could not change that setting.')
+  }
+}
+
+/**
+ * Names a part on a product, with no file yet.
+ *
+ * Re-validated here rather than trusted from the dialog: a server action's
+ * arguments are client-controlled, so this parse is the boundary.
+ */
+export async function createPart(
+  brand: string,
+  code: string,
+  input: { role: string; per_variant?: boolean },
+): Promise<ActionResult<ProductPart>> {
+  const parsed = PartWriteSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: 'Give the part a name of 64 characters or fewer.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    const part = await createProductPart(token, code, parsed.data)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: part }
+  } catch (err) {
+    return failure(err, 'Could not add the part.')
+  }
+}
+
+/** Renames a part, changes how it is scoped, or both. */
+export async function savePart(
+  brand: string,
+  id: string,
+  input: { role: string; per_variant?: boolean },
+): Promise<ActionResult<ProductPart>> {
+  const parsed = PartWriteSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: 'Give the part a name of 64 characters or fewer.' }
+  }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    const part = await updateProductPart(token, id, parsed.data)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: part }
+  } catch (err) {
+    return failure(err, 'Could not save the part.')
+  }
+}
+
+/** Removes a part and everything configured against it. */
+export async function removePart(brand: string, id: string): Promise<ActionResult<null>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    await deleteProductPart(token, id)
+    revalidatePath(`/dashboard/${brand}/designs/registry`)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, 'Could not remove the part.')
+  }
+}
+
+/**
+ * What Tensor would map for this design file, for a person to review.
+ *
+ * READ-ONLY. It writes nothing and revalidates nothing: the rows land in the
+ * editor's form and the person still presses Save mapping. A proposal that
+ * applied itself would mean re-uploading a corrected drawing silently
+ * re-pointed a live product's fields, and the first sign of it would be a
+ * batch of planks with the names swapped.
+ */
+export async function suggestFields(
+  brand: string,
+  code: string,
+  where: { role: string; sku?: string },
+): Promise<ActionResult<FieldSuggestions>> {
+  void brand
+  const role = (where.role ?? '').trim()
+  if (role === '') return { ok: false, error: 'Choose a design file first.' }
+
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    return { ok: true, data: await fetchFieldSuggestions(token, code, { role, sku: where.sku }) }
+  } catch (err) {
+    // The backend's own sentence names the step somebody has to take - "this
+    // product has no design file for that part yet" sends them to the right
+    // panel, where "Request failed (409)" sends them nowhere.
+    return failure(err, 'Could not work out a mapping for this design.')
   }
 }

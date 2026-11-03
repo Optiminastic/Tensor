@@ -4,18 +4,16 @@ import { Plus } from 'lucide-react'
 import { useCallback, useEffect, useState, type JSX } from 'react'
 
 import {
+  createPart,
   loadPreviewDesigns,
   loadProductParts,
 } from '@/app/dashboard/[brand]/production/design-fields-actions'
 import { DesignPartEditor } from '@/components/production/design-part-editor'
 import { PartAddDialog } from '@/components/production/part-add-dialog'
-import { VariantDesignRows } from '@/components/production/variant-design-rows'
+import { PartSettingsDialog } from '@/components/production/part-settings-dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { ProductPart, RegistryProductDetail } from '@/lib/validators/registry'
-
-/** The role a product has when it prints one thing - designRoleBody in the API. */
-const designRoleBody = 'body'
 
 interface DesignFieldsPanelProps {
   brand: string
@@ -89,57 +87,50 @@ export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): J
     return <p className="text-muted-foreground mt-3 text-sm">Loading…</p>
   }
 
-  const addButton = (
+  const addControl = (
     <PartAddDialog
-      brand={brand}
-      productCode={product.code}
       existingRoles={parts.map(p => p.role)}
-      onAdded={() => void refresh()}
+      onAdd={async (role, perVariant) => {
+        const res = await createPart(brand, product.code, { role, per_variant: perVariant })
+        if (!res.ok) throw new Error(res.error ?? 'Could not add the part.')
+        setChosen(role)
+        await refresh()
+      }}
       trigger={
         <Button variant="secondary" size="sm">
           <Plus className="size-3.5" aria-hidden />
-          {parts.length === 0 ? 'Add a design file' : 'Add another'}
+          Add part
         </Button>
       }
     />
   )
 
-  if (parts.length === 0) {
-    // A PRODUCT JUST IMPORTED FROM SHOPIFY LANDS HERE, with its child SKUs
-    // and nothing else. Showing only "add a design file" hid them entirely -
-    // you imported ten colourways and the panel named none of them - and the
-    // per-SKU rows below are the whole point of opening it.
+  const shown = parts
+
+  if (shown.length === 0) {
+    // A PRODUCT JUST IMPORTED FROM SHOPIFY LANDS HERE.
     //
-    // The rows are offered for the body role, which is the role a product has
-    // when it has one file. Choosing a file for a SKU creates that role, so
-    // the ordinary first step from here is the same gesture as every later
-    // one rather than a different screen.
+    // It used to land on a list of every child SKU with a file picker each,
+    // on the reasoning that showing the colourways beat showing nothing. That
+    // was the wrong first question. A product does not print "a file per
+    // SKU", it prints PARTS - one for a plank, three for a combo - and the
+    // SKUs only mean anything underneath one of them. Asked the other way
+    // round, a combo's eight SKUs were offered before anyone had said there
+    // were three things to print, and the plank's file was the only one the
+    // screen had room to ask for.
     return (
-      <div className="mt-3 flex flex-col items-start gap-4">
-        <div className="flex flex-col items-start gap-3">
-          <p className="text-muted-foreground text-sm text-pretty">
-            Nothing prints this product yet. Give every SKU the same file with{' '}
-            <span className="font-medium">Add a design file</span>, or name one per SKU below —
-            which is what a product whose colourways are different shapes needs.
-          </p>
-          {addButton}
-        </div>
-        <div className="border-border/70 w-full border-t pt-4">
-          <VariantDesignRows
-            brand={brand}
-            productCode={product.code}
-            role={designRoleBody}
-            variants={product.variants}
-            previewBySKU={previewBySKU}
-            productTemplate=""
-            onChanged={() => void refresh()}
-          />
-        </div>
+      <div className="mt-3 flex flex-col items-start gap-3">
+        <p className="text-muted-foreground max-w-prose text-sm text-pretty">
+          Nothing prints this product yet. Name what it prints — most products print one thing, a
+          combo prints several and each becomes its own job, on its own bed, in its own colour.
+          Every SKU&rsquo;s files are chosen inside the part.
+        </p>
+        {addControl}
       </div>
     )
   }
 
-  const part = parts.find(p => p.role === chosen) ?? parts[0]
+  const part = shown.find(p => p.role === chosen) ?? shown[0]
 
   return (
     <div className="mt-3 flex flex-col gap-3">
@@ -147,7 +138,7 @@ export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): J
           rearrange itself into something unfamiliar. */}
       <div className="flex flex-wrap items-center gap-2">
         <nav className="flex flex-wrap gap-1" aria-label="Design files">
-          {parts.map(p => (
+          {shown.map(p => (
             <button
               key={p.role}
               type="button"
@@ -170,7 +161,10 @@ export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): J
             </button>
           ))}
         </nav>
-        {addButton}
+        {addControl}
+        {part?.id ? (
+          <PartSettingsDialog brand={brand} part={part} onChanged={() => void refresh()} />
+        ) : null}
       </div>
 
       {part ? (

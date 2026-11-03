@@ -8,6 +8,7 @@ import {
   removePreviewDesign,
 } from '@/app/dashboard/[brand]/production/design-fields-actions'
 import { assignVariantDesign } from '@/app/dashboard/[brand]/production/registry-actions'
+import { DesignFileUpload } from '@/components/production/design-file-upload'
 import { useDesignTemplates } from '@/components/production/design-templates-context'
 import { VariantFieldMapDialog } from '@/components/production/variant-field-map-dialog'
 import { Select } from '@/components/ui/select'
@@ -118,6 +119,11 @@ function VariantRow({
 }: VariantRowProps): JSX.Element {
   const router = useRouter()
   const sku = (variant.sku ?? '').trim()
+  // What an uploaded file is filed under: the product, the part and the SKU.
+  // Stable, so replacing a drawing versions the same key rather than littering
+  // the Designs tab with one entry per upload.
+  const slotKey = (slot: string): string =>
+    `${productCode}_${role}_${sku}${slot}`.toLowerCase().replace(/[^a-z0-9]+/g, '_')
   // The row's own file, or "" when it follows the product. variant.design is
   // the active row for this role, which the backend resolves per variant.
   const own = variant.design?.role === role ? (variant.design.template_key ?? '') : ''
@@ -195,6 +201,12 @@ function VariantRow({
           </Select>
         </label>
 
+        <DesignFileUpload
+          brand={brand}
+          uploadKey={slotKey('')}
+          onUploaded={key => choosePrinting(key)}
+        />
+
         {/* The file the customer approves, which is not the file that prints.
             Cleared back to none is a real state: the link then shows the
             model that will be made. */}
@@ -213,6 +225,12 @@ function VariantRow({
             ))}
           </Select>
         </label>
+
+        <DesignFileUpload
+          brand={brand}
+          uploadKey={slotKey('_preview')}
+          onUploaded={key => choosePreview(key)}
+        />
 
         <VariantFieldMapDialog
           brand={brand}

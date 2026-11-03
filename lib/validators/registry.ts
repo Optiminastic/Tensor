@@ -401,6 +401,21 @@ export const ProductDesignWriteSchema = z.object({
  * step.
  */
 export const ProductPartSchema = z.object({
+  /**
+   * The stored part's id, absent while it is only derived from its files.
+   *
+   * Absent is not an error: every product configured before parts could be
+   * named has parts and no rows. It is how the panel knows whether renaming
+   * and removing are available yet.
+   */
+  id: z.string().optional(),
+  /**
+   * A file per child SKU, or one file for every colourway.
+   *
+   * This decides which of the two pickers the part shows. Before it existed
+   * the panel had to show both, and nothing said which one was meant to win.
+   */
+  per_variant: z.boolean().default(true),
   role: z.string(),
   template_key: z.string(),
   fields: z.number(),
@@ -440,6 +455,13 @@ export type TemplateParam = z.infer<typeof TemplateParamSchema>
 export type ObservedProperty = z.infer<typeof ObservedPropertySchema>
 export type FieldMap = z.infer<typeof FieldMapSchema>
 export type ProductPart = z.infer<typeof ProductPartSchema>
+
+/** Naming a part, or changing its name and how it is scoped. */
+export const PartWriteSchema = z.object({
+  role: z.string().trim().min(1).max(64),
+  per_variant: z.boolean().optional(),
+})
+export type PartWriteInput = z.infer<typeof PartWriteSchema>
 export type FieldMapWriteInput = z.infer<typeof FieldMapWriteSchema>
 export type ProductDesignWriteInput = z.infer<typeof ProductDesignWriteSchema>
 export type ImportProductInput = z.infer<typeof ImportProductSchema>

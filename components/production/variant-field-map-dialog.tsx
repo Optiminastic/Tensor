@@ -139,6 +139,11 @@ export function VariantFieldMapDialog({
             properties={properties}
             params={params}
             maps={own}
+            // This SKU's own file, so a proposal reads the variables the
+            // mapping being edited will actually drive. A product whose
+            // colourways carry separate .scad files declares a different set
+            // per SKU - which is the whole reason a per-SKU mapping exists.
+            sku={variant.sku ?? undefined}
             onSaved={() => {
               onChanged()
               router.refresh()

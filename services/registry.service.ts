@@ -56,7 +56,14 @@ export class RegistryServiceError extends Error {}
  */
 export const REGISTRY_READ_FAILED = 'Could not load the registry.'
 
-async function call<T>(path: string, init: RequestInit, parse: (data: unknown) => T): Promise<T> {
+// Exported so registry-parts.service.ts shares this exact path - the error
+// shape, the Zod boundary and the logging are the contract with Tensor-Core,
+// and a second copy of them would drift the first time one was fixed.
+export async function call<T>(
+  path: string,
+  init: RequestInit,
+  parse: (data: unknown) => T,
+): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${env.TENSOR_CORE_URL}${path}`, {
@@ -91,7 +98,7 @@ async function call<T>(path: string, init: RequestInit, parse: (data: unknown) =
   }
 }
 
-function jsonHeaders(token: string): HeadersInit {
+export function jsonHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 }
 

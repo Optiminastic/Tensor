@@ -4,6 +4,8 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useState, type JSX } from 'react'
 
 import { saveFieldMaps } from '@/app/dashboard/[brand]/production/design-fields-actions'
+import { FieldMapPropertyCell } from '@/components/production/field-map-property-cell'
+import { FieldSuggestButton } from '@/components/production/field-suggest-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -13,6 +15,7 @@ import type {
   ObservedProperty,
   TemplateParam,
 } from '@/lib/validators/registry'
+import type { FieldSuggestion } from '@/lib/validators/registry-suggest'
 
 interface FieldMapEditorProps {
   brand: string
@@ -22,6 +25,10 @@ interface FieldMapEditorProps {
   properties: ObservedProperty[]
   params: TemplateParam[]
   maps: FieldMap[]
+  /** One colourway's own file, when this part keeps a file per child SKU.
+   *  Those files declare their own variables, so a proposal has to read the
+   *  one this mapping will actually drive. */
+  sku?: string
   /** Called after a save, so the parts list can re-read what is configured. */
   onSaved: () => void
   /**
@@ -36,9 +43,6 @@ interface FieldMapEditorProps {
 }
 
 const FIGURE = 'font-mono tabular-nums'
-
-/** The dropdown entry that switches a row to a fixed value. Not a property. */
-const FIXED_SENTINEL = '__fixed__'
 
 /** A row carries a value rather than reading one from the order. */
 function isFixed(row: FieldMapWriteInput): boolean {
@@ -68,6 +72,7 @@ export function FieldMapEditor({
   properties,
   params,
   maps,
+  sku,
   onSaved,
   onSave,
 }: FieldMapEditorProps): JSX.Element {
@@ -85,9 +90,15 @@ export function FieldMapEditor({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  // Why each proposed row was proposed, kept beside the form rather than
+  // inside it: the reviewer needs it once, while reading, and it is not part
+  // of what gets saved. Cleared by the first hand edit, because after that
+  // the reasons no longer describe the rows on screen.
+  const [reasons, setReasons] = useState<FieldSuggestion[]>([])
 
   function edit(index: number, patch: Partial<FieldMapWriteInput>): void {
     setSaved(false)
+    setReasons([])
     setRows(current => current.map((row, i) => (i === index ? { ...row, ...patch } : row)))
   }
 
@@ -131,6 +142,7 @@ export function FieldMapEditor({
       return
     }
     setSaved(true)
+    setReasons([])
     onSaved()
   }
 
@@ -140,6 +152,20 @@ export function FieldMapEditor({
 
   return (
     <div className="flex flex-col gap-3">
+      <FieldSuggestButton
+        brand={brand}
+        productCode={productCode}
+        role={role}
+        sku={sku}
+        hasRows={rows.length > 0}
+        onSuggested={(proposed, notes) => {
+          setSaved(false)
+          setError(null)
+          setRows(proposed)
+          setReasons(notes)
+        }}
+      />
+
       {rows.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           Nothing is mapped yet, so this product renders from its template&rsquo;s defaults — the
@@ -149,48 +175,18 @@ export function FieldMapEditor({
         <ul className="flex flex-col gap-2">
           {rows.map((row, index) => (
             <li key={index} className="flex flex-wrap items-end gap-2">
-              <label className="flex min-w-48 flex-1 flex-col gap-1">
-                <span className="text-muted-foreground text-xs">
-                  {isFixed(row) ? 'Always' : 'Order field'}
-                </span>
-                {/* Not every variable a template needs is the customer's. A
-                    plank needs OUT_X=200 to reach the finished product size;
-                    without it the template renders at its natural size, which
-                    for one real order was 377mm. */}
-                {isFixed(row) ? (
-                  <Input
-                    value={row.fixed_value ?? ''}
-                    onChange={e => edit(index, { fixed_value: e.target.value })}
-                    placeholder="e.g. 200"
-                  />
-                ) : (
-                  <Select
-                    value={row.property_key}
-                    onChange={e =>
-                      edit(index, {
-                        property_key: e.target.value,
-                        // FIXED_SENTINEL is the dropdown's own entry, never a
-                        // property key - switching mode must not store it.
-                        ...(e.target.value === FIXED_SENTINEL
-                          ? { property_key: '', fixed_value: ' ' }
-                          : {}),
-                      })
-                    }
-                  >
-                    <option value="">Choose…</option>
-                    <option value={FIXED_SENTINEL}>A fixed value…</option>
-                    {/* The saved key is offered even when no recent order carried
-                      it. A mapping written before a quiet week would otherwise
-                      vanish from its own editor and be silently dropped on the
-                      next save. */}
-                    {optionKeys(properties, row.property_key).map(key => (
-                      <option key={key} value={key}>
-                        {labelFor(properties, key)}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </label>
+              {/* Three ways a variable gets its value - a field the customers
+                  have sent, a fixed value, or a key typed by hand for a
+                  product that has not sold yet. See
+                  field-map-property-cell.tsx, which also keeps a saved key
+                  showing when no recent order carried it: a mapping written
+                  before a quiet week would otherwise vanish from its own
+                  editor and be silently dropped on the next save. */}
+              <FieldMapPropertyCell
+                properties={properties}
+                row={{ property_key: row.property_key, fixed_value: row.fixed_value ?? '' }}
+                onChange={patch => edit(index, patch)}
+              />
 
               <label className="flex min-w-40 flex-1 flex-col gap-1">
                 <span className="text-muted-foreground text-xs">Fills variable</span>
@@ -303,6 +299,8 @@ export function FieldMapEditor({
         </ul>
       )}
 
+      {reasons.length > 0 ? <WhyEachRow reasons={reasons} /> : null}
+
       {rows.length > 0 ? <SampleHint properties={properties} rows={rows} /> : null}
 
       {error ? (
@@ -366,20 +364,43 @@ function SampleHint({
   )
 }
 
-/** The observed keys, plus whatever this row already holds. */
-function optionKeys(properties: ObservedProperty[], current: string): string[] {
-  const keys = properties.map(p => p.key)
-  return current !== '' && !keys.includes(current) ? [...keys, current] : keys
-}
-
-function labelFor(properties: ObservedProperty[], key: string): string {
-  const found = properties.find(p => p.key === key)
-  if (!found) return `${key} (not seen recently)`
-  return `${found.label} · ${found.orders} order${found.orders === 1 ? '' : 's'}`
-}
-
 /** The template's variables, plus whatever this row already holds. */
 function variableNames(params: TemplateParam[], current: string): string[] {
   const names = params.map(p => p.name)
   return current !== '' && !names.includes(current) ? [...names, current] : names
+}
+
+/**
+ * Why each proposed row was proposed.
+ *
+ * Beside the form rather than inside it: the reviewer needs this once, while
+ * deciding whether to save, and it is not part of what gets saved.
+ *
+ * The two sources read differently and are marked differently. "The design
+ * names this field" is the author's own word and needs a glance; "matched on
+ * wording" is Tensor pairing two names and needs reading. Presenting them
+ * identically would be the one way this feature could do harm - somebody
+ * saving a guess because it looked as settled as a fact.
+ */
+function WhyEachRow({ reasons }: { reasons: FieldSuggestion[] }): JSX.Element {
+  return (
+    <div className="border-border bg-surface-muted flex flex-col gap-1.5 rounded-2xl border px-4 py-3">
+      <p className="text-muted-foreground text-xs">
+        Proposed from the design and this product&rsquo;s recent orders. Read it, then save.
+      </p>
+      <ul className="flex flex-col gap-1">
+        {reasons.map(r => (
+          <li key={r.scad_variable} className="text-subtle-foreground text-xs">
+            <span className="font-mono">{r.scad_variable}</span>
+            {r.source === 'file' ? (
+              <span className="text-success"> · stated in the design</span>
+            ) : (
+              <span className="text-warning"> · {r.strength} match</span>
+            )}{' '}
+            {r.why}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
