@@ -18,8 +18,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { templateKeyFromFileName } from '@/lib/template-key'
 
 interface DesignAddDialogProps {
   brand: string
@@ -28,15 +28,21 @@ interface DesignAddDialogProps {
 }
 
 /**
- * Adds a design file under a new key.
+ * Adds a design file, filed under its own name.
  *
- * The key is the name the renderer looks up and a variant links to, so it is
- * asked for rather than derived from the filename: "dnp_two_heart (2).scad"
- * dragged from a downloads folder would otherwise become a template key nobody
- * can type, pointing at nothing.
+ * The key is the name the renderer looks up and a variant links to, and it
+ * used to be typed into a box beside the file picker. Typing it is the step
+ * nobody should have to take: the designer already named the file, and that
+ * name is what they will go looking for.
  *
- * Adding a key that already exists is refused here rather than silently
- * uploading. The endpoint treats a repeat key as a new VERSION of that
+ * The typed field was guarding against something real - a file called
+ * "dnp_two_heart (2).scad" becoming a key nobody can type - so the name is
+ * NORMALISED rather than trimmed, by templateKeyFromFileName, and the result
+ * is SHOWN before the upload. Deriving it out of sight would be the same
+ * hazard moved somewhere nobody can see it.
+ *
+ * Adding a key that already exists is still refused rather than silently
+ * uploaded. The endpoint treats a repeat key as a new VERSION of that
  * template - correct for Replace, and wrong for someone who believes they are
  * adding a second design and has just overwritten the first.
  */
@@ -44,7 +50,6 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
-  const [key, setKey] = useState('')
   const [file, setFile] = useState<File | null>(null)
   // Where it will be filed. '' is automatic: the heading its use implies,
   // which for a file nothing links to yet is Other.
@@ -54,14 +59,18 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
 
   useEffect(() => {
     if (!open) return
-    setKey('')
     setFile(null)
     setSection('')
     setError(null)
   }, [open])
 
-  const normalised = key.trim().toLowerCase()
+  const normalised = file === null ? '' : templateKeyFromFileName(file.name)
   const taken = existingKeys.some(k => k.toLowerCase() === normalised)
+  // A name with nothing usable in it - "___.scad", or a name that is only
+  // punctuation. Rare, and silently uploading it under "" would 422 from the
+  // backend with "Name the template", which names nothing the person can act
+  // on while looking at this dialog.
+  const unusable = file !== null && normalised === ''
 
   async function save(): Promise<void> {
     if (!file) {
@@ -114,24 +123,11 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
         <DialogHeader>
           <DialogTitle>Add design file</DialogTitle>
           <DialogDescription>
-            An OpenSCAD .scad file, under a key that variants can link to.
+            An OpenSCAD .scad file. It is filed under its own name, which is the key variants link
+            to.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
-          <Field
-            label="Template key"
-            htmlFor="t-key"
-            hint="Lower case, no spaces — e.g. dnp_three_heart"
-          >
-            <Input
-              id="t-key"
-              value={key}
-              onChange={e => setKey(e.target.value)}
-              placeholder="dnp_three_heart"
-              autoComplete="off"
-            />
-          </Field>
-
           <Field label="File" htmlFor="t-file" hint={file ? file.name : 'No file chosen'}>
             <div className="flex gap-2">
               <input
@@ -152,6 +148,23 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
               </Button>
             </div>
           </Field>
+
+          {/* SHOWN, NOT HIDDEN. The key is what a variant links to and what
+              somebody types when looking for this file later, so the name it
+              is actually getting is on screen before the upload - a derived
+              key nobody saw would be the old hazard moved out of sight. */}
+          {normalised !== '' ? (
+            <p className="text-muted-foreground text-xs">
+              Filed as <span className="text-foreground font-mono">{normalised}</span>
+            </p>
+          ) : null}
+
+          {unusable ? (
+            <p className="text-warning text-xs">
+              There is nothing in that file&rsquo;s name to make a key from. Rename it to something
+              like dnp_three_heart.scad and choose it again.
+            </p>
+          ) : null}
 
           {/* Where it lands on this page. Not what it is FOR - that is
               decided by which product links it, on the product. */}
@@ -175,7 +188,9 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
 
           {taken ? (
             <p className="text-warning text-xs">
-              A design with that key already exists. Use Replace on its row to upload a new version.
+              A design is already filed as <span className="font-mono">{normalised}</span>. Use
+              Replace on its row to upload a new version of it, or rename the file to add it as a
+              separate design.
             </p>
           ) : null}
 
@@ -191,7 +206,9 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
             </Button>
             <Button
               onClick={() => void save()}
-              disabled={pending || normalised === '' || taken || !file}
+              // normalised is '' both with no file chosen and with a file
+              // whose name has nothing usable in it, so it covers both.
+              disabled={pending || normalised === '' || taken}
             >
               {pending ? 'Uploading…' : 'Add design file'}
             </Button>
