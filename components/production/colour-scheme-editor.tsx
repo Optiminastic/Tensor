@@ -44,6 +44,15 @@ export interface SchemeRow {
   partName: string
   /** A palette name, or "" for the customer's chosen colour. */
   colourName: string
+  /**
+   * Whether the ORDER decides this piece exists.
+   *
+   * Carried through the editor rather than set only from the stored row,
+   * because a scheme save replaces every piece: a row that came back without
+   * it would send false and make a conditional piece mandatory again, failing
+   * every order that does not buy it.
+   */
+  optional: boolean
 }
 
 interface ColourSchemeEditorProps {
@@ -120,6 +129,22 @@ export function ColourSchemeEditor({
                 <option value={row.colourName}>Always {row.colourName}</option>
               ) : null}
             </Select>
+            {/* A piece the order decides the existence of - the mirror's
+                verified tick. Every other piece holds the job when it renders
+                nothing, which is what catches a name the template cannot
+                draw, so this is opt-in per piece and never the default. */}
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={row.optional}
+                disabled={disabled}
+                className="accent-accent size-3.5"
+                onChange={e => update(i, { optional: e.target.checked })}
+              />
+              <span className="text-muted-foreground text-xs whitespace-nowrap">
+                Only on some orders
+              </span>
+            </label>
             <Button
               variant="ghost"
               size="sm"
@@ -138,7 +163,9 @@ export function ColourSchemeEditor({
           variant="secondary"
           size="sm"
           disabled={disabled}
-          onClick={() => onChange([...rows, { partName: '', colourName: FOLLOWS_CUSTOMER }])}
+          onClick={() =>
+            onChange([...rows, { partName: '', colourName: FOLLOWS_CUSTOMER, optional: false }])
+          }
         >
           <Plus className="size-4" aria-hidden />
           Add a piece

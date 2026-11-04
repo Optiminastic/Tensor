@@ -17,7 +17,9 @@ import {
 } from '@/components/production/colour-scheme-editor'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
-import type { ColourPart, RegistryVariant } from '@/lib/validators/registry'
+import { Tag } from '@/components/ui/tag'
+import type { RegistryVariant } from '@/lib/validators/registry'
+import type { ColourPart } from '@/lib/validators/registry-colour'
 
 interface ColourPartsPanelProps {
   brand: string
@@ -94,8 +96,12 @@ export function ColourPartsPanel({
   function beginEditing(): void {
     setRows(
       shown.length > 0
-        ? shown.map(p => ({ partName: p.part_name, colourName: p.colour_hex || FOLLOWS_CUSTOMER }))
-        : [{ partName: '', colourName: FOLLOWS_CUSTOMER }],
+        ? shown.map(p => ({
+            partName: p.part_name,
+            colourName: p.colour_hex || FOLLOWS_CUSTOMER,
+            optional: p.optional,
+          }))
+        : [{ partName: '', colourName: FOLLOWS_CUSTOMER, optional: false }],
     )
   }
 
@@ -120,6 +126,7 @@ export function ColourPartsPanel({
         parts: cleaned.map(r => ({
           part_name: r.partName,
           colour_hex: isRawHex(r.colourName) ? r.colourName : '',
+          optional: r.optional,
           ...(isRawHex(r.colourName) || r.colourName === FOLLOWS_CUSTOMER
             ? {}
             : { colour_name: r.colourName }),
@@ -237,6 +244,16 @@ export function ColourPartsPanel({
                   }}
                 />
                 <code className="font-mono text-sm">{part.part_name}</code>
+                {/* Said on the row rather than only in the editor: a piece
+                    that may be absent is why an order can come out with one
+                    fewer object than the scheme lists, and somebody looking
+                    at a model wondering where the tick went reads this
+                    first. */}
+                {part.optional ? (
+                  <Tag tone="muted" className="whitespace-nowrap">
+                    Only on some orders
+                  </Tag>
+                ) : null}
                 <span className="text-muted-foreground ml-auto text-sm">
                   {part.colour_hex ? `Always ${part.colour_hex}` : 'The colour the customer chose'}
                 </span>

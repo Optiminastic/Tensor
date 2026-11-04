@@ -26,11 +26,13 @@ import {
   RegistryProductDetailSchema,
   RegistryProductSchema,
   type VariantDesignWriteInput,
+} from '@/lib/validators/registry'
+import {
   type ColourPart,
   ColourPartSchema,
   ColourPartsResponseSchema,
   type ColourSchemeWriteInput,
-} from '@/lib/validators/registry'
+} from '@/lib/validators/registry-colour'
 
 const log = createLogger('RegistryService')
 const TIMEOUT_MS = 15_000
@@ -407,18 +409,28 @@ export async function uploadColourReference(
   )
 }
 
-/** Moves one piece between a fixed colour and the customer's choice. */
+/**
+ * Moves one piece between a fixed colour and the customer's choice, and sets
+ * whether the order may leave it out.
+ *
+ * `optional` is OMITTED when undefined rather than sent as false. The backend
+ * reads a missing field as "not mentioned" and keeps the stored answer, so a
+ * colour change cannot quietly make a conditional piece mandatory again and
+ * fail every order that does not buy it.
+ */
 export async function setColourPartColour(
   token: string,
   id: string,
-  colourHex: string,
+  change: { colourHex: string; optional?: boolean },
 ): Promise<ColourPart> {
+  const body: { colour_hex: string; optional?: boolean } = { colour_hex: change.colourHex }
+  if (change.optional !== undefined) body.optional = change.optional
   return call(
     `/registry/colour-parts/${encodeURIComponent(id)}`,
     {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ colour_hex: colourHex }),
+      body: JSON.stringify(body),
     },
     data => ColourPartSchema.parse(data),
   )

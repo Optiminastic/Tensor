@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
-import type { ColourPart, ColourSchemeWriteInput } from '@/lib/validators/registry'
+import type { ColourPart, ColourSchemeWriteInput } from '@/lib/validators/registry-colour'
 import {
   RegistryServiceError,
   clearColourParts,
@@ -94,16 +94,23 @@ export async function saveColourSchemeAction(
   }
 }
 
-/** Moves one piece between a fixed colour and the customer's choice. */
+/**
+ * Moves one piece between a fixed colour and the customer's choice, and sets
+ * whether the order decides the piece exists at all.
+ *
+ * `optional` left out means "not mentioned", which the backend reads as "keep
+ * what is stored" - so changing a hex never silently makes the mirror's tick
+ * mandatory again.
+ */
 export async function setColourPartColourAction(
   brand: string,
   id: string,
-  colourHex: string,
+  change: { colourHex: string; optional?: boolean },
 ): Promise<ActionResult<ColourPart>> {
   const { token: t, error } = await token()
   if (!t) return { ok: false, error }
   try {
-    const part = await setColourPartColour(t, id, colourHex)
+    const part = await setColourPartColour(t, id, change)
     revalidatePath(`/dashboard/${brand}/designs/registry`)
     return { ok: true, data: part }
   } catch (err) {
