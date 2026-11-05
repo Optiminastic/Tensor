@@ -224,21 +224,36 @@ export function FieldMapEditor({
                   for a plank, where a blank name is scrap; wrong for a rose
                   the customer chose not to name — two of the seven combos on
                   record carry no rose name at all. */}
+              {/* A CHECKBOX, not a dropdown, because this is the control that
+                  decides whether an order renders at all and it was being
+                  missed. Measured on the Family Crossword Frame: name_5 and
+                  name_6 sat on the default "Hold the job", so every order of
+                  four names failed with `this order carries no "name 5"` -
+                  a product that sells 2 to 6 names could only ever make the
+                  6-name one. Ticking it is now one click and reads as a
+                  property of the field rather than as a branch of a menu. */}
               <label className="flex w-32 flex-col gap-1">
-                <span className="text-muted-foreground text-xs">If not answered</span>
-                {/* A fixed value is always there, so there is nothing to
-                    decide - disabled rather than hidden, so the columns stay
-                    aligned down the list. */}
-                <Select
-                  value={
-                    isFixed(row) ? 'required' : row.optional === true ? 'optional' : 'required'
-                  }
-                  disabled={isFixed(row)}
-                  onChange={e => edit(index, { optional: e.target.value === 'optional' })}
-                >
-                  <option value="required">{isFixed(row) ? 'always set' : 'Hold the job'}</option>
-                  <option value="optional">Leave it out</option>
-                </Select>
+                <span className="text-muted-foreground text-xs">Optional</span>
+                <span className="flex h-9 items-center gap-2">
+                  {/* A fixed value is always there, so there is nothing to
+                      decide - disabled rather than hidden, so the columns
+                      stay aligned down the list. */}
+                  <input
+                    type="checkbox"
+                    className="accent-accent size-4"
+                    checked={!isFixed(row) && row.optional === true}
+                    disabled={isFixed(row)}
+                    aria-label={`${row.scad_variable || 'this field'} is optional`}
+                    onChange={e => edit(index, { optional: e.target.checked })}
+                  />
+                  <span className="text-muted-foreground text-xs text-pretty">
+                    {isFixed(row)
+                      ? 'always set'
+                      : row.optional === true
+                        ? 'render without it'
+                        : 'hold the job'}
+                  </span>
+                </span>
               </label>
 
               {/* What an unanswered optional field passes instead.
