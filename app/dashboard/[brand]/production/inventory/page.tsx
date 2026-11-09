@@ -31,6 +31,7 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
   let colourMap: ColourMapEntry[] = []
   let loadedColours: LoadedColour[] = []
   let error: string | null = null
+  let colourMapNotice: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
@@ -54,16 +55,20 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
     // The colour map and the unmapped spools travel together - one is the
     // record, the other is the work left - and both are read separately again
     // so a colour-map outage cannot blank the shelf an operator came for.
-    try {
-      ;[colourMap, loadedColours] = await Promise.all([
-        listColourMap(token),
-        listLoadedColours(token),
-      ])
-    } catch (err) {
-      if (!error) {
-        error =
-          err instanceof ColourMapServiceError ? err.message : 'Could not load the colour map.'
-      }
+    // A NOTICE, never the page-level error: that one replaces the whole page,
+    // and a slow BambuBuddy once blanked the spool shelf this way.
+    const [mapResult, loadedResult] = await Promise.allSettled([
+      listColourMap(token),
+      listLoadedColours(token),
+    ])
+    if (mapResult.status === 'fulfilled') colourMap = mapResult.value
+    if (loadedResult.status === 'fulfilled') loadedColours = loadedResult.value
+    const failed = [mapResult, loadedResult].find(r => r.status === 'rejected')
+    if (failed) {
+      colourMapNotice =
+        failed.reason instanceof ColourMapServiceError
+          ? `Colour map: ${failed.reason.message}`
+          : 'Could not load the colour map.'
     }
   }
 
@@ -80,6 +85,11 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
             title="Inventory"
             description={<>Filament on the spool shelf, and everything else a plank ships with.</>}
           />
+          {colourMapNotice ? (
+            <p role="status" className="bg-warning-subtle text-warning rounded-2xl px-4 py-3 text-sm">
+              {colourMapNotice}
+            </p>
+          ) : null}
           <InventoryTabs
             brand={brand}
             filaments={filaments}
