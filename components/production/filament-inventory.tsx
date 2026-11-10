@@ -12,6 +12,7 @@ import {
 } from '@/components/production/date-range'
 import { FilamentSyncButton } from '@/components/production/filament-sync-button'
 import { FilterBar } from '@/components/production/filter-bar'
+import { InventoryImportDialog } from '@/components/production/inventory-import-dialog'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -137,6 +138,7 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
         </p>
         <div className="flex items-start gap-2">
           <FilamentSyncButton brand={brand} />
+          <InventoryImportDialog kind="filament" />
           <AddFilamentDialog brand={brand} />
         </div>
       </div>

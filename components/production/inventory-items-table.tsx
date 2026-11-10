@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type JSX } from 'react'
 
+import { InventoryImportDialog } from '@/components/production/inventory-import-dialog'
 import { InventoryItemActions } from '@/components/production/inventory-item-actions'
 import { InventoryItemDialog } from '@/components/production/inventory-item-dialog'
 import { TablePagination } from '@/components/production/table-pagination'
@@ -85,6 +86,7 @@ export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps):
               Total value <span className={FIGURE}>{money(totalValue)}</span>
             </span>
           ) : null}
+          <InventoryImportDialog kind="items" />
           <InventoryItemDialog brand={brand} trigger={<Button>Add item</Button>} />
         </div>
       </div>
