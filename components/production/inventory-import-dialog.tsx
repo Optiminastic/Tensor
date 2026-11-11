@@ -19,6 +19,7 @@ interface InventoryImportDialogProps {
 interface ImportCopy {
   button: string
   title: string
+  sheet: string
   columns: string
   rule: string
 }
@@ -27,13 +28,17 @@ const COPY: Record<ImportKind, ImportCopy> = {
   filament: {
     button: 'Import filament',
     title: 'Import filament from Excel',
-    columns: 'Material, Colour, Grams available, Reorder level (g)',
-    rule: 'A material and colour already on the shelf has its grams replaced; a blank reorder level keeps the current one.',
+    sheet: 'Filament',
+    columns:
+      'Colour (or Color), and either Grams available or Closing (spools, 1 spool = 1000 g). Material is optional and defaults to PLA',
+    rule: 'A material and colour already on the shelf has its stock replaced; a blank reorder level keeps the current one.',
   },
   items: {
     button: 'Import items',
     title: 'Import items from Excel',
-    columns: 'Name, Quantity, Unit, Unit price, Code',
+    sheet: 'Boxes',
+    columns:
+      'Name (or Boxes), and Quantity (or Remaining; blank means none). Unit defaults to piece; Unit price and Code are optional',
     rule: 'An item already on the shelf (matched by name) has its quantity, unit and price replaced.',
   },
 }
@@ -79,8 +84,12 @@ export function InventoryImportDialog({ kind }: InventoryImportDialogProps): JSX
         setError(payload.detail ?? 'The spreadsheet was not accepted.')
         return
       }
-      const payload = data as { created?: number; updated?: number }
-      setResult(`${payload.created ?? 0} added, ${payload.updated ?? 0} updated.`)
+      const payload = data as { created?: number; updated?: number; columns?: string[] }
+      const kept = payload.columns ?? []
+      setResult(
+        `${payload.created ?? 0} added, ${payload.updated ?? 0} updated.` +
+          (kept.length > 0 ? ` Kept as custom columns: ${kept.join(', ')}.` : ''),
+      )
       router.refresh()
     } catch {
       setError('Could not reach Tensor-Core.')
@@ -106,8 +115,10 @@ export function InventoryImportDialog({ kind }: InventoryImportDialogProps): JSX
         </DialogHeader>
         <div className="flex flex-col gap-5">
           <p className="text-muted-foreground text-sm text-pretty">
-            The first sheet is read. Row 1 holds the headings: <strong>{copy.columns}</strong>.{' '}
-            {copy.rule} Every row is checked first; if any row is wrong, nothing is imported.
+            Reads the sheet named {copy.sheet} if there is one, otherwise the first. Row 1 holds the
+            headings: {copy.columns}. Any other column is kept as a custom column, and a TOTAL row
+            is skipped. {copy.rule} Every row is checked first; if any row is wrong, nothing is
+            imported.
           </p>
           <a href={`/api/inventory-import/${kind}`} className="self-start" download>
             <Button type="button" variant="ghost" size="sm">

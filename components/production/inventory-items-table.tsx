@@ -2,6 +2,8 @@
 
 import { useMemo, useState, type JSX } from 'react'
 
+import { ExtraValueCell } from '@/components/production/extra-value-cell'
+import { InventoryColumnsDialog } from '@/components/production/inventory-columns-dialog'
 import { InventoryImportDialog } from '@/components/production/inventory-import-dialog'
 import { InventoryItemActions } from '@/components/production/inventory-item-actions'
 import { InventoryItemDialog } from '@/components/production/inventory-item-dialog'
@@ -19,10 +21,13 @@ import {
 } from '@/components/ui/table'
 import { usePagination } from '@/hooks/use-pagination'
 import type { InventoryItem } from '@/lib/validators/inventory'
+import type { InventoryColumn } from '@/lib/validators/inventory-columns'
 
 interface InventoryItemsTableProps {
   brand: string
   items: InventoryItem[]
+  /** The shelf's custom columns, shown after the built-in ones. */
+  customColumns: InventoryColumn[]
 }
 
 const COLUMNS = ['Item', 'Quantity', 'Price per unit', 'Total value', 'Updated']
@@ -50,13 +55,22 @@ function quantity(value: number): string {
  * and what is it worth" - and inventing a low-stock rule would mean inventing
  * the reorder level it compares against.
  */
-export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps): JSX.Element {
+export function InventoryItemsTable({
+  brand,
+  items,
+  customColumns,
+}: InventoryItemsTableProps): JSX.Element {
   const [search, setSearch] = useState('')
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
     if (!needle) return items
-    return items.filter(item => item.name.toLowerCase().includes(needle))
+    // Custom values are searchable too: a box is often found by its size.
+    return items.filter(
+      item =>
+        item.name.toLowerCase().includes(needle) ||
+        Object.values(item.extra ?? {}).some(v => v.toLowerCase().includes(needle)),
+    )
   }, [items, search])
 
   const page = usePagination(filtered)
@@ -86,6 +100,7 @@ export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps):
               Total value <span className={FIGURE}>{money(totalValue)}</span>
             </span>
           ) : null}
+          <InventoryColumnsDialog brand={brand} shelf="items" columns={customColumns} />
           <InventoryImportDialog kind="items" />
           <InventoryItemDialog brand={brand} trigger={<Button>Add item</Button>} />
         </div>
@@ -107,6 +122,11 @@ export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps):
                     {column}
                   </TableHeaderCell>
                 ))}
+                {customColumns.map(column => (
+                  <TableHeaderCell key={column.id} className="py-2 whitespace-nowrap">
+                    {column.name}
+                  </TableHeaderCell>
+                ))}
                 {/* Unlabelled: a header over a row-action menu names nothing
                     the icon does not already say. */}
                 <TableHeaderCell className="w-12 py-2">
@@ -118,7 +138,7 @@ export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps):
               {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={COLUMNS.length + 1}
+                    colSpan={COLUMNS.length + customColumns.length + 1}
                     className="text-muted-foreground text-center text-sm"
                   >
                     No items match that search.
@@ -151,6 +171,16 @@ export function InventoryItemsTable({ brand, items }: InventoryItemsTableProps):
                     <TableCell className="text-muted-foreground py-2 text-xs whitespace-nowrap">
                       {new Date(item.updated_at).toLocaleDateString('en-IN')}
                     </TableCell>
+                    {customColumns.map(column => (
+                      <ExtraValueCell
+                        key={column.id}
+                        brand={brand}
+                        shelf="items"
+                        rowId={item.id}
+                        column={column.name}
+                        value={item.extra?.[column.name] ?? ''}
+                      />
+                    ))}
                     <TableCell className="py-2 text-right">
                       <InventoryItemActions brand={brand} item={item} />
                     </TableCell>

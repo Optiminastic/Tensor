@@ -9,6 +9,7 @@ import { Tabs, type TabItem } from '@/components/ui/tabs'
 import { useQueryTab } from '@/hooks/use-query-tab'
 import type { ColourMapEntry, LoadedColour } from '@/lib/validators/colour-map'
 import type { InventoryItem } from '@/lib/validators/inventory'
+import type { InventoryColumn } from '@/lib/validators/inventory-columns'
 import type { Filament } from '@/lib/validators/production'
 
 interface InventoryTabsProps {
@@ -18,6 +19,9 @@ interface InventoryTabsProps {
   colourMap: ColourMapEntry[]
   /** Spools loaded in the fleet that Tensor cannot name yet. */
   loadedColours: LoadedColour[]
+  /** Each shelf's custom columns. */
+  filamentColumns: InventoryColumn[]
+  itemColumns: InventoryColumn[]
 }
 
 const FILAMENT_TAB = 'filament'
@@ -41,6 +45,8 @@ export function InventoryTabs({
   items,
   colourMap,
   loadedColours,
+  filamentColumns,
+  itemColumns,
 }: InventoryTabsProps): JSX.Element {
   const [tab, setTab] = useQueryTab<string>('tab', FILAMENT_TAB)
 
@@ -60,8 +66,12 @@ export function InventoryTabs({
   return (
     <div className="flex flex-col gap-4">
       <Tabs tabs={tabs} value={tab} onValueChange={setTab} label="Choose an inventory shelf" />
-      {tab === FILAMENT_TAB ? <FilamentInventory brand={brand} filaments={filaments} /> : null}
-      {tab === OTHERS_TAB ? <InventoryItemsTable brand={brand} items={items} /> : null}
+      {tab === FILAMENT_TAB ? (
+        <FilamentInventory brand={brand} filaments={filaments} customColumns={filamentColumns} />
+      ) : null}
+      {tab === OTHERS_TAB ? (
+        <InventoryItemsTable brand={brand} items={items} customColumns={itemColumns} />
+      ) : null}
       {tab === COLOURS_TAB ? (
         <ColourMapView brand={brand} entries={colourMap} loaded={loadedColours} />
       ) : null}

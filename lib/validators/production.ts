@@ -484,6 +484,8 @@ export const FilamentSchema = z.object({
   reorder_level_grams: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
+  // Values for the shelf's custom columns, keyed by column name.
+  extra: z.record(z.string(), z.string()).optional(),
 })
 export type Filament = z.infer<typeof FilamentSchema>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { Hammer, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Hammer, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, type JSX } from 'react'
 
@@ -31,6 +31,7 @@ export function InventoryItemActions({ brand, item }: InventoryItemActionsProps)
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [adding, setAdding] = useState(false)
   const [sourcing, setSourcing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [pending, setPending] = useState(false)
@@ -115,6 +116,17 @@ export function InventoryItemActions({ brand, item }: InventoryItemActionsProps)
                 className="hover:bg-surface-muted flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
                 onClick={() => {
                   setOpen(false)
+                  setAdding(true)
+                }}
+              >
+                <Plus className="size-3.5" aria-hidden />
+                Add new item
+              </button>
+              <button
+                type="button"
+                className="hover:bg-surface-muted flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
+                onClick={() => {
+                  setOpen(false)
                   setSourcing(true)
                 }}
               >
@@ -137,6 +149,7 @@ export function InventoryItemActions({ brand, item }: InventoryItemActionsProps)
       {/* Outside the Popover: closing the menu to open the dialog would unmount
           the dialog with it. */}
       <InventoryItemDialog brand={brand} item={item} open={editing} onOpenChange={setEditing} />
+      <InventoryItemDialog brand={brand} open={adding} onOpenChange={setAdding} />
       {sourcing ? (
         <ComponentSourceDialog
           brand={brand}

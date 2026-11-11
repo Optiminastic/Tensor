@@ -7,12 +7,14 @@ import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { ColourMapEntry, LoadedColour } from '@/lib/validators/colour-map'
 import type { InventoryItem } from '@/lib/validators/inventory'
+import type { InventoryColumn } from '@/lib/validators/inventory-columns'
 import type { Filament } from '@/lib/validators/production'
 import {
   ColourMapServiceError,
   listColourMap,
   listLoadedColours,
 } from '@/services/colour-map.service'
+import { listInventoryColumns } from '@/services/inventory-columns.service'
 import { InventoryServiceError, listInventoryItems } from '@/services/inventory.service'
 import { ProductionServiceError, listFilament } from '@/services/production.service'
 
@@ -32,6 +34,8 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
   let loadedColours: LoadedColour[] = []
   let error: string | null = null
   let colourMapNotice: string | null = null
+  let filamentColumns: InventoryColumn[] = []
+  let itemColumns: InventoryColumn[] = []
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
@@ -57,10 +61,15 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
     // so a colour-map outage cannot blank the shelf an operator came for.
     // A NOTICE, never the page-level error: that one replaces the whole page,
     // and a slow BambuBuddy once blanked the spool shelf this way.
-    const [mapResult, loadedResult] = await Promise.allSettled([
+    const [mapResult, loadedResult, filamentColsResult, itemColsResult] = await Promise.allSettled([
       listColourMap(token),
       listLoadedColours(token),
+      listInventoryColumns(token, 'filament'),
+      listInventoryColumns(token, 'items'),
     ])
+    // Custom columns are extras: without them the shelves still show.
+    if (filamentColsResult.status === 'fulfilled') filamentColumns = filamentColsResult.value
+    if (itemColsResult.status === 'fulfilled') itemColumns = itemColsResult.value
     if (mapResult.status === 'fulfilled') colourMap = mapResult.value
     if (loadedResult.status === 'fulfilled') loadedColours = loadedResult.value
     const failed = [mapResult, loadedResult].find(r => r.status === 'rejected')
@@ -86,7 +95,10 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
             description={<>Filament on the spool shelf, and everything else a plank ships with.</>}
           />
           {colourMapNotice ? (
-            <p role="status" className="bg-warning-subtle text-warning rounded-2xl px-4 py-3 text-sm">
+            <p
+              role="status"
+              className="bg-warning-subtle text-warning rounded-2xl px-4 py-3 text-sm"
+            >
               {colourMapNotice}
             </p>
           ) : null}
@@ -96,6 +108,8 @@ export default async function InventoryPage({ params }: InventoryPageProps): Pro
             items={items}
             colourMap={colourMap}
             loadedColours={loadedColours}
+            filamentColumns={filamentColumns}
+            itemColumns={itemColumns}
           />
         </>
       )}

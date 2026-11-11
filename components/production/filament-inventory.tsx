@@ -10,8 +10,11 @@ import {
   type PeriodValue,
   resolvePeriod,
 } from '@/components/production/date-range'
+import { ExtraValueCell } from '@/components/production/extra-value-cell'
+import { FilamentRowMenu } from '@/components/production/filament-row-menu'
 import { FilamentSyncButton } from '@/components/production/filament-sync-button'
 import { FilterBar } from '@/components/production/filter-bar'
+import { InventoryColumnsDialog } from '@/components/production/inventory-columns-dialog'
 import { InventoryImportDialog } from '@/components/production/inventory-import-dialog'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -35,11 +38,15 @@ import {
 } from '@/components/ui/table'
 import type { TabItem } from '@/components/ui/tabs'
 import { Tag } from '@/components/ui/tag'
+import { swatchForName } from '@/lib/colour-name-swatch'
+import type { InventoryColumn } from '@/lib/validators/inventory-columns'
 import type { Filament } from '@/lib/validators/production'
 
 interface FilamentInventoryProps {
   brand: string
   filaments: Filament[]
+  /** The shelf's custom columns, shown after the built-in ones. */
+  customColumns: InventoryColumn[]
 }
 
 interface ColourSwatchProps {
@@ -52,12 +59,14 @@ interface ColourSwatchProps {
  *
  * A name is what the planner keys on, but nobody can picture "Ivory" - and an
  * operator matching stock against a shelf is matching the swatch. The dot is
- * only drawn when a hex actually exists: a row typed in by hand has no colour
- * to show, and defaulting to grey would look like a real colour rather than an
- * absent one.
+ * drawn solid when a hex exists. Without one, a name the browser recognises
+ * (Royal Blue, or the last word of "Bbay Blue") gets a DASHED dot, marked
+ * approximate; a name nothing recognises gets none - defaulting to grey would
+ * look like a real colour rather than an absent one.
  */
 function ColourSwatch({ name, hex }: ColourSwatchProps): JSX.Element {
   if (!name) return <span className="text-muted-foreground">-</span>
+  const approximate = hex ? null : swatchForName(name)
   return (
     <span className="flex items-center gap-2">
       {hex ? (
@@ -65,6 +74,12 @@ function ColourSwatch({ name, hex }: ColourSwatchProps): JSX.Element {
           aria-hidden
           className="border-border size-3.5 shrink-0 rounded-full border"
           style={{ backgroundColor: hex }}
+        />
+      ) : approximate ? (
+        <span
+          className="border-border-strong size-3.5 shrink-0 rounded-full border border-dashed"
+          style={{ backgroundColor: approximate }}
+          title="Approximate - worked out from the name. Add it to the colour map for the exact shade."
         />
       ) : null}
       <span>{name}</span>
@@ -84,7 +99,11 @@ function matchesSearch(filament: Filament, search: string): boolean {
 
 /** Filament stock, one line per (material, colour), with a reorder threshold and a
  * low-stock indicator. Wired to Tensor-Core's /filament-inventory. */
-export function FilamentInventory({ brand, filaments }: FilamentInventoryProps): JSX.Element {
+export function FilamentInventory({
+  brand,
+  filaments,
+  customColumns,
+}: FilamentInventoryProps): JSX.Element {
   const [search, setSearch] = useState('')
   const [stock, setStock] = useState('')
   const [material, setMaterial] = useState('')
@@ -138,6 +157,7 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
         </p>
         <div className="flex items-start gap-2">
           <FilamentSyncButton brand={brand} />
+          <InventoryColumnsDialog brand={brand} shelf="filament" columns={customColumns} />
           <InventoryImportDialog kind="filament" />
           <AddFilamentDialog brand={brand} />
         </div>
@@ -180,12 +200,23 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
                   <TableHeaderCell className="text-right">Available (kg)</TableHeaderCell>
                   <TableHeaderCell className="text-right">Reorder at (kg)</TableHeaderCell>
                   <TableHeaderCell>Status</TableHeaderCell>
+                  {customColumns.map(column => (
+                    <TableHeaderCell key={column.id} className="whitespace-nowrap">
+                      {column.name}
+                    </TableHeaderCell>
+                  ))}
+                  <TableHeaderCell className="w-12">
+                    <span className="sr-only">Actions</span>
+                  </TableHeaderCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-muted-foreground text-center text-sm">
+                    <TableCell
+                      colSpan={6 + customColumns.length}
+                      className="text-muted-foreground text-center text-sm"
+                    >
                       No filament matches these filters.
                     </TableCell>
                   </TableRow>
@@ -210,6 +241,19 @@ export function FilamentInventory({ brand, filaments }: FilamentInventoryProps):
                         </TableCell>
                         <TableCell>
                           <Tag tone={low ? 'warning' : 'success'}>{low ? 'Low' : 'In stock'}</Tag>
+                        </TableCell>
+                        {customColumns.map(column => (
+                          <ExtraValueCell
+                            key={column.id}
+                            brand={brand}
+                            shelf="filament"
+                            rowId={filament.id}
+                            column={column.name}
+                            value={filament.extra?.[column.name] ?? ''}
+                          />
+                        ))}
+                        <TableCell className="text-right">
+                          <FilamentRowMenu brand={brand} filament={filament} />
                         </TableCell>
                       </TableRow>
                     )

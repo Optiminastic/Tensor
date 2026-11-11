@@ -78,6 +78,8 @@ export const InventoryItemSchema = z.object({
     .transform(v => v ?? 'per_sku'),
   created_at: z.string(),
   updated_at: z.string(),
+  // Values for the shelf's custom columns, keyed by column name.
+  extra: z.record(z.string(), z.string()).optional(),
 })
 
 export type InventoryItem = z.infer<typeof InventoryItemSchema>
