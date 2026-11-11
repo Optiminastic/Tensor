@@ -7,12 +7,14 @@ import {
   AddInventoryColumnSchema,
   type InventoryColumn,
   SetInventoryExtraSchema,
+  SetInventoryExtrasSchema,
 } from '@/lib/validators/inventory-columns'
 import {
   InventoryColumnsServiceError,
   addInventoryColumn as addColumn,
   deleteInventoryColumn as deleteColumn,
   setInventoryExtra as setExtra,
+  setInventoryExtras as setExtras,
 } from '@/services/inventory-columns.service'
 
 import type { ActionResult } from '../actions'
@@ -79,5 +81,29 @@ export async function setInventoryExtra(
     return { ok: true, data: null }
   } catch (err) {
     return failure(err, 'Could not save the value.')
+  }
+}
+
+/** Writes several custom values on one row together - the Edit form's save. */
+export async function setInventoryExtras(
+  brand: string,
+  input: unknown,
+): Promise<ActionResult<null>> {
+  const parsed = SetInventoryExtrasSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? 'Those values were not accepted.',
+    }
+  }
+  if (Object.keys(parsed.data.values).length === 0) return { ok: true, data: null }
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error }
+  try {
+    await setExtras(token, parsed.data)
+    revalidateInventory(brand)
+    return { ok: true, data: null }
+  } catch (err) {
+    return failure(err, 'Could not save the custom values.')
   }
 }

@@ -30,3 +30,14 @@ export const SetInventoryExtraSchema = z.object({
   value: z.string().max(500),
 })
 export type SetInventoryExtraInput = z.infer<typeof SetInventoryExtraSchema>
+
+/** Several custom values on one row, saved together - the Edit form. */
+export const SetInventoryExtrasSchema = z.object({
+  shelf: InventoryShelfSchema,
+  rowId: z.string().uuid(),
+  values: z.record(
+    z.string().min(1).max(64),
+    z.string().max(500, 'A value is at most 500 characters.'),
+  ),
+})
+export type SetInventoryExtrasInput = z.infer<typeof SetInventoryExtrasSchema>

@@ -5,9 +5,12 @@ import { useState, type FormEvent, type JSX } from 'react'
 
 import { addFilament } from '@/app/dashboard/[brand]/production/actions'
 import { editFilament } from '@/app/dashboard/[brand]/production/inventory/filament-row-actions'
+import { setInventoryExtras } from '@/app/dashboard/[brand]/production/inventory/inventory-columns-actions'
+import { CustomFieldInputs } from '@/components/production/custom-field-inputs'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { changedCustomValues } from '@/lib/inventory-extra'
 import type { Filament } from '@/lib/validators/production'
 
 interface FilamentDraft {
@@ -16,6 +19,7 @@ interface FilamentDraft {
   hex: string
   kg: string
   reorderKg: string
+  extra: Record<string, string>
 }
 
 function draftOf(filament?: Filament): FilamentDraft {
@@ -25,6 +29,7 @@ function draftOf(filament?: Filament): FilamentDraft {
     hex: filament?.colour_hex ?? '',
     kg: filament ? String(filament.grams_available / 1000) : '',
     reorderKg: filament ? String(filament.reorder_level_grams / 1000) : '',
+    extra: { ...(filament?.extra ?? {}) },
   }
 }
 
@@ -59,6 +64,20 @@ export function FilamentRowForm({ brand, filament, onDone }: FilamentRowFormProp
     if (!res.ok) {
       setError(res.error ?? 'Could not save the filament.')
       return
+    }
+    // The custom columns save second: they belong to the row, so a new row
+    // has to exist before they can.
+    const rowId = filament?.id ?? res.data?.id
+    const values = changedCustomValues(filament?.extra, draft.extra)
+    if (rowId && Object.keys(values).length > 0) {
+      setPending(true)
+      const saved = await setInventoryExtras(brand, { shelf: 'filament', rowId, values })
+      setPending(false)
+      if (!saved.ok) {
+        setError(saved.error ?? 'The row saved, but its custom columns did not.')
+        router.refresh()
+        return
+      }
     }
     onDone()
     router.refresh()
@@ -119,6 +138,12 @@ export function FilamentRowForm({ brand, filament, onDone }: FilamentRowFormProp
           />
         </Field>
       </div>
+      <CustomFieldInputs
+        shelf="filament"
+        values={draft.extra}
+        onChange={(column, value) => set({ extra: { ...draft.extra, [column]: value } })}
+        disabled={pending}
+      />
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}

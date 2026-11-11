@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, type JSX, type ReactNode } from 'react'
 
 import { setComponentSourceAction } from '@/app/dashboard/[brand]/production/component-actions'
+import { setInventoryExtras } from '@/app/dashboard/[brand]/production/inventory/inventory-columns-actions'
 import {
   addInventoryItem,
   editInventoryItem,
 } from '@/app/dashboard/[brand]/production/inventory-actions'
 import { loadShopifyCatalogue } from '@/app/dashboard/[brand]/production/registry-actions'
 import { ComponentSourceDialog } from '@/components/production/component-source-dialog'
+import { CustomFieldInputs } from '@/components/production/custom-field-inputs'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -24,6 +26,7 @@ import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import { changedCustomValues } from '@/lib/inventory-extra'
 import { INVENTORY_UNITS, type InventoryItem, type InventoryUnit } from '@/lib/validators/inventory'
 import type { ShopifyProduct } from '@/lib/validators/shopify-products'
 
@@ -75,6 +78,8 @@ export function InventoryItemDialog({
     item?.unit_price === null ? '' : String(item?.unit_price ?? ''),
   )
   const [code, setCode] = useState(item?.code ?? '')
+  // The shelf's custom columns, edited here beside the built-in fields.
+  const [extra, setExtra] = useState<Record<string, string>>({ ...(item?.extra ?? {}) })
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // The live Shopify catalogue, so a part can be declared for a product
@@ -94,6 +99,7 @@ export function InventoryItemDialog({
       item?.unit_price === null || item?.unit_price === undefined ? '' : String(item.unit_price),
     )
     setCode(item?.code ?? '')
+    setExtra({ ...(item?.extra ?? {}) })
     setProductGID(item?.shopify_product_gid ?? '')
     setError(null)
     void loadShopifyCatalogue(brand).then(res => {
@@ -124,6 +130,19 @@ export function InventoryItemDialog({
     if (!res.ok) {
       setError(res.error ?? 'Could not save the item.')
       return
+    }
+    // Custom columns save second: a new item has to exist before its values can.
+    const rowId = item?.id ?? res.data?.id
+    const values = changedCustomValues(item?.extra, extra)
+    if (rowId && Object.keys(values).length > 0) {
+      setPending(true)
+      const saved = await setInventoryExtras(brand, { shelf: 'items', rowId, values })
+      setPending(false)
+      if (!saved.ok) {
+        setError(saved.error ?? 'The item saved, but its custom columns did not.')
+        router.refresh()
+        return
+      }
     }
     setOpen(false)
     router.refresh()
@@ -271,6 +290,12 @@ export function InventoryItemDialog({
                 placeholder="Leave blank if not recorded"
               />
             </Field>
+            <CustomFieldInputs
+              shelf="items"
+              values={extra}
+              onChange={(column, value) => setExtra(prev => ({ ...prev, [column]: value }))}
+              disabled={pending}
+            />
             {error ? (
               <p
                 role="alert"

@@ -7,6 +7,7 @@ import {
   InventoryColumnSchema,
   type InventoryShelf,
   type SetInventoryExtraInput,
+  type SetInventoryExtrasInput,
 } from '@/lib/validators/inventory-columns'
 
 const log = createLogger('InventoryColumnsService')
@@ -87,6 +88,21 @@ export async function setInventoryExtra(
       method: 'PATCH',
       headers: jsonHeaders(token),
       body: JSON.stringify({ column: input.column, value: input.value }),
+    },
+    () => undefined,
+  )
+}
+
+export async function setInventoryExtras(
+  token: string,
+  input: SetInventoryExtrasInput,
+): Promise<void> {
+  return call(
+    `${ROW_PATHS[input.shelf]}/${encodeURIComponent(input.rowId)}/extra`,
+    {
+      method: 'PATCH',
+      headers: jsonHeaders(token),
+      body: JSON.stringify({ values: input.values }),
     },
     () => undefined,
   )

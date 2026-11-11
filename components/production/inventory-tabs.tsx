@@ -4,6 +4,7 @@ import { useState, type JSX } from 'react'
 
 import { ColourMapView } from '@/components/production/colour-map-view'
 import { FilamentInventory } from '@/components/production/filament-inventory'
+import { InventoryColumnsProvider } from '@/components/production/inventory-columns-context'
 import { InventoryItemsTable } from '@/components/production/inventory-items-table'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import { useQueryTab } from '@/hooks/use-query-tab'
@@ -64,17 +65,19 @@ export function InventoryTabs({
   ]
 
   return (
-    <div className="flex flex-col gap-4">
-      <Tabs tabs={tabs} value={tab} onValueChange={setTab} label="Choose an inventory shelf" />
-      {tab === FILAMENT_TAB ? (
-        <FilamentInventory brand={brand} filaments={filaments} customColumns={filamentColumns} />
-      ) : null}
-      {tab === OTHERS_TAB ? (
-        <InventoryItemsTable brand={brand} items={items} customColumns={itemColumns} />
-      ) : null}
-      {tab === COLOURS_TAB ? (
-        <ColourMapView brand={brand} entries={colourMap} loaded={loadedColours} />
-      ) : null}
-    </div>
+    <InventoryColumnsProvider columns={{ filament: filamentColumns, items: itemColumns }}>
+      <div className="flex flex-col gap-4">
+        <Tabs tabs={tabs} value={tab} onValueChange={setTab} label="Choose an inventory shelf" />
+        {tab === FILAMENT_TAB ? (
+          <FilamentInventory brand={brand} filaments={filaments} customColumns={filamentColumns} />
+        ) : null}
+        {tab === OTHERS_TAB ? (
+          <InventoryItemsTable brand={brand} items={items} customColumns={itemColumns} />
+        ) : null}
+        {tab === COLOURS_TAB ? (
+          <ColourMapView brand={brand} entries={colourMap} loaded={loadedColours} />
+        ) : null}
+      </div>
+    </InventoryColumnsProvider>
   )
 }
