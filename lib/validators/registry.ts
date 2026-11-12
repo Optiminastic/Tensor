@@ -449,6 +449,9 @@ export const ImportProductResultSchema = z.object({
   skipped: z.number(),
   /** Variants this import stopped matching, because Shopify dropped them. */
   retired: z.number(),
+  /** Some variants carry no SKU, so their orders are matched by the Shopify
+   *  product through a stand-in variant whose SKU is the product code. */
+  match_by_product: z.boolean().optional(),
 })
 
 export type TemplateParam = z.infer<typeof TemplateParamSchema>

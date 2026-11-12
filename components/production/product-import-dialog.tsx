@@ -107,8 +107,8 @@ export function ProductImportDialog({ brand, trigger }: ProductImportDialogProps
         <DialogHeader>
           <DialogTitle>Add a product</DialogTitle>
           <DialogDescription>
-            Choose it from Shopify. Its SKUs come with it — those are what an order is matched to
-            the product by.
+            Choose it from Shopify. Its SKUs come with it, and an order is matched to the product by
+            its SKU - or, when a variant has none, by the Shopify product itself.
           </DialogDescription>
         </DialogHeader>
 
@@ -197,14 +197,8 @@ function CatalogueList({ catalogue, matches, chosen, onChoose }: CatalogueListPr
                 {/* The count, not the SKUs: one line per product keeps this a
                     list you can scan. The SKUs themselves appear below once a
                     product is chosen, where there is room to read them. */}
-                <span
-                  className={cn(
-                    'shrink-0 text-xs',
-                    withSku.length === 0 ? 'text-warning' : 'text-muted-foreground',
-                    FIGURE,
-                  )}
-                >
-                  {withSku.length === 0 ? 'no SKUs' : `${withSku.length} SKUs`}
+                <span className={cn('shrink-0 text-xs', 'text-muted-foreground', FIGURE)}>
+                  {withSku.length === 0 ? 'matched by product' : `${withSku.length} SKUs`}
                 </span>
               </button>
             </li>
@@ -235,9 +229,10 @@ function ImportPreview({ product }: { product: ShopifyProduct }): JSX.Element {
       </div>
 
       {withSku.length === 0 ? (
-        <p className="text-warning text-xs">
-          None of this product&rsquo;s variants carry a SKU, so no order could ever be matched to
-          it. Add SKUs in Shopify first.
+        <p className="text-muted-foreground text-xs">
+          No variant carries a SKU, so its orders will be matched by this Shopify product, through
+          one variant named <span className={FIGURE}>{code || '—'}</span>. Give that variant a print
+          file and field mapping as usual.
         </p>
       ) : (
         <div className="flex flex-wrap gap-1">
@@ -256,7 +251,9 @@ function ImportPreview({ product }: { product: ShopifyProduct }): JSX.Element {
       {variants.length > withSku.length ? (
         <p className="text-muted-foreground text-xs">
           {variants.length - withSku.length} variant
-          {variants.length - withSku.length === 1 ? '' : 's'} carry no SKU and will be skipped.
+          {variants.length - withSku.length === 1 ? '' : 's'} carry no SKU; their orders will be
+          matched by this Shopify product, through the variant{' '}
+          <span className={FIGURE}>{code || '—'}</span>.
         </p>
       ) : null}
     </div>
