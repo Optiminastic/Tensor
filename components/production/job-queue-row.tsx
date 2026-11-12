@@ -121,6 +121,9 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
           {/* "Oops" alone says something is wrong but not what. The renderer's
               own words are the only useful thing anyone has. */}
           <FailureNote reason={job.modelError} className="max-w-52 text-right" />
+          {/* A failed render says "Rebuild the model" - so the row offers it,
+              rather than sending the operator into the job to find it. */}
+          {job.modelStatus === 'failed' ? <JobRerenderButton jobId={job.id} /> : null}
         </div>
       </TableCell>
     </TableRow>
