@@ -5,6 +5,7 @@ import { useState, type JSX, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { FailureNote, failureRowClass } from '@/components/production/failure-note'
 import { JobModelUploadButton } from '@/components/production/job-model-upload-button'
+import { JobRerenderButton } from '@/components/production/job-rerender-button'
 import { PersonalisationTag } from '@/components/production/personalisation-tag'
 import {
   MODEL_STATUS_CONFIG,
@@ -106,7 +107,14 @@ export function JobQueueRow({ brand, job }: JobQueueRowProps): JSX.Element {
       <TableCell className="text-right">
         <div className="flex flex-col items-end gap-1">
           {job.modelStatus === 'approval_required' ? (
-            <JobModelUploadButton jobId={job.id} />
+            <>
+              <JobModelUploadButton jobId={job.id} />
+              {/* Rebuild too: a job judged "upload a model" before its
+                  product was set up in the registry can now be built from
+                  it. For a product that really is uploaded, the backend says
+                  so. */}
+              <JobRerenderButton jobId={job.id} />
+            </>
           ) : (
             <TonePill {...MODEL_STATUS_CONFIG[job.modelStatus]} />
           )}

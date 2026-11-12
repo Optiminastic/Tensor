@@ -62,7 +62,9 @@ export function JobModelPreview({
                   than uploading around: the geometry is Tensor's to build, and
                   the usual cause - an unresolvable colour, a name OpenSCAD
                   could not set - is fixed elsewhere and then rebuilt here. */}
-              {jobId && modelStatus === 'failed' ? (
+              {/* And for a job waiting on an upload: one judged before its
+                  product was set up in the registry builds from it now. */}
+              {jobId && (modelStatus === 'failed' || modelStatus === 'approval_required') ? (
                 <JobRerenderButton jobId={jobId} size="md" />
               ) : null}
             </>
