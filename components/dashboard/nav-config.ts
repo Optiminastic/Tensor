@@ -9,6 +9,7 @@ import {
   Coins,
   Factory,
   FileSpreadsheet,
+  ImagePlus,
   Gauge,
   Layers,
   LayoutDashboard,
@@ -191,6 +192,13 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
         href: '/production/bulk-orders',
         icon: FileSpreadsheet,
         permission: 'bulk_order:read',
+      },
+      // Print files made from one order: the DNP photo frame and the moon night lamp.
+      {
+        label: 'Product Creation',
+        href: '/production/product-creation',
+        icon: ImagePlus,
+        permission: 'production:read',
       },
       // Below Inventory on purpose: the Registry is what Inventory is ABOUT.
       // Inventory says how many LED strips are on the shelf; the Registry says
