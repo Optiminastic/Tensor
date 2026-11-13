@@ -183,10 +183,9 @@ export const PRIMARY_SECTIONS: PrimarySection[] = [
         icon: Warehouse,
         permission: 'filament:read',
       },
-      // Directly below Inventory, where the shop asked for it, and ADMIN ONLY.
-      // bulk_order:read is granted to no role but ADMIN, which holds every
-      // permission by construction - so this leaf is invisible to everyone
-      // else even though the Production section around it is not.
+      // Directly below Inventory, where the shop asked for it. bulk_order:read
+      // is held by ADMIN and, since 2026-11-13, DESIGNER (every Production
+      // action an admin has); every other role still does not see this leaf.
       {
         label: 'Bulk Orders',
         href: '/production/bulk-orders',

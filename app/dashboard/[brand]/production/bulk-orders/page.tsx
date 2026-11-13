@@ -23,7 +23,8 @@ interface BulkOrdersPageProps {
  * Bulk orders: a business asks for a hundred planks, the shop answers with a
  * quotation.
  *
- * ADMIN ONLY, on bulk_order:read - the same key that puts it in the nav. It was
+ * On bulk_order:read - the same key that puts it in the nav - held by ADMIN and,
+ * since 2026-11-13, DESIGNER. It was
  * pricing:read first, which a Project Lead and a Performance Marketer also
  * hold, so the page was visible to three roles rather than one. Bulk orders
  * carry negotiated prices and can put a hundred jobs on the floor from one
