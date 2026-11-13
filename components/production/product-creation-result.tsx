@@ -3,11 +3,13 @@
 import { Box, Download, FileText } from 'lucide-react'
 import type { JSX } from 'react'
 
+import { BackgroundBuildButton } from '@/components/production/background-build-button'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { CreatableProduct } from '@/lib/product-creation'
 
 interface ProductCreationResultProps {
+  brand: string
   product: CreatableProduct
   order: string
   previewUrl: string
@@ -18,6 +20,7 @@ interface ProductCreationResultProps {
 
 /** The built preview, with the PNG and the print file to download. */
 export function ProductCreationResult({
+  brand,
   product,
   order,
   previewUrl,
@@ -38,10 +41,19 @@ export function ProductCreationResult({
               <Download className="size-4" aria-hidden /> Download PNG
             </Button>
           </a>
-          <Button type="button" onClick={onDownload} disabled={downloading}>
-            <Icon className="size-4" aria-hidden />
-            {downloading ? 'Building…' : product.download.label}
-          </Button>
+          {product.download.background ? (
+            <BackgroundBuildButton
+              brand={brand}
+              product={product.value}
+              order={order}
+              label={product.download.label}
+            />
+          ) : (
+            <Button type="button" onClick={onDownload} disabled={downloading}>
+              <Icon className="size-4" aria-hidden />
+              {downloading ? 'Building…' : product.download.label}
+            </Button>
+          )}
         </div>
       </div>
       {/* A blob URL from the backend, not a static asset next/image can optimise. */}

@@ -6,7 +6,7 @@ import { env } from '@/lib/env'
 export const runtime = 'nodejs'
 
 /** The products the page can build, by URL segment. Anything else is a 404. */
-const PRODUCTS = new Set(['dnp-photo-frame', 'night-lamp'])
+const PRODUCTS = new Set(['dnp-photo-frame', 'night-lamp', 'moon-lamp'])
 
 /**
  * Proxies a product build to Tensor-Core and streams the file back.

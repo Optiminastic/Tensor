@@ -3,6 +3,7 @@
 import { ImagePlus } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type JSX } from 'react'
 
+import { BuildFirstResult } from '@/components/production/build-first-result'
 import { ProductCreationResult } from '@/components/production/product-creation-result'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -16,6 +17,8 @@ interface ProductCreationFormProps {
 }
 
 type Built = { product: string; order: string; url: string; filename: string }
+/** run remounts the result, so Submit again starts (or finds) the build again. */
+type BuildFirst = { product: string; order: string; run: number }
 
 /**
  * Choose a product, give an order number, get the print file.
@@ -31,18 +34,27 @@ export function ProductCreationForm({ brand }: ProductCreationFormProps): JSX.El
   const [pending, setPending] = useState<'preview' | 'download' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [built, setBuilt] = useState<Built | null>(null)
+  const [buildFirst, setBuildFirst] = useState<BuildFirst | null>(null)
 
   // The preview is a blob URL; release it when it is replaced or the page goes.
   useEffect(() => () => (built ? URL.revokeObjectURL(built.url) : undefined), [built])
 
   const chosen = CREATABLE_PRODUCTS.find(p => p.value === product) ?? CREATABLE_PRODUCTS[0]
   const builtProduct = CREATABLE_PRODUCTS.find(p => p.value === built?.product)
+  const buildFirstProduct = CREATABLE_PRODUCTS.find(p => p.value === buildFirst?.product)
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     setError(null)
-    setPending('preview')
     const order = orderNumber.trim()
+    if (chosen?.buildFirst) {
+      // The picture comes from the finished model, so the build is the preview.
+      setBuilt(null)
+      setBuildFirst({ product, order, run: (buildFirst?.run ?? 0) + 1 })
+      return
+    }
+    setBuildFirst(null)
+    setPending('preview')
     const res = await buildProductFile(brand, product, { order_number: order, format: 'png' })
     setPending(null)
     if ('error' in res) {
@@ -110,12 +122,22 @@ export function ProductCreationForm({ brand }: ProductCreationFormProps): JSX.El
 
       {built && builtProduct ? (
         <ProductCreationResult
+          brand={brand}
           product={builtProduct}
           order={built.order}
           previewUrl={built.url}
           previewName={built.filename}
           downloading={pending === 'download'}
           onDownload={() => void download()}
+        />
+      ) : null}
+
+      {buildFirst && buildFirstProduct ? (
+        <BuildFirstResult
+          key={buildFirst.run}
+          brand={brand}
+          product={buildFirstProduct}
+          order={buildFirst.order}
         />
       ) : null}
     </div>
