@@ -80,6 +80,22 @@ export const CREATABLE_PRODUCTS: readonly CreatableProduct[] = [
     buildFirst: true,
     check: 'the display side, letters up - check both names before printing.',
   },
+  {
+    value: 'couple-date-plank',
+    label: 'Couple Date Plank',
+    hint: 'From the registry: the two names, the date and their three colours from the order (name_1, name_2, date, left_name_color, right_name_color, couple_date_color). One coloured 3MF.',
+    download: { format: '3mf', label: 'Download 3MF', background: true },
+    buildFirst: true,
+    check: 'check both names, the date and the colours before printing.',
+  },
+  {
+    value: 'registry',
+    label: 'Any registry product (from the order)',
+    hint: 'Every item in the order that the registry knows how to make, from its own design file and field mapping. One item gives its 3MF; several give a ZIP of all of them.',
+    download: { format: '3mf', label: 'Download file', background: true },
+    buildFirst: true,
+    check: 'every item the registry makes for this order - check each before printing.',
+  },
 ]
 
 export type ProductBuild = {

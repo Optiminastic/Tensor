@@ -6,7 +6,14 @@ import { env } from '@/lib/env'
 export const runtime = 'nodejs'
 
 /** The products whose print file is built in the background. */
-const BUILT_IN_BACKGROUND = new Set(['moon-lamp', 'pdnp-front-text', 'soulmate-combo', 'duo-snap'])
+const BUILT_IN_BACKGROUND = new Set([
+  'moon-lamp',
+  'pdnp-front-text',
+  'soulmate-combo',
+  'duo-snap',
+  'couple-date-plank',
+  'registry',
+])
 
 /** Starts (or reuses) a background build of a product's print file. */
 export async function POST(
