@@ -9,6 +9,7 @@ import { useProductBuild } from '@/hooks/use-product-build'
 import {
   type CreatableProduct,
   productBuildFileUrl,
+  productBuildPartUrl,
   productBuildPreviewUrl,
 } from '@/lib/product-creation'
 
@@ -38,12 +39,24 @@ export function BuildFirstResult({ brand, product, order }: BuildFirstResultProp
           Order <span className="font-mono">{order}</span> — {product.check}
         </p>
         {build?.status === 'done' ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <a href={productBuildPreviewUrl(brand, build.id)} download className="contents">
               <Button type="button" variant="secondary">
                 <Download className="size-4" aria-hidden /> Download PNG
               </Button>
             </a>
+            {product.parts?.map(part => (
+              <a
+                key={part.value}
+                href={productBuildPartUrl(brand, build.id, part.value)}
+                download
+                className="contents"
+              >
+                <Button type="button" variant="secondary">
+                  <Download className="size-4" aria-hidden /> {part.label} 3MF
+                </Button>
+              </a>
+            ))}
             <a
               href={productBuildFileUrl(brand, build.id)}
               download={build.filename}

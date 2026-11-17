@@ -20,6 +20,11 @@ export interface CreatableProduct {
    * Submit starts the background build and the preview comes with the file.
    */
   buildFirst?: boolean
+  /**
+   * parts: a product that prints as several files offers each on its own
+   * beside the download, which then holds all of them.
+   */
+  parts?: readonly { value: string; label: string }[]
   /** Shown above the preview. */
   check: string
 }
@@ -53,6 +58,27 @@ export const CREATABLE_PRODUCTS: readonly CreatableProduct[] = [
     download: { format: '3mf', label: 'Download 3MF', background: true },
     buildFirst: true,
     check: 'check the spelling of the front text before printing.',
+  },
+  {
+    value: 'soulmate-combo',
+    label: 'Soulmate Combo (plank + rose + keychain)',
+    hint: 'Three coloured 3MFs from the order: the Dual Name Plank (single heart, letters in the order’s colour, STEP 1–3), the 3D Rose (STEP 4) and the Heart Keychain (STEP 5) in their own colours.',
+    download: { format: '3mf', label: 'Download all (ZIP)', background: true },
+    buildFirst: true,
+    parts: [
+      { value: 'plank', label: 'Plank' },
+      { value: 'rose', label: 'Rose' },
+      { value: 'keychain', label: 'Keychain' },
+    ],
+    check: 'plank, rose and keychain - check every name before printing.',
+  },
+  {
+    value: 'duo-snap',
+    label: 'Duo Snap',
+    hint: 'Uses only the order’s TOP NAME, BOTTOM NAME and colour: the two names joined by “&”, outlined and framed in the colour bought, letters in white. The photo is not used.',
+    download: { format: '3mf', label: 'Download 3MF', background: true },
+    buildFirst: true,
+    check: 'the display side, letters up - check both names before printing.',
   },
 ]
 
@@ -137,4 +163,9 @@ export function saveBlob(blob: Blob, filename: string): void {
 /** The preview PNG drawn from a finished build's model. */
 export function productBuildPreviewUrl(brand: string, id: string): string {
   return `/api/product-creation/${encodeURIComponent(brand)}/builds/${encodeURIComponent(id)}/preview`
+}
+
+/** Where one file of a multi-file build downloads from. */
+export function productBuildPartUrl(brand: string, id: string, part: string): string {
+  return `/api/product-creation/${encodeURIComponent(brand)}/builds/${encodeURIComponent(id)}/parts/${encodeURIComponent(part)}`
 }
