@@ -13,7 +13,7 @@ import { DesignFieldsSkeleton } from './design-fields-skeleton'
 export function ProductDetailSkeleton(): JSX.Element {
   return (
     <Card
-      className="flex min-w-0 flex-1 flex-col gap-3 p-4"
+      className="flex min-w-0 flex-1 flex-col gap-3 overflow-hidden p-4 lg:min-h-0"
       aria-busy="true"
       aria-label="Loading the product"
     >

@@ -37,6 +37,13 @@ const PRODUCTS_TAB = 'products'
 const DESIGNS_TAB = 'designs'
 const SLICING_TAB = 'slicing'
 
+/**
+ * A tab's content under the fixed title and tabs: it takes the rest of the
+ * frame and scrolls inside it (wide screens only - a phone scrolls the page).
+ * The Products tab lays out its own two scrolling columns instead.
+ */
+const SCROLL_AREA = 'scrollbar-thin lg:min-h-0 lg:flex-1 lg:overflow-y-auto'
+
 /** What Production carries: the file a SKU prints from, and how it slices. */
 export const PRODUCTION_TABS = [DESIGNS_TAB, SLICING_TAB] as const
 
@@ -85,8 +92,10 @@ export function RegistryTabs({
   const active = tabs.some(t => t.value === tab) ? tab : (tabs[0]?.value ?? PRODUCTS_TAB)
 
   return (
-    <div className="flex flex-col gap-4">
-      <Tabs tabs={tabs} value={active} onValueChange={setTab} label="Choose a registry" />
+    <div className="flex flex-col gap-4 lg:h-full lg:min-h-0">
+      <div className="shrink-0">
+        <Tabs tabs={tabs} value={active} onValueChange={setTab} label="Choose a registry" />
+      </div>
 
       {/* The provider wraps BOTH panels that choose a design file. It used to
           wrap only the products one; a component that is printed here names a
@@ -94,7 +103,9 @@ export function RegistryTabs({
           empty list rather than fail. */}
       <DesignTemplatesProvider templates={templates}>
         {active === COMPONENTS_TAB ? (
-          <ComponentRegistryTable brand={brand} items={components} />
+          <div className={SCROLL_AREA}>
+            <ComponentRegistryTable brand={brand} items={components} />
+          </div>
         ) : null}
 
         {active === PRODUCTS_TAB ? (
@@ -103,13 +114,19 @@ export function RegistryTabs({
       </DesignTemplatesProvider>
 
       {active === DESIGNS_TAB ? (
-        <DesignRegistryTable brand={brand} templates={templates} partFiles={partFiles ?? []} />
+        <div className={SCROLL_AREA}>
+          <DesignRegistryTable brand={brand} templates={templates} partFiles={partFiles ?? []} />
+        </div>
       ) : null}
 
       {/* Its own tab, not a control inside each product: the job is usually
           "these twenty SKUs all print with DNP-H2C", which a per-product panel
           would turn into twenty visits. */}
-      {active === SLICING_TAB ? <SKUPipelinePanel brand={brand} /> : null}
+      {active === SLICING_TAB ? (
+        <div className={SCROLL_AREA}>
+          <SKUPipelinePanel brand={brand} />
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -596,3 +596,25 @@
     --tag-ink: var(--tag-grey-ink);
   }
 }
+
+/*
+ * A thin, quiet scrollbar for panels that scroll inside a fixed page - the
+ * registry's product list and product card. The page frame stays still, so the
+ * scrollbar is the only sign a column has more; it uses the border token so it
+ * reads as part of the surface in both themes rather than as a control.
+ */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+}

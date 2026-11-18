@@ -7,6 +7,12 @@ interface PageHeadingProps {
   description?: ReactNode
   /** The page's primary actions, right-aligned on wide screens. */
   actions?: ReactNode
+  /**
+   * Tighter spacing between the eyebrow, title and description, for a page
+   * whose content sits in a fixed frame under the heading (the registry) and
+   * wants the height for its scrolling panels.
+   */
+  compact?: boolean
 }
 
 /** A dashboard page's heading in the landing UI: mono eyebrow, title, line, actions. */
@@ -15,10 +21,11 @@ export function PageHeading({
   title,
   description,
   actions,
+  compact = false,
 }: PageHeadingProps): JSX.Element {
   return (
     <header className="flex w-full flex-wrap items-end justify-between gap-6">
-      <div className="flex max-w-2xl flex-col gap-3">
+      <div className={compact ? 'flex max-w-2xl flex-col gap-1' : 'flex max-w-2xl flex-col gap-3'}>
         <p className="text-muted-foreground font-mono text-xs tracking-[0.18em] uppercase">
           <span aria-hidden className="mr-2">
             •

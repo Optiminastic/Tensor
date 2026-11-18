@@ -89,11 +89,16 @@ export function ProductRegistryPanel({
   }
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
+    // Two columns that each scroll on their own under the fixed title and tabs
+    // (wide screens): the list on the left, the open product on the right.
+    <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row">
       {/* The product list. Narrow and fixed: there are a handful of real
           products, and giving them half the page would say otherwise. */}
-      <div className="flex shrink-0 flex-col gap-2 lg:w-56">
-        <nav className="flex flex-col gap-1" aria-label="Products">
+      <div className="flex shrink-0 flex-col gap-2 lg:min-h-0 lg:w-56">
+        <nav
+          className="scrollbar-thin flex flex-col gap-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1"
+          aria-label="Products"
+        >
           {products.map(p => (
             <button
               key={p.code}
@@ -118,7 +123,7 @@ export function ProductRegistryPanel({
       {detail.product ? (
         <ProductDetail brand={brand} product={detail.product} components={components} />
       ) : detail.error ? (
-        <Card className="text-danger flex min-w-0 flex-1 p-4 text-sm" role="alert">
+        <Card className="text-danger flex min-w-0 flex-1 p-4 text-sm lg:self-start" role="alert">
           {detail.error}
         </Card>
       ) : (
@@ -187,7 +192,7 @@ function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.
   const [showPreview, setShowPreview] = useState(false)
 
   return (
-    <Card className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+    <Card className="scrollbar-thin flex min-w-0 flex-1 flex-col gap-3 p-4 lg:min-h-0 lg:overflow-y-auto">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 className="text-lg font-medium">{product.name}</h2>

@@ -92,7 +92,11 @@ export default async function DesignRegistryPage({
   }
 
   return (
-    <main className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 md:px-8">
+    // On a wide screen the page is a fixed frame: the title and the tabs stay
+    // put, and what is under them scrolls inside its own panels (the product
+    // list and the product card each on their own). On a phone the sidebar
+    // stacks above, so the page scrolls as a whole as before.
+    <main className="flex w-full flex-col gap-4 px-4 pt-4 pb-6 sm:px-6 md:px-8 lg:h-dvh lg:overflow-hidden lg:pt-5 lg:pb-5">
       {error ? (
         <p role="alert" className="bg-danger-subtle text-danger rounded-2xl px-4 py-3 text-sm">
           {error}
@@ -100,17 +104,20 @@ export default async function DesignRegistryPage({
       ) : (
         <>
           <PageHeading
+            compact
             eyebrow="Designs"
             title="Registry"
             description={<>What a product is made of, what it is made from, and what one costs.</>}
           />
-          <RegistryTabs
-            brand={brand}
-            components={components}
-            products={products}
-            templates={templates}
-            partFiles={partFiles}
-          />
+          <div className="lg:min-h-0 lg:flex-1">
+            <RegistryTabs
+              brand={brand}
+              components={components}
+              products={products}
+              templates={templates}
+              partFiles={partFiles}
+            />
+          </div>
         </>
       )}
     </main>
