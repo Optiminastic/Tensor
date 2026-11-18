@@ -33,6 +33,7 @@ export function NavRail({ base, permissions }: NavRailProps): JSX.Element {
   return (
     <aside className="border-border/70 bg-surface sticky top-0 hidden h-dvh w-[4.5rem] shrink-0 flex-col items-center gap-1.5 border-r py-4 lg:flex">
       <Link
+        prefetch={false}
         href="/dashboard"
         aria-label="Tensor"
         className="mb-3 flex size-10 items-center justify-center"
@@ -46,6 +47,7 @@ export function NavRail({ base, permissions }: NavRailProps): JSX.Element {
         const active = segment !== null && segment === section.segment
         return (
           <Link
+            prefetch={false}
             key={section.label}
             href={href}
             title={section.label}
@@ -76,6 +78,7 @@ export function NavRail({ base, permissions }: NavRailProps): JSX.Element {
         const active = pathname === section.href || pathname.startsWith(`${section.href}/`)
         return (
           <Link
+            prefetch={false}
             key={section.label}
             href={section.href}
             title={section.label}

@@ -129,6 +129,7 @@ export function NavPanel({
             const active = href === activeHref
             return (
               <Link
+                prefetch={false}
                 key={item.href}
                 href={href}
                 aria-current={active ? 'page' : undefined}

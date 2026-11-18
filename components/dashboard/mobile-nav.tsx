@@ -86,7 +86,7 @@ export function MobileNav({
           <SheetTitle className="sr-only">Navigation</SheetTitle>
 
           <div className="border-border flex h-14 shrink-0 items-center border-b px-4">
-            <Link href="/dashboard" aria-label="Tensor" onClick={close}>
+            <Link prefetch={false} href="/dashboard" aria-label="Tensor" onClick={close}>
               <Logo markClassName="h-6" />
             </Link>
           </div>
@@ -132,7 +132,7 @@ export function MobileNav({
         </SheetContent>
       </Sheet>
 
-      <Link href="/dashboard" aria-label="Tensor" className="flex items-center">
+      <Link prefetch={false} href="/dashboard" aria-label="Tensor" className="flex items-center">
         <Logo markClassName="h-6" />
       </Link>
     </div>
@@ -197,6 +197,7 @@ interface DrawerLinkProps {
 function DrawerLink({ href, label, active, onNavigate }: DrawerLinkProps): JSX.Element {
   return (
     <Link
+      prefetch={false}
       href={href}
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
