@@ -9,10 +9,12 @@ import {
   VariantDesignWriteSchema,
   type ImportProductResult,
   type RegistryProduct,
+  type RegistryProductDetail,
 } from '@/lib/validators/registry'
 import type { ShopifyProduct } from '@/lib/validators/shopify-products'
 import {
   deleteProduct,
+  getRegistryProduct,
   importShopifyProduct,
   RegistryServiceError,
   setVariantDesign,
@@ -54,6 +56,30 @@ function failure(error: unknown, fallback: string): ActionResult<never> {
   const known =
     error instanceof RegistryServiceError || error instanceof ShopifyProductsServiceError
   return { ok: false, error: known ? error.message : fallback }
+}
+
+/**
+ * One product's full definition - its SKUs, options and design files - for the
+ * product the registry has open.
+ *
+ * The page used to load every product's definition up front, one backend call
+ * per product, and re-ran all of them after every save anywhere on the page.
+ * Now it loads the list, and the open product is read on its own: once when it
+ * is opened, and again after a save, which is one call instead of one per
+ * product.
+ */
+export async function loadRegistryProduct(
+  _brand: string,
+  code: string,
+): Promise<ActionResult<RegistryProductDetail>> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
+
+  try {
+    return { ok: true, data: await getRegistryProduct(token, code) }
+  } catch (err) {
+    return failure(err, 'Could not load that product.')
+  }
 }
 
 /**

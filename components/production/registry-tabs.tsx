@@ -11,12 +11,13 @@ import { Tabs, type TabItem } from '@/components/ui/tabs'
 import { useQueryTab } from '@/hooks/use-query-tab'
 import type { InventoryItem } from '@/lib/validators/inventory'
 import type { PartFile } from '@/lib/validators/part-files'
-import type { DesignTemplate, RegistryProductDetail } from '@/lib/validators/registry'
+import type { DesignTemplate, RegistryProduct } from '@/lib/validators/registry'
 
 interface RegistryTabsProps {
   brand: string
   components: InventoryItem[]
-  products: RegistryProductDetail[]
+  /** The product list; the open product's full definition is loaded by its panel. */
+  products: RegistryProduct[]
   templates: DesignTemplate[]
   /** The stored part files, shown as the Designs tab’s third section. */
   partFiles?: PartFile[]

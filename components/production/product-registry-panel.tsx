@@ -1,8 +1,9 @@
 'use client'
 
 import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useMemo, useState, type JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 
+import { loadRegistryProduct } from '@/app/dashboard/[brand]/production/registry-actions'
 import { DesignFieldsPanel } from '@/components/production/design-fields-panel'
 import { PreviewDesignPanel } from '@/components/production/preview-design-panel'
 import { ProductComponentsPanel } from '@/components/production/product-components-panel'
@@ -10,18 +11,18 @@ import { ProductDeleteDialog } from '@/components/production/product-delete-dial
 import { ProductFormDialog } from '@/components/production/product-form-dialog'
 import { ProductImportDialog } from '@/components/production/product-import-dialog'
 import { ProductPersonalisationToggle } from '@/components/production/product-personalisation-toggle'
-import { SKUReadinessPanel } from '@/components/production/sku-readiness-panel'
-import { VariantTable } from '@/components/production/variant-table'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Disclosure } from '@/components/ui/disclosure'
+import { useQueryTab } from '@/hooks/use-query-tab'
 import { cn } from '@/lib/utils'
 import type { InventoryItem } from '@/lib/validators/inventory'
-import type { RegistryProductDetail } from '@/lib/validators/registry'
+import type { RegistryProduct, RegistryProductDetail } from '@/lib/validators/registry'
 
 interface ProductRegistryPanelProps {
   brand: string
-  products: RegistryProductDetail[]
+  /** The product list (code, name, SKU count). */
+  products: RegistryProduct[]
   /** The shelf, passed through to the components list on each product. */
   components: InventoryItem[]
 }
@@ -46,11 +47,13 @@ export function ProductRegistryPanel({
   products,
   components,
 }: ProductRegistryPanelProps): JSX.Element {
-  const [selected, setSelected] = useState(products[0]?.code ?? '')
-  const product = useMemo(
-    () => products.find(p => p.code === selected) ?? products[0],
-    [products, selected],
-  )
+  // The open product lives in the URL (?product=SNP), so a link, a refresh or
+  // Back returns to it. Mirrored with the history API like the tab beside it:
+  // switching products costs no server round trip.
+  const codes = products.map(p => p.code)
+  const [selected, setSelected] = useQueryTab<string>('product', codes[0] ?? '', codes)
+  const product = products.find(p => p.code === selected) ?? products[0]
+  const detail = useProductDetail(brand, product?.code ?? '', products)
 
   const addProductButton = (
     <ProductImportDialog
@@ -111,9 +114,57 @@ export function ProductRegistryPanel({
         {addProductButton}
       </div>
 
-      {product ? <ProductDetail brand={brand} product={product} components={components} /> : null}
+      {detail.product ? (
+        <ProductDetail brand={brand} product={detail.product} components={components} />
+      ) : (
+        <Card className="text-muted-foreground flex min-w-0 flex-1 p-4 text-sm">
+          {detail.error ?? 'Loading…'}
+        </Card>
+      )}
     </div>
   )
+}
+
+interface ProductDetailState {
+  product: RegistryProductDetail | null
+  error: string | null
+}
+
+/**
+ * The open product's full definition, read on its own.
+ *
+ * Read again whenever the page re-renders after a save - the product list is a
+ * new array then - so what is shown is never older than the last write. That is
+ * one backend call for the open product; the page used to re-read every
+ * product's definition after every save. The previous definition stays on
+ * screen while the new one loads, so a save does not blank the card.
+ */
+function useProductDetail(
+  brand: string,
+  code: string,
+  products: RegistryProduct[],
+): ProductDetailState {
+  const [state, setState] = useState<ProductDetailState>({ product: null, error: null })
+  useEffect(() => {
+    if (!code) return
+    let cancelled = false
+    void loadRegistryProduct(brand, code).then(res => {
+      if (cancelled) return
+      setState(prev =>
+        res.ok && res.data
+          ? { product: res.data, error: null }
+          : {
+              product: prev.product?.code === code ? prev.product : null,
+              error: res.error ?? 'Could not load that product.',
+            },
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [brand, code, products])
+  // A product other than the open one is never shown, even for a moment.
+  return state.product && state.product.code !== code ? { product: null, error: null } : state
 }
 
 interface ProductDetailProps {
@@ -131,8 +182,6 @@ function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.
   const [showDesign, setShowDesign] = useState(true)
   const [showComponents, setShowComponents] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
-  const [showReadiness, setShowReadiness] = useState(false)
-  const [showVariants, setShowVariants] = useState(false)
 
   return (
     <Card className="flex min-w-0 flex-1 flex-col gap-3 p-4">
@@ -218,26 +267,6 @@ function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.
           components={components}
           variants={product.variants}
         />
-      </Disclosure>
-
-      {/* The same questions an arriving order will ask, asked now. Without
-          it the answer arrives hours later as a held job, attached to a
-          customer's order. */}
-      <Disclosure
-        label="Ready to make"
-        open={showReadiness}
-        onToggle={() => setShowReadiness(open => !open)}
-      >
-        <SKUReadinessPanel brand={brand} productCode={product.code} />
-      </Disclosure>
-
-      <Disclosure
-        label="SKUs"
-        count={product.variants.length}
-        open={showVariants}
-        onToggle={() => setShowVariants(open => !open)}
-      >
-        <VariantTable brand={brand} variants={product.variants} />
       </Disclosure>
     </Card>
   )

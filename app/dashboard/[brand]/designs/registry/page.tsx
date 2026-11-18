@@ -7,15 +7,11 @@ import { requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { InventoryItem } from '@/lib/validators/inventory'
 import type { PartFile } from '@/lib/validators/part-files'
-import type { DesignTemplate, RegistryProductDetail } from '@/lib/validators/registry'
+import type { DesignTemplate, RegistryProduct } from '@/lib/validators/registry'
 import { listDesignTemplates } from '@/services/design-templates.service'
 import { InventoryServiceError, listInventoryItems } from '@/services/inventory.service'
 import { listPartFiles } from '@/services/part-files.service'
-import {
-  getRegistryProduct,
-  listRegistryProducts,
-  RegistryServiceError,
-} from '@/services/registry.service'
+import { listRegistryProducts, RegistryServiceError } from '@/services/registry.service'
 
 export const metadata: Metadata = { title: 'Registry' }
 
@@ -51,7 +47,7 @@ export default async function DesignRegistryPage({
   await requirePermission('registry:read', `/dashboard/${brand}`)
 
   let components: InventoryItem[] = []
-  let products: RegistryProductDetail[] = []
+  let products: RegistryProduct[] = []
   let templates: DesignTemplate[] = []
   let partFiles: PartFile[] = []
   let error: string | null = null
@@ -59,36 +55,39 @@ export default async function DesignRegistryPage({
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
   } else {
-    try {
-      components = await listInventoryItems(token)
-    } catch (err) {
-      error = err instanceof InventoryServiceError ? err.message : 'Could not load the parts list.'
+    // In parallel: none of these waits on another, and loading them one after
+    // the other made every visit - and every re-render after a save - wait for
+    // the sum of all four.
+    //
+    // The products are the LIST only (code, name, SKU count). The open
+    // product's full definition is loaded by the panel on its own
+    // (loadRegistryProduct): this page used to fetch every product's
+    // definition, one call each, on every load and again after every save.
+    const [inv, files, tmpls, prods] = await Promise.allSettled([
+      listInventoryItems(token),
+      listPartFiles(token),
+      listDesignTemplates(token),
+      listRegistryProducts(token),
+    ])
+    if (inv.status === 'fulfilled') {
+      components = inv.value
+    } else {
+      error =
+        inv.reason instanceof InventoryServiceError
+          ? inv.reason.message
+          : 'Could not load the parts list.'
     }
-    try {
-      partFiles = await listPartFiles(token)
-    } catch {
-      // Same reasoning as the templates below: one missing list is no reason
-      // to hide the rest of the registry.
-      partFiles = []
-    }
-    try {
-      templates = await listDesignTemplates(token)
-    } catch {
-      // The Designs tab renders empty rather than failing the page: a missing
-      // template list is no reason to hide the parts and products beside it.
-      templates = []
-    }
-    // Each product's full definition, so the Products tab can render its
-    // variants without a request per click. There are a handful of products,
-    // not a catalogue.
-    try {
-      const summaries = await listRegistryProducts(token)
-      products = await Promise.all(summaries.map(p => getRegistryProduct(token, p.code)))
-    } catch (err) {
-      if (!error) {
-        error =
-          err instanceof RegistryServiceError ? err.message : 'Could not load the product registry.'
-      }
+    // A missing file list or template list is no reason to hide the rest of
+    // the registry: those tabs render empty instead.
+    partFiles = files.status === 'fulfilled' ? files.value : []
+    templates = tmpls.status === 'fulfilled' ? tmpls.value : []
+    if (prods.status === 'fulfilled') {
+      products = prods.value
+    } else if (!error) {
+      error =
+        prods.reason instanceof RegistryServiceError
+          ? prods.reason.message
+          : 'Could not load the product registry.'
     }
   }
 
