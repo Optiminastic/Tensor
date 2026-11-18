@@ -5,7 +5,8 @@ import type { JSX } from 'react'
 
 import { PageHeading } from '@/components/dashboard/page-heading'
 import { ProjectManager, type BrandOption } from '@/components/projects/project-manager'
-import { getSessionSafe, getTokenSafe } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
+import { backendTokenOrNull } from '@/lib/backend-token'
 import type { Project } from '@/lib/validators/projects'
 import { listBrands } from '@/services/brands.service'
 import { listProjects } from '@/services/projects.service'
@@ -31,7 +32,7 @@ export default async function ProjectsPage(): Promise<JSX.Element> {
   let loadError: string | null = null
 
   try {
-    const token = await getTokenSafe(requestHeaders)
+    const token = await backendTokenOrNull()
     if (token?.token) {
       projects = await listProjects(token.token)
       // Brands populate the project's brand picker; a failure here should not

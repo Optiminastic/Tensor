@@ -1,8 +1,5 @@
 'use server'
 
-import { headers } from 'next/headers'
-
-import { auth } from '@/lib/auth'
 import { resolveBackendToken } from '@/lib/backend-token'
 import { createLogger } from '@/lib/logger'
 import type { Transcript } from '@/lib/validators/call-logs'
@@ -26,11 +23,9 @@ function describe(error: unknown): string {
 
 // A server action's arguments are client-controlled, so the token never comes
 // from them.
+// The session is validated and its token reused (see resolveBackendToken).
 async function resolveToken(): Promise<{ token?: string; error?: string }> {
-  const requestHeaders = await headers()
-  const token = await auth.api.getToken({ headers: requestHeaders })
-  if (!token?.token) return { error: 'Could not mint an access token. Sign in again.' }
-  return { token: token.token }
+  return resolveBackendToken()
 }
 
 /**

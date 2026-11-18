@@ -61,7 +61,7 @@ export default async function DesignRegistryPage({
     //
     // The products are the LIST only (code, name, SKU count). The open
     // product's full definition is loaded by the panel on its own
-    // (loadRegistryProduct): this page used to fetch every product's
+    // (loadProductWorkspace): this page used to fetch every product's
     // definition, one call each, on every load and again after every save.
     const [inv, files, tmpls, prods] = await Promise.allSettled([
       listInventoryItems(token),

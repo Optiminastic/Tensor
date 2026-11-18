@@ -6,8 +6,9 @@ import type { JSX } from 'react'
 import { InviteManager } from '@/components/admin/invite-manager'
 import { MembersList, type MemberView } from '@/components/admin/members-list'
 import { PageHeading } from '@/components/dashboard/page-heading'
-import { getSessionSafe, getTokenSafe, getUserDirectory } from '@/lib/auth'
+import { getSessionSafe, getUserDirectory } from '@/lib/auth'
 import { can, currentAuthz, requirePermission } from '@/lib/authz'
+import { backendTokenOrNull } from '@/lib/backend-token'
 import type { Invite, Member } from '@/lib/validators/admin'
 import { listInvites, listMembers } from '@/services/admin.service'
 
@@ -39,7 +40,7 @@ export default async function UsersPage(): Promise<JSX.Element> {
   // route rendered as "No brands exist yet" on a workspace that had a brand,
   // with the real cause named nowhere. Each one now fails on its own and the
   // rest of the page still renders.
-  const token = await getTokenSafe(requestHeaders)
+  const token = await backendTokenOrNull()
   if (token?.token) {
     const accessToken = token.token
     // Invites are admin-only; a Project Lead skips that call (it would 403).

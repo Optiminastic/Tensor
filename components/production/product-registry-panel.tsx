@@ -3,7 +3,10 @@
 import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState, type JSX } from 'react'
 
-import { loadRegistryProduct } from '@/app/dashboard/[brand]/production/registry-actions'
+import {
+  loadProductWorkspace,
+  type ProductWorkspace,
+} from '@/app/dashboard/[brand]/production/registry-actions'
 import { DesignFieldsPanel } from '@/components/production/design-fields-panel'
 import { PreviewDesignPanel } from '@/components/production/preview-design-panel'
 import { ProductComponentsPanel } from '@/components/production/product-components-panel'
@@ -120,8 +123,15 @@ export function ProductRegistryPanel({
         {addProductButton}
       </div>
 
-      {detail.product ? (
-        <ProductDetail brand={brand} product={detail.product} components={components} />
+      {detail.workspace ? (
+        // Keyed by product: its panels start from the data loaded with it
+        // rather than re-reading it, and a different product starts fresh.
+        <ProductDetail
+          key={detail.workspace.product.code}
+          brand={brand}
+          workspace={detail.workspace}
+          components={components}
+        />
       ) : detail.error ? (
         <Card className="text-danger flex min-w-0 flex-1 p-4 text-sm lg:self-start" role="alert">
           {detail.error}
@@ -134,12 +144,13 @@ export function ProductRegistryPanel({
 }
 
 interface ProductDetailState {
-  product: RegistryProductDetail | null
+  workspace: ProductWorkspace | null
   error: string | null
 }
 
 /**
- * The open product's full definition, read on its own.
+ * The open product's full definition, with its parts and preview files - one
+ * combined call (loadProductWorkspace), read on its own.
  *
  * Read again whenever the page re-renders after a save - the product list is a
  * new array then - so what is shown is never older than the last write. That is
@@ -152,17 +163,17 @@ function useProductDetail(
   code: string,
   products: RegistryProduct[],
 ): ProductDetailState {
-  const [state, setState] = useState<ProductDetailState>({ product: null, error: null })
+  const [state, setState] = useState<ProductDetailState>({ workspace: null, error: null })
   useEffect(() => {
     if (!code) return
     let cancelled = false
-    void loadRegistryProduct(brand, code).then(res => {
+    void loadProductWorkspace(brand, code).then(res => {
       if (cancelled) return
       setState(prev =>
         res.ok && res.data
-          ? { product: res.data, error: null }
+          ? { workspace: res.data, error: null }
           : {
-              product: prev.product?.code === code ? prev.product : null,
+              workspace: prev.workspace?.product.code === code ? prev.workspace : null,
               error: res.error ?? 'Could not load that product.',
             },
       )
@@ -172,17 +183,21 @@ function useProductDetail(
     }
   }, [brand, code, products])
   // A product other than the open one is never shown, even for a moment.
-  return state.product && state.product.code !== code ? { product: null, error: null } : state
+  return state.workspace && state.workspace.product.code !== code
+    ? { workspace: null, error: null }
+    : state
 }
 
 interface ProductDetailProps {
   brand: string
-  product: RegistryProductDetail
+  /** The product with the parts and preview files loaded alongside it. */
+  workspace: ProductWorkspace
   /** The shelf, for the components picker. */
   components: InventoryItem[]
 }
 
-function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.Element {
+function ProductDetail({ brand, workspace, components }: ProductDetailProps): JSX.Element {
+  const { product } = workspace
   // Design and fields open by default: it is the only thing on this card
   // somebody can act on, and a product that renders nothing says so there.
   // The SKU list is closed, because it can be sixty-four rows long and
@@ -241,7 +256,12 @@ function ProductDetail({ brand, product, components }: ProductDetailProps): JSX.
         open={showDesign}
         onToggle={() => setShowDesign(open => !open)}
       >
-        <DesignFieldsPanel brand={brand} product={product} />
+        <DesignFieldsPanel
+          brand={brand}
+          product={product}
+          initialParts={workspace.parts}
+          initialPreviews={workspace.previews}
+        />
       </Disclosure>
 
       {/* The file the customer approves, which is not the file that prints.

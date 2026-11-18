@@ -1,9 +1,7 @@
 'use server'
 
-import { headers } from 'next/headers'
-
-import { getTokenSafe } from '@/lib/auth'
 import { requirePermission } from '@/lib/authz'
+import { backendTokenOrNull } from '@/lib/backend-token'
 import { createLogger } from '@/lib/logger'
 import type { AccountsReport, AccountsReportSendResult } from '@/lib/validators/accounts-report'
 import {
@@ -32,7 +30,7 @@ export interface ActionResult<T = undefined> {
  */
 async function token(): Promise<string | null> {
   await requirePermission('accounts:manage', '/dashboard')
-  return (await getTokenSafe(await headers()))?.token ?? null
+  return (await backendTokenOrNull())?.token ?? null
 }
 
 export async function saveAccountsReportAction(input: {

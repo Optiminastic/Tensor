@@ -5,7 +5,8 @@ import { isAllBrands } from '@/components/dashboard/nav-config'
 import { FloorCard } from '@/components/dashboard/overview/floor-card'
 import { OverviewBento } from '@/components/dashboard/overview/overview-bento'
 import { OverviewHeader } from '@/components/dashboard/overview/overview-header'
-import { getSessionSafe, getTokenSafe } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
+import { backendTokenOrNull } from '@/lib/backend-token'
 import { overviewModel } from '@/lib/dashboard/overview-model'
 import type { Machine } from '@/lib/validators/machines'
 import type { Order, ProductionJob } from '@/lib/validators/production'
@@ -48,10 +49,7 @@ export default async function BrandOverviewPage({
 }: BrandOverviewPageProps): Promise<JSX.Element> {
   const { brand } = await params
   const requestHeaders = await headers()
-  const [token, session] = await Promise.all([
-    getTokenSafe(requestHeaders),
-    getSessionSafe(requestHeaders),
-  ])
+  const [token, session] = await Promise.all([backendTokenOrNull(), getSessionSafe(requestHeaders)])
   const data = await loadOverview(token?.token ?? null)
   const model = overviewModel(data)
   const brandHref = `/dashboard/${brand}`

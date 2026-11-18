@@ -14,11 +14,24 @@ import { PartAddDialog } from '@/components/production/part-add-dialog'
 import { PartSettingsDialog } from '@/components/production/part-settings-dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import type { PreviewDesign } from '@/lib/validators/preview-design'
 import type { ProductPart, RegistryProductDetail } from '@/lib/validators/registry'
+
+/** Which file each SKU's customer preview is drawn from, by SKU. */
+function previewMap(designs: PreviewDesign[]): Record<string, string> {
+  return Object.fromEntries(designs.map(d => [d.variant_sku, d.template_key]))
+}
 
 interface DesignFieldsPanelProps {
   brand: string
   product: RegistryProductDetail
+  /**
+   * The parts and preview files already loaded with the product
+   * (loadProductWorkspace). Given, the panel starts from them instead of
+   * reading them again; null or absent, it reads them itself.
+   */
+  initialParts?: ProductPart[] | null
+  initialPreviews?: PreviewDesign[] | null
 }
 
 /**
@@ -37,25 +50,33 @@ interface DesignFieldsPanelProps {
  * read from two hundred recent orders, and making every visit to the registry
  * pay for a panel nobody opened would be the wrong trade.
  */
-export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): JSX.Element {
-  const [parts, setParts] = useState<ProductPart[] | null>(null)
+export function DesignFieldsPanel({
+  brand,
+  product,
+  initialParts,
+  initialPreviews,
+}: DesignFieldsPanelProps): JSX.Element {
+  const [parts, setParts] = useState<ProductPart[] | null>(initialParts ?? null)
   const [error, setError] = useState<string | null>(null)
-  const [chosen, setChosen] = useState('')
+  const [chosen, setChosen] = useState(initialParts?.[0]?.role ?? '')
   // Which file each SKU's customer preview is drawn from, by SKU. Read once
   // for the product: a row asking for itself would be one request per
   // colourway, and this panel shows every colourway at once.
-  const [previewBySKU, setPreviewBySKU] = useState<Record<string, string>>({})
+  const [previewBySKU, setPreviewBySKU] = useState<Record<string, string>>(() =>
+    previewMap(initialPreviews ?? []),
+  )
 
   useEffect(() => {
+    if (initialPreviews) return
     let cancelled = false
     void loadPreviewDesigns(brand, product.code).then(res => {
       if (cancelled || !res.ok || !res.data) return
-      setPreviewBySKU(Object.fromEntries(res.data.map(d => [d.variant_sku, d.template_key])))
+      setPreviewBySKU(previewMap(res.data))
     })
     return () => {
       cancelled = true
     }
-  }, [brand, product.code])
+  }, [brand, product.code, initialPreviews])
 
   const refresh = useCallback(async (): Promise<void> => {
     const res = await loadProductParts(brand, product.code)
@@ -72,10 +93,11 @@ export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): J
   }, [brand, product.code])
 
   useEffect(() => {
+    if (initialParts) return
     setParts(null)
     setError(null)
     void refresh()
-  }, [refresh])
+  }, [refresh, initialParts])
 
   if (error) {
     return (

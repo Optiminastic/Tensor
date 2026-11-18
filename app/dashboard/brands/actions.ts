@@ -1,9 +1,7 @@
 'use server'
 
-import { headers } from 'next/headers'
-
 import { isAllBrands } from '@/components/dashboard/nav-config'
-import { auth } from '@/lib/auth'
+import { resolveBackendToken } from '@/lib/backend-token'
 import { createLogger } from '@/lib/logger'
 import { clearPendingCookie, readPendingCookie } from '@/lib/shopify/pending'
 import { type BrandProfile, BrandCreateSchema, BrandUpdateSchema } from '@/lib/validators/brands'
@@ -45,14 +43,9 @@ function describe(error: unknown): string {
 
 // Re-resolves identity server-side. A server action's arguments are
 // client-controlled, so the token never comes from them.
+// The session is validated and its token reused (see resolveBackendToken).
 async function resolveToken(): Promise<{ token?: string; error?: string }> {
-  const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
-  if (!session) return { error: 'Your session has expired. Sign in again.' }
-
-  const token = await auth.api.getToken({ headers: requestHeaders })
-  if (!token?.token) return { error: 'Could not mint an access token. Sign in again.' }
-  return { token: token.token }
+  return resolveBackendToken()
 }
 
 // Persists the Shopify connection captured during OAuth. The token was stashed

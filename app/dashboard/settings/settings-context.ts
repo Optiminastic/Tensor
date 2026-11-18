@@ -2,8 +2,9 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { isAllBrands } from '@/components/dashboard/nav-config'
-import { getSessionSafe, getTokenSafe } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import { requirePermission } from '@/lib/authz'
+import { backendTokenOrNull } from '@/lib/backend-token'
 import type { BrandProfile } from '@/lib/validators/brands'
 import { listBrands } from '@/services/brands.service'
 
@@ -38,7 +39,7 @@ export async function loadSettingsContext(
   const requestHeaders = await headers()
   await requireSettingsAccess(requestHeaders, callbackPath)
 
-  const token = (await getTokenSafe(requestHeaders))?.token ?? null
+  const token = (await backendTokenOrNull())?.token ?? null
   const { brands, loadError } = await loadBrands(token)
   const activeBrand = await resolveBrandSlug(brandParam)
 

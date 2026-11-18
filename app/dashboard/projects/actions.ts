@@ -1,8 +1,6 @@
 'use server'
 
-import { headers } from 'next/headers'
-
-import { auth } from '@/lib/auth'
+import { resolveBackendToken } from '@/lib/backend-token'
 import { createLogger } from '@/lib/logger'
 import { type Project, ProjectCreateSchema, ProjectUpdateSchema } from '@/lib/validators/projects'
 import {
@@ -33,13 +31,10 @@ function describe(error: unknown): string {
  * act are decided here and enforced in Tensor-Core, never taken from the form.
  */
 async function requireToken(): Promise<{ token: string } | { error: string }> {
-  const requestHeaders = await headers()
-  const session = await auth.api.getSession({ headers: requestHeaders })
-  if (!session) return { error: 'Your session has expired. Sign in again.' }
-
-  const token = await auth.api.getToken({ headers: requestHeaders })
-  if (!token?.token) return { error: 'Could not mint an access token. Sign in again.' }
-  return { token: token.token }
+  // The session is validated and its token reused (see resolveBackendToken).
+  const { token, error } = await resolveBackendToken()
+  if (!token) return { error: error ?? 'Your session has expired. Sign in again.' }
+  return { token }
 }
 
 export async function createProject(input: unknown): Promise<ActionResult<Project>> {

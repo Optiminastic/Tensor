@@ -4,8 +4,8 @@ import type { JSX } from 'react'
 
 import { ALL_BRANDS, isAllBrands } from '@/components/dashboard/nav-config'
 import { RetryButton } from '@/components/dashboard/retry-button'
-import { getTokenSafe } from '@/lib/auth'
 import { can, currentAuthz } from '@/lib/authz'
+import { backendTokenOrNull } from '@/lib/backend-token'
 import type { BrandProfile } from '@/lib/validators/brands'
 import { BrandServiceError, listBrands } from '@/services/brands.service'
 
@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic'
  * show a distinct, retryable state.
  */
 export default async function DashboardPage(): Promise<JSX.Element> {
-  const token = await getTokenSafe(await headers())
+  const token = await backendTokenOrNull()
   if (!token?.token) redirect('/login')
 
   let brands: BrandProfile[]

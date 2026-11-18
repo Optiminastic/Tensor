@@ -9,8 +9,9 @@ import { BrandEditor } from '@/components/brands/brand-editor'
 import { PageHeading } from '@/components/dashboard/page-heading'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { getSessionSafe, getTokenSafe } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import { can, currentAuthz } from '@/lib/authz'
+import { backendTokenOrNull } from '@/lib/backend-token'
 import { env } from '@/lib/env'
 import type { BrandProfile } from '@/lib/validators/brands'
 import type { Connection } from '@/lib/validators/connections'
@@ -41,7 +42,7 @@ export default async function BrandsPage(): Promise<JSX.Element> {
   )
 
   try {
-    const token = await getTokenSafe(requestHeaders)
+    const token = await backendTokenOrNull()
     if (token?.token) {
       brands = await listBrands(token.token)
       connectionsByBrand = await Promise.all(

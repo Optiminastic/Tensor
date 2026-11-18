@@ -58,3 +58,13 @@ export async function resolveBackendToken(): Promise<ResolvedToken> {
   minted.set(key, { token: fresh.token, reuseUntil: Date.now() + REUSE_MS })
   return { token: fresh.token }
 }
+
+/**
+ * resolveBackendToken in getTokenSafe's shape - the token, or null - for the
+ * pages and actions written against that. They used to mint a fresh token on
+ * every load; through here they reuse the session's (see above).
+ */
+export async function backendTokenOrNull(): Promise<{ token: string } | null> {
+  const { token } = await resolveBackendToken()
+  return token ? { token } : null
+}

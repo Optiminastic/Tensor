@@ -3,19 +3,23 @@
 import { revalidatePath } from 'next/cache'
 
 import { resolveBackendToken } from '@/lib/backend-token'
+import type { PreviewDesign } from '@/lib/validators/preview-design'
 import {
   ImportProductSchema,
   ProductWriteSchema,
   VariantDesignWriteSchema,
   type ImportProductResult,
+  type ProductPart,
   type RegistryProduct,
   type RegistryProductDetail,
 } from '@/lib/validators/registry'
 import type { ShopifyProduct } from '@/lib/validators/shopify-products'
+import { listPreviewDesigns } from '@/services/preview-design.service'
 import {
   deleteProduct,
   getRegistryProduct,
   importShopifyProduct,
+  listProductParts,
   RegistryServiceError,
   setVariantDesign,
   updateProduct,
@@ -58,27 +62,44 @@ function failure(error: unknown, fallback: string): ActionResult<never> {
   return { ok: false, error: known ? error.message : fallback }
 }
 
+/** What the registry needs to show one product: its definition and its design. */
+export interface ProductWorkspace {
+  product: RegistryProductDetail
+  /** null when it could not be read here; the panel then reads it itself. */
+  parts: ProductPart[] | null
+  previews: PreviewDesign[] | null
+}
+
 /**
- * One product's full definition - its SKUs, options and design files - for the
- * product the registry has open.
+ * Everything the open product's card loads on opening, in ONE call.
  *
- * The page used to load every product's definition up front, one backend call
- * per product, and re-ran all of them after every save anywhere on the page.
- * Now it loads the list, and the open product is read on its own: once when it
- * is opened, and again after a save, which is one call instead of one per
- * product.
+ * Opening a product used to be one action for its definition, then one for its
+ * parts, then one for its preview files - and Next runs a page's server actions
+ * one at a time, so they queued behind each other. Here the three are read in
+ * parallel on the server. A failure of the parts or previews does not fail the
+ * product: those come back null and the Design & fields panel reads them
+ * itself, as it did before.
  */
-export async function loadRegistryProduct(
+export async function loadProductWorkspace(
   _brand: string,
   code: string,
-): Promise<ActionResult<RegistryProductDetail>> {
+): Promise<ActionResult<ProductWorkspace>> {
   const { token, error } = await resolveBackendToken()
   if (!token) return { ok: false, error: error ?? 'Your session has expired. Sign in again.' }
 
-  try {
-    return { ok: true, data: await getRegistryProduct(token, code) }
-  } catch (err) {
-    return failure(err, 'Could not load that product.')
+  const [product, parts, previews] = await Promise.allSettled([
+    getRegistryProduct(token, code),
+    listProductParts(token, code),
+    listPreviewDesigns(token, code),
+  ])
+  if (product.status === 'rejected') return failure(product.reason, 'Could not load that product.')
+  return {
+    ok: true,
+    data: {
+      product: product.value,
+      parts: parts.status === 'fulfilled' ? parts.value : null,
+      previews: previews.status === 'fulfilled' ? previews.value : null,
+    },
   }
 }
 
