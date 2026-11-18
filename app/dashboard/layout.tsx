@@ -6,8 +6,9 @@ import type { BrandOption } from '@/components/dashboard/brand-switcher'
 import { ALL_BRANDS, isAllBrands } from '@/components/dashboard/nav-config'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { interTight } from '@/components/landing/landing-font'
-import { getSessionSafe, getTokenSafe } from '@/lib/auth'
+import { getSessionSafe } from '@/lib/auth'
 import { can, currentAuthz } from '@/lib/authz'
+import { resolveBackendToken } from '@/lib/backend-token'
 import { listBrands } from '@/services/brands.service'
 
 export const dynamic = 'force-dynamic'
@@ -29,9 +30,11 @@ export default async function DashboardLayout({
   const session = await getSessionSafe(requestHeaders)
   if (!session) redirect('/login?callbackUrl=/dashboard')
 
-  const token = await getTokenSafe(requestHeaders)
+  // The session's reused token (see resolveBackendToken), not a fresh mint: this
+  // layout runs on every page change.
+  const token = await resolveBackendToken()
   let brands: BrandOption[] = []
-  if (token?.token) {
+  if (token.token) {
     brands = await listBrands(token.token)
       .then(list => list.map(brand => ({ slug: brand.slug, name: brand.name })))
       .catch(() => [])

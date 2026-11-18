@@ -97,6 +97,14 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '80mb',
     },
+    // The client router keeps a visited page for 30 s, so Back, Forward and a
+    // link to a page seen moments ago reuse it instead of re-rendering it on
+    // the server - every dashboard page is dynamic, and the default of 0 kept
+    // nothing. A server action that revalidates still clears what it changed,
+    // and the auto-refreshing floor pages call router.refresh(), which skips it.
+    staleTimes: {
+      dynamic: 30,
+    },
     // The auth middleware also sees the request body, and Next caps THAT at 10 MB
     // by default - so a large STL + preview is truncated mid-stream and the form
     // parse throws "Unexpected end of form". Raise it past the upload size.

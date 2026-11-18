@@ -1,9 +1,8 @@
-import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import type { JSX, ReactNode } from 'react'
 
 import { isAllBrands } from '@/components/dashboard/nav-config'
-import { getTokenSafe } from '@/lib/auth'
+import { resolveBackendToken } from '@/lib/backend-token'
 import { listBrands } from '@/services/brands.service'
 
 export const dynamic = 'force-dynamic'
@@ -24,8 +23,10 @@ export default async function BrandLayout({
   const { brand } = await params
   // The global "All brands" sentinel is a valid virtual brand, not a real slug.
   if (isAllBrands(brand)) return <>{children}</>
-  const token = await getTokenSafe(await headers())
-  if (token?.token) {
+  // The same reused token as the dashboard layout, so listBrands (memoised per
+  // request on its token) answers both from one call.
+  const token = await resolveBackendToken()
+  if (token.token) {
     const brands = await listBrands(token.token).catch(() => null)
     if (brands !== null && !brands.some(item => item.slug === brand)) notFound()
   }

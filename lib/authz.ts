@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { cache } from 'react'
 
 import { getSessionSafe } from '@/lib/auth'
-import type { Role } from '@/lib/validators/authz'
+import { resolveBackendToken } from '@/lib/backend-token'
+import { type Role, type UserAuthz, UserAuthzSchema } from '@/lib/validators/authz'
 import { fetchUserAuthz } from '@/services/authz.service'
 
 /**
@@ -32,9 +33,33 @@ export const currentAuthz = cache(async (): Promise<CurrentAuthz> => {
   const session = await getSessionSafe(await headers())
   if (!session) return ANON
 
-  const authz = await fetchUserAuthz(session.user.id)
+  // The roles are already in the session's access token - stamped at mint, and
+  // the token is reused for minutes (resolveBackendToken). Reading them from it
+  // spares a Tensor-Core round trip on every page change. Only when the token
+  // cannot be read is the backend asked directly.
+  const { token } = await resolveBackendToken()
+  const authz = (token ? claimsOf(token) : null) ?? (await fetchUserAuthz(session.user.id))
   return { userId: session.user.id, roles: authz.roles, permissions: authz.permissions }
 })
+
+/**
+ * The roles and permissions inside an access token this server minted.
+ *
+ * Not verified here, deliberately: the token came from our own mint, not from
+ * the client, and this answers a UX question (which buttons to show). Tensor-
+ * Core verifies the signature on every call, and that is the boundary.
+ */
+function claimsOf(token: string): UserAuthz | null {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return null
+    const json: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    const parsed = UserAuthzSchema.safeParse(json)
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
 
 /** Whether the caller holds a `resource:action` permission. */
 export function can(authz: CurrentAuthz, permission: string): boolean {
