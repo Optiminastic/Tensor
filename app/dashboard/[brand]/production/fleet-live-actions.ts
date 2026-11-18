@@ -2,10 +2,14 @@
 
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { FleetMachine, FleetMachineLive } from '@/lib/validators/machine-fleet'
+import type { Archive } from '@/lib/validators/print-history'
+import type { QueueItem } from '@/lib/validators/print-queue'
 import {
   getFleetMachine,
   getFleetMachineLive,
   listFleetMachines,
+  listPrintHistory,
+  listPrintQueue,
   MachineFleetServiceError,
 } from '@/services/machine-fleet.service'
 
@@ -72,4 +76,45 @@ export async function fetchFleetMachineLive(
       err instanceof MachineFleetServiceError ? err.message : 'Could not load live printer status.'
     return { ok: false, error: message }
   }
+}
+
+/** BambuBuddy's live queue and print history, each with its own failure. */
+export interface PrintActivity {
+  queue: QueueItem[]
+  queueError: string | null
+  history: Archive[]
+  historyError: string | null
+}
+
+/**
+ * BambuBuddy's queue and history for Machine Management, read after the page
+ * has rendered.
+ *
+ * They go through the BambuBuddy tunnel - about 1 s for the queue and 2 s for
+ * the history on prod - and the page used to wait for both before showing the
+ * Machines tab, which uses neither. Read together, because they fail together.
+ * Each failure is carried to its own tab rather than failing the other.
+ */
+export async function loadPrintActivity(): Promise<PrintActivity> {
+  const { token, error } = await resolveBackendToken()
+  if (!token) {
+    const message = error ?? 'Your session has expired. Sign in again.'
+    return { queue: [], queueError: message, history: [], historyError: message }
+  }
+  const [queue, history] = await Promise.allSettled([
+    listPrintQueue(token),
+    listPrintHistory(token),
+  ])
+  return {
+    queue: queue.status === 'fulfilled' ? queue.value : [],
+    queueError: failureOf(queue, 'Could not reach BambuBuddy to read the print queue.'),
+    history: history.status === 'fulfilled' ? history.value : [],
+    historyError: failureOf(history, 'Could not reach BambuBuddy to read the print history.'),
+  }
+}
+
+/** A read's failure in the operator's words: the backend's own, else the fallback. */
+function failureOf(result: PromiseSettledResult<unknown>, fallback: string): string | null {
+  if (result.status === 'fulfilled') return null
+  return result.reason instanceof MachineFleetServiceError ? result.reason.message : fallback
 }

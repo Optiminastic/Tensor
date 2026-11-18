@@ -9,15 +9,8 @@ import type { BatchRecord } from '@/components/production/types'
 import { can, currentAuthz, requirePermission } from '@/lib/authz'
 import { resolveBackendToken } from '@/lib/backend-token'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
-import type { Archive } from '@/lib/validators/print-history'
-import type { QueueItem } from '@/lib/validators/print-queue'
 import { listBatches } from '@/services/batches.service'
-import {
-  listFleetMachines,
-  listPrintHistory,
-  listPrintQueue,
-  MachineFleetServiceError,
-} from '@/services/machine-fleet.service'
+import { listFleetMachines, MachineFleetServiceError } from '@/services/machine-fleet.service'
 
 export const metadata: Metadata = { title: 'Machine Management' }
 
@@ -33,61 +26,34 @@ export default async function MachineManagementPage({
 
   let machines: FleetMachine[] = []
   let batches: BatchRecord[] = []
-  let queue: QueueItem[] = []
-  let queueError: string | null = null
-  let history: Archive[] = []
-  let historyError: string | null = null
   let error: string | null = null
   const { token, error: tokenError } = await resolveBackendToken()
   if (!token) {
     error = tokenError ?? 'Your session has expired. Sign in again.'
   } else {
-    try {
-      machines = await listFleetMachines(token)
-    } catch (err) {
-      error = err instanceof MachineFleetServiceError ? err.message : 'Could not load machines.'
-    }
-    // Batches back the Queued and History tabs. Read separately because
-    // batch:read is its own permission - an operator who may see machines but
-    // not batches gets the Machines tab and two empty ones, rather than a page
-    // that fails to load. A failure here is swallowed for the same reason: the
-    // fleet is the page's reason for existing and must still render.
-    if (can(await currentAuthz(), 'batch:read')) {
-      try {
-        batches = (await listBatches(token)).map(toBatchRecord)
-      } catch {
-        batches = []
-      }
-    }
-    // Read through to BambuBuddy, so this is the one part of the page that
-    // depends on the tunnel being up. Its failure is carried to the Queued tab
-    // rather than failing the page: the fleet and history still render, and
-    // the tab says it could not reach BambuBuddy instead of showing an empty
-    // list that reads as "nothing queued".
+    // The fleet and the beds, in parallel. BambuBuddy's queue and history are
+    // NOT read here: they go through the BambuBuddy tunnel (1-2 s on prod) and
+    // only the Queued and History tabs use them, so MachineManagementTabs reads
+    // them after the page has rendered (loadPrintActivity). The page used to
+    // wait for all four, one after another - about 3 s before anything showed.
     //
-    // Read together, because they fail together: both go through the same
-    // tunnel, and a page that fetched them one after the other would wait out
-    // two timeouts before rendering anything when BambuBuddy is unreachable.
-    const [queueResult, historyResult] = await Promise.allSettled([
-      listPrintQueue(token),
-      listPrintHistory(token),
+    // Batches back the Queued tab and are their own permission: an operator who
+    // may see machines but not batches gets an empty Queued list rather than a
+    // page that fails to load, so a failure there is swallowed.
+    const canReadBatches = can(await currentAuthz(), 'batch:read')
+    const [fleet, beds] = await Promise.allSettled([
+      listFleetMachines(token),
+      canReadBatches ? listBatches(token) : Promise.resolve([]),
     ])
-    if (queueResult.status === 'fulfilled') {
-      queue = queueResult.value
+    if (fleet.status === 'fulfilled') {
+      machines = fleet.value
     } else {
-      queueError =
-        queueResult.reason instanceof MachineFleetServiceError
-          ? queueResult.reason.message
-          : 'Could not reach BambuBuddy to read the print queue.'
+      error =
+        fleet.reason instanceof MachineFleetServiceError
+          ? fleet.reason.message
+          : 'Could not load machines.'
     }
-    if (historyResult.status === 'fulfilled') {
-      history = historyResult.value
-    } else {
-      historyError =
-        historyResult.reason instanceof MachineFleetServiceError
-          ? historyResult.reason.message
-          : 'Could not reach BambuBuddy to read the print history.'
-    }
+    batches = beds.status === 'fulfilled' ? beds.value.map(toBatchRecord) : []
   }
 
   return (
@@ -105,15 +71,7 @@ export default async function MachineManagementPage({
           {error}
         </p>
       ) : (
-        <MachineManagementTabs
-          brand={brand}
-          machines={machines}
-          batches={batches}
-          queue={queue}
-          queueError={queueError}
-          history={history}
-          historyError={historyError}
-        />
+        <MachineManagementTabs brand={brand} machines={machines} batches={batches} />
       )}
     </main>
   )

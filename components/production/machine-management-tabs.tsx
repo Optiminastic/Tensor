@@ -1,17 +1,20 @@
 'use client'
 
-import { useMemo, useState, type JSX } from 'react'
+import { useEffect, useMemo, useState, type JSX } from 'react'
 
+import {
+  loadPrintActivity,
+  type PrintActivity,
+} from '@/app/dashboard/[brand]/production/fleet-live-actions'
 import { BatchTableGrid } from '@/components/production/batch-table-grid'
 import { FleetMachineTable } from '@/components/production/fleet-machine-table'
+import { ListSkeleton } from '@/components/production/list-skeleton'
 import { PrintHistoryBoard } from '@/components/production/print-history-board'
 import { PrintQueueBoard } from '@/components/production/print-queue-board'
 import type { BatchRecord } from '@/components/production/types'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import { useQueryTab } from '@/hooks/use-query-tab'
 import type { FleetMachine } from '@/lib/validators/machine-fleet'
-import type { Archive } from '@/lib/validators/print-history'
-import type { QueueItem } from '@/lib/validators/print-queue'
 
 /**
  * Machine Management, split the way the work actually splits: what is waiting
@@ -35,12 +38,6 @@ interface MachineManagementTabsProps {
   brand: string
   machines: FleetMachine[]
   batches: BatchRecord[]
-  /** BambuBuddy's live queue. Empty when it could not be reached - see queueError. */
-  queue: QueueItem[]
-  queueError: string | null
-  /** BambuBuddy's print history. Empty when it could not be reached - see historyError. */
-  history: Archive[]
-  historyError: string | null
 }
 
 const QUEUED = 'queued'
@@ -51,11 +48,23 @@ export function MachineManagementTabs({
   brand,
   machines,
   batches,
-  queue,
-  queueError,
-  history,
-  historyError,
 }: MachineManagementTabsProps): JSX.Element {
+  // BambuBuddy's queue and history, read after the page has rendered: they go
+  // through the BambuBuddy tunnel (1-2 s), and the Machines tab people arrive
+  // on uses neither. null until they land.
+  const [activity, setActivity] = useState<PrintActivity | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void loadPrintActivity().then(result => {
+      if (!cancelled) setActivity(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  const queue = useMemo(() => activity?.queue ?? [], [activity])
+  const history = activity?.history ?? []
+
   // Machines first: it is the page people arrive for, and it was the whole
   // page until now - opening somewhere else would move the ground under them.
   const [tab, setTab] = useQueryTab<string>('tab', MACHINES)
@@ -117,7 +126,7 @@ export function MachineManagementTabs({
       countTone: live > 0 ? 'live' : 'default',
     },
     { value: MACHINES, label: 'Machines', count: machines.length },
-    { value: HISTORY, label: 'History', count: history.length },
+    { value: HISTORY, label: 'History', count: activity ? history.length : undefined },
   ]
 
   return (
@@ -134,7 +143,11 @@ export function MachineManagementTabs({
             <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
               In BambuBuddy&rsquo;s queue
             </h2>
-            <PrintQueueBoard items={liveQueue} error={queueError} />
+            {activity ? (
+              <PrintQueueBoard items={liveQueue} error={activity.queueError} />
+            ) : (
+              <ListSkeleton />
+            )}
           </section>
 
           <section className="flex flex-col gap-2">
@@ -160,7 +173,11 @@ export function MachineManagementTabs({
 
       {tab === HISTORY ? (
         <div role="tabpanel" aria-labelledby={`tab-${HISTORY}`}>
-          <PrintHistoryBoard items={history} error={historyError} />
+          {activity ? (
+            <PrintHistoryBoard items={history} error={activity.historyError} />
+          ) : (
+            <ListSkeleton />
+          )}
         </div>
       ) : null}
     </div>
