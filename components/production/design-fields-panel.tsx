@@ -8,6 +8,7 @@ import {
   loadPreviewDesigns,
   loadProductParts,
 } from '@/app/dashboard/[brand]/production/design-fields-actions'
+import { DesignFieldsSkeleton } from '@/components/production/design-fields-skeleton'
 import { DesignPartEditor } from '@/components/production/design-part-editor'
 import { PartAddDialog } from '@/components/production/part-add-dialog'
 import { PartSettingsDialog } from '@/components/production/part-settings-dialog'
@@ -84,7 +85,7 @@ export function DesignFieldsPanel({ brand, product }: DesignFieldsPanelProps): J
     )
   }
   if (!parts) {
-    return <p className="text-muted-foreground mt-3 text-sm">Loading…</p>
+    return <DesignFieldsSkeleton />
   }
 
   const addControl = (

@@ -8,6 +8,7 @@ import { DesignFieldsPanel } from '@/components/production/design-fields-panel'
 import { PreviewDesignPanel } from '@/components/production/preview-design-panel'
 import { ProductComponentsPanel } from '@/components/production/product-components-panel'
 import { ProductDeleteDialog } from '@/components/production/product-delete-dialog'
+import { ProductDetailSkeleton } from '@/components/production/product-detail-skeleton'
 import { ProductFormDialog } from '@/components/production/product-form-dialog'
 import { ProductImportDialog } from '@/components/production/product-import-dialog'
 import { ProductPersonalisationToggle } from '@/components/production/product-personalisation-toggle'
@@ -116,10 +117,12 @@ export function ProductRegistryPanel({
 
       {detail.product ? (
         <ProductDetail brand={brand} product={detail.product} components={components} />
-      ) : (
-        <Card className="text-muted-foreground flex min-w-0 flex-1 p-4 text-sm">
-          {detail.error ?? 'Loading…'}
+      ) : detail.error ? (
+        <Card className="text-danger flex min-w-0 flex-1 p-4 text-sm" role="alert">
+          {detail.error}
         </Card>
+      ) : (
+        <ProductDetailSkeleton />
       )}
     </div>
   )
