@@ -36,6 +36,9 @@ export const VoiceCallSchema = z.object({
     .min(0)
     .max(999, 'That is more items than anyone puts in one basket.')
     .optional(),
+  // The state from the checkout's address. The agent opens the call in that
+  // state's language; empty when the customer left before the address step.
+  customerState: z.string().trim().max(80).optional(),
 })
 
 export type VoiceCallInput = z.infer<typeof VoiceCallSchema>

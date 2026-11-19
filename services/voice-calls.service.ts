@@ -92,6 +92,7 @@ export async function placeVoiceCall(
         product_name: input.productName,
         cart_value: input.cartValue,
         item_count: input.itemCount,
+        customer_state: input.customerState,
       }),
     },
     data => VoiceCallResultSchema.parse(data),

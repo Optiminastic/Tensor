@@ -82,6 +82,7 @@ export function CallCheckoutButton({ checkout, disabled }: CallCheckoutButtonPro
         productName: productPhrase(checkout),
         cartValue: spokenAmount(checkout.total_amount),
         itemCount: checkout.item_count > 0 ? checkout.item_count : undefined,
+        customerState: checkout.province || undefined,
       })
       if (!result.ok) {
         setError(result.error ?? 'The call could not be placed.')
