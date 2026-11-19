@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" role="img" aria-label="One product split into three printed parts, each filled from the customer's answers">
+  <style>
+    .box { fill: #fff; stroke: #0e1116; stroke-opacity: .15; }
+    .t { font: 600 15px system-ui, sans-serif; fill: #0e1116; }
+    .m { font: 500 12px ui-monospace, Menlo, monospace; fill: #0e1116; fill-opacity: .65; }
+    .wire { stroke: #0e1116; stroke-opacity: .3; stroke-width: 2; fill: none; stroke-dasharray: 3 7; animation: dash 1.4s linear infinite; }
+    .chip { animation: slide 5s ease-in-out infinite; }
+    .c2 { animation-delay: .5s } .c3 { animation-delay: 1s }
+    @keyframes dash { to { stroke-dashoffset: -20 } }
+    @keyframes slide { 0%, 10% { transform: translateX(-40px); opacity: 0 } 30%, 80% { transform: translateX(0); opacity: 1 } 100% { transform: translateX(0); opacity: 0 } }
+    @media (prefers-reduced-motion: reduce) { .wire, .chip { animation: none } }
+  </style>
+
+  <!-- the product -->
+  <rect class="box" x="30" y="160" width="150" height="80" rx="18"/>
+  <text class="t" x="48" y="195">Soulmate combo</text>
+  <text class="m" x="48" y="218">SC-RED · 1 line</text>
+
+  <path class="wire" d="M180 200 C 230 200, 230 90, 280 90"/>
+  <path class="wire" d="M180 200 H280"/>
+  <path class="wire" d="M180 200 C 230 200, 230 310, 280 310"/>
+
+  <!-- plank -->
+  <rect class="box" x="280" y="52" width="210" height="76" rx="18"/>
+  <rect x="298" y="70" width="54" height="16" rx="4" fill="#2d8af7"/>
+  <rect x="298" y="92" width="54" height="16" rx="4" fill="#d7f75b" stroke="#0e1116" stroke-width="1.5"/>
+  <text class="t" x="364" y="84">Plank</text>
+  <g class="chip"><text class="m" x="364" y="106">name1 ← ARJUN</text></g>
+  <!-- rose -->
+  <rect class="box" x="280" y="162" width="210" height="76" rx="18"/>
+  <g transform="translate(325 200)"><circle r="16" fill="#e5484d"/><circle r="8" fill="#fff" fill-opacity=".35"/><path d="M0 16 V30" stroke="#7a9c00" stroke-width="3"/></g>
+  <text class="t" x="364" y="194">Rose</text>
+  <g class="chip c2"><text class="m" x="364" y="216">NAME ← PRIYA</text></g>
+  <!-- keychain -->
+  <rect class="box" x="280" y="272" width="210" height="76" rx="18"/>
+  <g transform="translate(325 310)"><path d="M0 12 C -22 -2, -12 -20, 0 -8 C 12 -20, 22 -2, 0 12 Z" fill="#e5484d"/><circle cy="-14" r="5" fill="none" stroke="#0e1116" stroke-width="2"/></g>
+  <text class="t" x="364" y="304">Keychain</text>
+  <g class="chip c3"><text class="m" x="364" y="326">NAME ← ARJUN</text></g>
+</svg>

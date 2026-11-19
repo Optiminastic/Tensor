@@ -1,18 +1,48 @@
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
-import { CardGridSection } from '@/components/landing/card-grid-section'
-import { FEATURE_GROUPS, FEATURE_HIGHLIGHTS } from '@/components/landing/content/features'
+import { FEATURE_GROUPS } from '@/components/landing/content/features'
 import { LOGOS } from '@/components/landing/content/logos'
 import { ContentSection } from '@/components/landing/content-section'
-import { FeatureHighlights } from '@/components/landing/feature-highlights'
+import { FeatureList } from '@/components/landing/feature-list'
+import { Illustration } from '@/components/landing/illustration'
 import { LogoGrid } from '@/components/landing/logo-grid'
+import { SplitSection } from '@/components/landing/split-section'
 import { SubpageShell } from '@/components/landing/subpage-shell'
 
 export const metadata: Metadata = {
   title: 'Features',
   description:
     'Everything Tensor does for a 3D-printing workshop: slicer-based costing, a product registry, automatic jobs and models, colour-first batching, printing, fulfilment and a voice agent.',
+}
+
+/** Each feature group's illustration in public/illustrations, and what it shows. */
+const ILLUSTRATIONS: Record<string, { src: string; alt: string }> = {
+  designs: {
+    src: '/illustrations/costing.svg',
+    alt: 'A design sliced into layers and priced on the ladder',
+  },
+  registry: {
+    src: '/illustrations/registry.svg',
+    alt: 'One product split into parts, each filled from the order',
+  },
+  production: {
+    src: '/illustrations/production.svg',
+    alt: 'An order arriving and becoming jobs with 3D models',
+  },
+  printing: {
+    src: '/illustrations/printing.svg',
+    alt: 'Parts packed onto a print bed, largest first',
+  },
+  fulfilment: {
+    src: '/illustrations/fulfilment.svg',
+    alt: 'A parcel passing QC and packing on its way to the customer',
+  },
+  agent: {
+    src: '/illustrations/agent.svg',
+    alt: 'A voice agent greeting customers in their own language',
+  },
+  admin: { src: '/illustrations/workspace.svg', alt: 'Six roles around one protected workspace' },
 }
 
 const DEPENDENCIES = [
@@ -33,16 +63,23 @@ export default function FeaturesPage(): JSX.Element {
       title="Everything a print farm runs on, in one place"
       intro="Tensor takes a design from upload to a costed product, an order to a print-ready model, a model to a packed bed, and a parcel to the customer's door."
     >
-      <FeatureHighlights items={FEATURE_HIGHLIGHTS} />
-      {FEATURE_GROUPS.map(group => (
-        <CardGridSection
+      <Illustration
+        src="/illustrations/pipeline.svg"
+        alt="An order moving through Tensor: order, job, 3D model, print bed, printer, parcel"
+      />
+      {FEATURE_GROUPS.map((group, i) => (
+        <SplitSection
           key={group.id}
           id={group.id}
           eyebrow={group.eyebrow}
           title={group.title}
           intro={group.intro}
-          cards={group.items}
-        />
+          illustration={ILLUSTRATIONS[group.id]?.src ?? '/illustrations/pipeline.svg'}
+          illustrationAlt={ILLUSTRATIONS[group.id]?.alt ?? ''}
+          flip={i % 2 === 1}
+        >
+          <FeatureList items={group.items} />
+        </SplitSection>
       ))}
       <ContentSection
         id="dependencies"

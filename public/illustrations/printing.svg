@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" role="img" aria-label="Parts dropping onto a print bed, largest first, and a print head moving across">
+  <style>
+    .bed { fill: #fff; stroke: #0e1116; stroke-opacity: .15; }
+    .grid { stroke: #0e1116; stroke-opacity: .07; }
+    .part { stroke: #0e1116; stroke-width: 2; animation: drop 8s cubic-bezier(.3,1.3,.5,1) infinite; }
+    .p2 { animation-delay: .6s } .p3 { animation-delay: 1.2s } .p4 { animation-delay: 1.8s } .p5 { animation-delay: 2.4s }
+    .head { animation: sweep 4s ease-in-out infinite alternate; }
+    .m { font: 500 12px ui-monospace, Menlo, monospace; fill: #0e1116; fill-opacity: .65; }
+    @keyframes drop { 0% { transform: translateY(-120px); opacity: 0 } 12%, 88% { transform: translateY(0); opacity: 1 } 100% { transform: translateY(0); opacity: 0 } }
+    @keyframes sweep { from { transform: translateX(0) } to { transform: translateX(300px) } }
+    @media (prefers-reduced-motion: reduce) { .part, .head { animation: none; opacity: 1 } }
+  </style>
+
+  <!-- gantry and print head -->
+  <rect x="40" y="40" width="440" height="10" rx="5" fill="#0e1116"/>
+  <g class="head">
+    <rect x="60" y="30" width="60" height="34" rx="8" fill="#0e1116"/>
+    <path d="M82 64 h16 l-8 12 z" fill="#2d8af7"/>
+  </g>
+
+  <!-- the bed -->
+  <rect class="bed" x="40" y="96" width="440" height="270" rx="18"/>
+  <g class="grid">
+    <path d="M84 96 V366 M128 96 V366 M172 96 V366 M216 96 V366 M260 96 V366 M304 96 V366 M348 96 V366 M392 96 V366 M436 96 V366"/>
+    <path d="M40 140 H480 M40 184 H480 M40 228 H480 M40 272 H480 M40 316 H480"/>
+  </g>
+
+  <!-- largest first: guillotine packing -->
+  <rect class="part" x="60" y="116" width="250" height="70" rx="8" fill="#2d8af7"/>
+  <rect class="part p2" x="60" y="198" width="250" height="70" rx="8" fill="#2d8af7"/>
+  <rect class="part p3" x="324" y="116" width="136" height="120" rx="8" fill="#d7f75b"/>
+  <rect class="part p4" x="60" y="280" width="120" height="66" rx="8" fill="#0e1116"/>
+  <rect class="part p5" x="194" y="280" width="116" height="66" rx="8" fill="#0e1116"/>
+  <text class="m" x="324" y="276">5 units · 1 colour</text>
+  <text class="m" x="324" y="298">locked → H2C-02</text>
+</svg>

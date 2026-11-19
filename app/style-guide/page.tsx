@@ -5,7 +5,7 @@ import { SubpageShell } from '@/components/landing/subpage-shell'
 import { StyleGuide } from '@/components/style-guide/style-guide'
 
 export const metadata: Metadata = {
-  title: 'Design language',
+  title: 'Design system',
 }
 
 export default function StyleGuidePage(): JSX.Element {
@@ -13,7 +13,7 @@ export default function StyleGuidePage(): JSX.Element {
     <SubpageShell
       eyebrow="Design system"
       title="The design language behind Tensor"
-      intro="The colours, type, controls and data displays every screen in the workspace is built from - one set of tokens, in light and dark."
+      intro="The colours, type and components Tensor is built from today - one set of tokens, in light and dark."
     >
       <StyleGuide />
     </SubpageShell>

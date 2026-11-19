@@ -6,6 +6,8 @@ import { CardGridSection } from '@/components/landing/card-grid-section'
 import { BEFORE_AFTER, PRINCIPLES, ROLES } from '@/components/landing/content/about'
 import { ContentSection } from '@/components/landing/content-section'
 import { CtaBanner } from '@/components/landing/cta-banner'
+import { RuledList } from '@/components/landing/ruled-list'
+import { SplitSection } from '@/components/landing/split-section'
 import { SubpageShell } from '@/components/landing/subpage-shell'
 
 export const metadata: Metadata = {
@@ -19,11 +21,23 @@ const PRINCIPLE_CARDS = PRINCIPLES.map(p => ({
   description: p.detail,
   icon: p.icon,
 }))
-const ROLE_CARDS = ROLES.map(r => ({ title: r.title, description: r.does, icon: r.icon }))
+const ROLE_ITEMS = ROLES.map(r => ({ title: r.title, description: r.does }))
 const NEXT_LINKS = [
   { href: '/features', label: 'Features' },
   { href: '/architecture', label: 'Architecture' },
 ]
+
+const WHY_INTRO =
+  'Every order carries a customer’s name, a colour and a deadline. Getting it right means pricing it honestly, rendering the right model, packing the right bed and shipping the right parcel - many times a day. Tensor makes each of those decisions the same way every time.'
+
+const PRINCIPLES_SECTION = {
+  id: 'principles',
+  eyebrow: 'Principles',
+  title: 'What it is built to do',
+  intro: 'Four rules shape every screen and every line of the backend.',
+  columns: 2,
+  cards: PRINCIPLE_CARDS,
+} as const
 
 export default function AboutPage(): JSX.Element {
   return (
@@ -36,25 +50,21 @@ export default function AboutPage(): JSX.Element {
         id="why"
         eyebrow="Why it exists"
         title="A personalised print is a hundred small decisions"
-        intro="Every order carries a customer’s name, a colour and a deadline. Getting it right means pricing it honestly, rendering the right model, packing the right bed and shipping the right parcel - many times a day. Tensor makes each of those decisions the same way every time."
+        intro={WHY_INTRO}
       >
         <BeforeAfterList rows={BEFORE_AFTER} />
       </ContentSection>
-      <CardGridSection
-        id="principles"
-        eyebrow="Principles"
-        title="What it is built to do"
-        intro="Four rules shape every screen and every line of the backend."
-        columns={2}
-        cards={PRINCIPLE_CARDS}
-      />
-      <CardGridSection
+      <CardGridSection {...PRINCIPLES_SECTION} />
+      <SplitSection
         id="people"
         eyebrow="Who uses it"
         title="Six roles, one system"
         intro="From the designer to the packer, everyone works in the same place - each with exactly the access their job needs."
-        cards={ROLE_CARDS}
-      />
+        illustration="/illustrations/workspace.svg"
+        illustrationAlt="Six roles around one protected workspace"
+      >
+        <RuledList items={ROLE_ITEMS} columns={2} />
+      </SplitSection>
       <CtaBanner
         title="See how it fits together"
         body="What it does, what it connects to, and how it is built."

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" role="img" aria-label="Six roles around one protected workspace, and old days fading out of the calendar">
+  <style>
+    .ring { fill: none; stroke: #0e1116; stroke-opacity: .12; stroke-width: 2; stroke-dasharray: 4 8; animation: turn 30s linear infinite; transform-origin: 170px 200px; }
+    .role { fill: #fff; stroke: #0e1116; stroke-opacity: .2; stroke-width: 2; }
+    .r { font: 600 11px system-ui, sans-serif; fill: #0e1116; text-anchor: middle; }
+    .day { fill: #fff; stroke: #0e1116; stroke-opacity: .12; }
+    .old { fill: #2d8af7; animation: fade 6s ease-in-out infinite; }
+    .o2 { animation-delay: .4s } .o3 { animation-delay: .8s }
+    .m { font: 500 12px ui-monospace, Menlo, monospace; fill: #0e1116; fill-opacity: .65; }
+    @keyframes turn { to { transform: rotate(360deg) } }
+    @keyframes fade { 0%, 30% { opacity: 1 } 60%, 100% { opacity: 0 } }
+    @media (prefers-reduced-motion: reduce) { .ring, .old { animation: none } }
+  </style>
+
+  <!-- the workspace and its roles -->
+  <circle class="ring" cx="170" cy="200" r="120"/>
+  <path d="M170 150 l46 18 v34 c0 30 -22 48 -46 58 c-24 -10 -46 -28 -46 -58 v-34 z" fill="#0e1116"/>
+  <path d="M152 206 l12 12 l24 -26" stroke="#d7f75b" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <g>
+    <circle class="role" cx="170" cy="80" r="26"/><text class="r" x="170" y="84">Admin</text>
+    <circle class="role" cx="274" cy="140" r="26"/><text class="r" x="274" y="144">Design</text>
+    <circle class="role" cx="274" cy="260" r="26"/><text class="r" x="274" y="264">Lead</text>
+    <circle class="role" cx="170" cy="320" r="26"/><text class="r" x="170" y="324">Ops</text>
+    <circle class="role" cx="66" cy="260" r="26"/><text class="r" x="66" y="264">QC</text>
+    <circle class="role" cx="66" cy="140" r="26"/><text class="r" x="66" y="144">Mkt</text>
+  </g>
+
+  <!-- retention: days past 30 leave, a summary stays -->
+  <g transform="translate(340 100)">
+    <rect class="day" width="40" height="40" rx="8"/><rect class="old" x="6" y="6" width="28" height="28" rx="5"/>
+    <rect class="day" x="48" width="40" height="40" rx="8"/><rect class="old o2" x="54" y="6" width="28" height="28" rx="5"/>
+    <rect class="day" x="96" width="40" height="40" rx="8"/><rect class="old o3" x="102" y="6" width="28" height="28" rx="5"/>
+    <rect class="day" y="48" width="40" height="40" rx="8"/><rect x="6" y="54" width="28" height="28" rx="5" fill="#d7f75b"/>
+    <rect class="day" x="48" y="48" width="40" height="40" rx="8"/><rect x="54" y="54" width="28" height="28" rx="5" fill="#d7f75b"/>
+    <rect class="day" x="96" y="48" width="40" height="40" rx="8"/><rect x="102" y="54" width="28" height="28" rx="5" fill="#d7f75b"/>
+    <text class="m" x="0" y="120">&gt; 30 days: removed</text>
+    <text class="m" x="0" y="140">a daily summary stays</text>
+  </g>
+</svg>

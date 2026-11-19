@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" role="img" aria-label="A voice agent calling a customer back in their own language">
+  <style>
+    .phone { fill: #0e1116; }
+    .screen { fill: #1667e6; }
+    .bar { fill: #d7f75b; transform-box: fill-box; transform-origin: center; animation: talk 1.1s ease-in-out infinite; }
+    .b2 { animation-delay: .1s } .b3 { animation-delay: .2s } .b4 { animation-delay: .3s } .b5 { animation-delay: .4s } .b6 { animation-delay: .5s } .b7 { animation-delay: .6s }
+    .bubble { fill: #fff; stroke: #0e1116; stroke-opacity: .15; }
+    .hello { font: 600 18px system-ui, 'Noto Sans', 'Nirmala UI', sans-serif; fill: #0e1116; }
+    .lang { font: 500 12px ui-monospace, Menlo, monospace; fill: #0e1116; fill-opacity: .6; }
+    .say { opacity: 0; animation: say 8s ease-in-out infinite; }
+    .s2 { animation-delay: 2s } .s3 { animation-delay: 4s } .s4 { animation-delay: 6s }
+    .white { font: 600 13px system-ui, sans-serif; fill: #fff; }
+    @keyframes talk { 0%, 100% { transform: scaleY(.35) } 50% { transform: scaleY(1) } }
+    @keyframes say { 0% { opacity: 0; transform: translateY(8px) } 5%, 22% { opacity: 1; transform: translateY(0) } 27%, 100% { opacity: 0 } }
+    @media (prefers-reduced-motion: reduce) { .bar, .say { animation: none } .say { opacity: 0 } .s1 { opacity: 1 } }
+  </style>
+
+  <!-- phone -->
+  <rect class="phone" x="70" y="40" width="170" height="320" rx="30"/>
+  <rect class="screen" x="82" y="56" width="146" height="288" rx="22"/>
+  <text class="white" x="155" y="110" text-anchor="middle">Riya</text>
+  <text class="white" x="155" y="130" text-anchor="middle" fill-opacity=".7" font-weight="500">calling about your cart</text>
+  <g transform="translate(155 210)">
+    <rect class="bar" x="-63" y="-14" width="10" height="28" rx="5"/>
+    <rect class="bar b2" x="-45" y="-26" width="10" height="52" rx="5"/>
+    <rect class="bar b3" x="-27" y="-18" width="10" height="36" rx="5"/>
+    <rect class="bar b4" x="-9" y="-32" width="10" height="64" rx="5"/>
+    <rect class="bar b5" x="9" y="-20" width="10" height="40" rx="5"/>
+    <rect class="bar b6" x="27" y="-28" width="10" height="56" rx="5"/>
+    <rect class="bar b7" x="45" y="-12" width="10" height="24" rx="5"/>
+  </g>
+  <circle cx="155" cy="300" r="22" fill="#e5484d"/>
+  <path d="M144 300 c4 -6 18 -6 22 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <!-- greetings, one per state -->
+  <g class="say s1"><rect class="bubble" x="270" y="150" width="210" height="76" rx="20"/><text class="hello" x="290" y="186">नमस्कार!</text><text class="lang" x="290" y="210">Maharashtra · Marathi</text></g>
+  <g class="say s2"><rect class="bubble" x="270" y="150" width="210" height="76" rx="20"/><text class="hello" x="290" y="186">வணக்கம்!</text><text class="lang" x="290" y="210">Tamil Nadu · Tamil</text></g>
+  <g class="say s3"><rect class="bubble" x="270" y="150" width="210" height="76" rx="20"/><text class="hello" x="290" y="186">নমস্কার!</text><text class="lang" x="290" y="210">West Bengal · Bengali</text></g>
+  <g class="say s4"><rect class="bubble" x="270" y="150" width="210" height="76" rx="20"/><text class="hello" x="290" y="186">नमस्ते!</text><text class="lang" x="290" y="210">Rajasthan · Hindi</text></g>
+  <path d="M270 200 l-16 10 l18 4" fill="#fff" stroke="#0e1116" stroke-opacity=".15"/>
+</svg>

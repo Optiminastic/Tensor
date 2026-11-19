@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" role="img" aria-label="A parcel passing assembly, QC and packing, then travelling to the customer's door">
+  <style>
+    .stop { fill: #fff; stroke: #0e1116; stroke-opacity: .15; }
+    .t { font: 600 14px system-ui, sans-serif; fill: #0e1116; }
+    .m { font: 500 12px ui-monospace, Menlo, monospace; fill: #0e1116; fill-opacity: .65; }
+    .tick { stroke: #7a9c00; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; animation: tick 7s ease-out infinite; }
+    .k2 { animation-delay: .5s } .k3 { animation-delay: 1s }
+    .route { stroke: #0e1116; stroke-opacity: .3; stroke-width: 3; fill: none; stroke-dasharray: 2 10; stroke-linecap: round; }
+    .parcel { offset-path: path('M70 300 C 160 300, 200 220, 290 240 S 420 330, 450 250'); animation: ship 7s ease-in-out infinite; }
+    .pin { transform-box: fill-box; transform-origin: bottom; animation: pop 7s ease-out infinite; }
+    @keyframes tick { 0%, 8% { stroke-dashoffset: 30 } 20%, 100% { stroke-dashoffset: 0 } }
+    @keyframes ship { 0%, 30% { offset-distance: 0% } 85%, 100% { offset-distance: 100% } }
+    @keyframes pop { 0%, 80% { transform: scale(1) } 88% { transform: scale(1.25) } 100% { transform: scale(1) } }
+    @media (prefers-reduced-motion: reduce) { .tick, .parcel, .pin { animation: none } .tick { stroke-dashoffset: 0 } }
+  </style>
+
+  <g transform="translate(40 50)">
+    <rect class="stop" width="136" height="64" rx="16"/><text class="t" x="16" y="30">Assembly</text>
+    <path class="tick" d="M100 26 l8 8 l14 -16"/><text class="m" x="16" y="50">checked</text>
+  </g>
+  <g transform="translate(192 50)">
+    <rect class="stop" width="136" height="64" rx="16"/><text class="t" x="16" y="30">QC</text>
+    <path class="tick k2" d="M100 26 l8 8 l14 -16"/><text class="m" x="16" y="50">passed</text>
+  </g>
+  <g transform="translate(344 50)">
+    <rect class="stop" width="136" height="64" rx="16"/><text class="t" x="16" y="30">Packing</text>
+    <path class="tick k3" d="M100 26 l8 8 l14 -16"/><text class="m" x="16" y="50">sealed</text>
+  </g>
+
+  <path class="route" d="M70 300 C 160 300, 200 220, 290 240 S 420 330, 450 250"/>
+  <g transform="translate(450 214)"><g class="pin">
+    <path d="M0 36 C -18 14, -18 0, 0 0 C 18 0, 18 14, 0 36 Z" fill="#2d8af7"/><circle cy="13" r="6" fill="#fff"/>
+  </g></g>
+  <text class="m" x="390" y="300">delivered</text>
+  <g class="parcel">
+    <rect x="-18" y="-16" width="36" height="32" rx="6" fill="#d7f75b" stroke="#0e1116" stroke-width="2"/>
+    <path d="M-18 -4 H18 M0 -16 V-4" stroke="#0e1116" stroke-width="2"/>
+  </g>
+  <text class="m" x="44" y="340">Delhivery · tracked</text>
+</svg>

@@ -364,11 +364,3 @@ export const FEATURE_GROUPS: readonly FeatureGroup[] = [
     ],
   },
 ]
-
-/** The headline promises, one line each, above the feature groups. */
-export const FEATURE_HIGHLIGHTS: readonly { label: string; icon: LucideIcon }[] = [
-  { label: 'Orders in within ~1 minute', icon: Sparkles },
-  { label: 'Every price from the slicer', icon: Calculator },
-  { label: 'Every job its own 3D model', icon: Cpu },
-  { label: 'Every parcel tracked to the door', icon: PackageCheck },
-]

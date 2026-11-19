@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 400" role="img" aria-label="A Shopify order arriving and becoming jobs, each rendering its own 3D model">
+  <style>
+    .card { fill: #fff; stroke: #0e1116; stroke-opacity: .15; }
+    .t { font: 600 13px system-ui, sans-serif; fill: #0e1116; }
+    .m { font: 500 12px ui-monospace, Menlo, monospace; fill: #0e1116; fill-opacity: .65; }
+    .order { animation: drop 6s cubic-bezier(.2,.8,.2,1) infinite; }
+    .job { opacity: 0; animation: deal 6s ease-out infinite; }
+    .j2 { animation-delay: .3s } .j3 { animation-delay: .6s }
+    .wire { stroke: #2d8af7; stroke-width: 2; fill: none; stroke-dasharray: 3 7; animation: dash 1.4s linear infinite; }
+    .model { stroke: #0e1116; stroke-width: 2; fill: #d7f75b; stroke-linejoin: round; transform-box: fill-box; transform-origin: center; animation: render 6s ease-out infinite; }
+    @keyframes drop { 0% { transform: translateY(-60px); opacity: 0 } 15%, 100% { transform: translateY(0); opacity: 1 } }
+    @keyframes deal { 0%, 22% { opacity: 0; transform: translateX(-30px) } 38%, 92% { opacity: 1; transform: translateX(0) } 100% { opacity: 0 } }
+    @keyframes render { 0%, 45% { fill-opacity: 0 } 65%, 100% { fill-opacity: 1 } }
+    @keyframes dash { to { stroke-dashoffset: -20 } }
+    @media (prefers-reduced-motion: reduce) { .order, .job, .wire, .model { animation: none; opacity: 1 } .model { fill-opacity: 1 } }
+  </style>
+
+  <!-- the order -->
+  <g class="order">
+    <rect class="card" x="30" y="140" width="170" height="120" rx="18"/>
+    <rect x="48" y="158" width="28" height="28" rx="8" fill="#7a9c00"/>
+    <path d="M55 168 h14 l-2 12 h-10 z M58 168 v-3 a4 4 0 0 1 8 0 v3" fill="none" stroke="#fff" stroke-width="2"/>
+    <text class="t" x="86" y="178">#116755</text>
+    <text class="m" x="48" y="214">3 items · paid</text>
+    <text class="m" x="48" y="236">in Tensor in 1 min</text>
+  </g>
+
+  <path class="wire" d="M200 200 C 240 200, 240 90, 270 90"/>
+  <path class="wire" d="M200 200 H270"/>
+  <path class="wire" d="M200 200 C 240 200, 240 310, 270 310"/>
+
+  <g class="job">
+    <rect class="card" x="270" y="56" width="220" height="68" rx="16"/>
+    <text class="t" x="288" y="86">JOB-116755-PLANK</text><text class="m" x="288" y="106">rendering…</text>
+    <path class="model" d="M450 76 l18 10 v18 l-18 10 l-18 -10 v-18 z"/>
+  </g>
+  <g class="job j2">
+    <rect class="card" x="270" y="166" width="220" height="68" rx="16"/>
+    <text class="t" x="288" y="196">JOB-116755-ROSE</text><text class="m" x="288" y="216">model ready</text>
+    <path class="model" d="M450 186 l18 10 v18 l-18 10 l-18 -10 v-18 z"/>
+  </g>
+  <g class="job j3">
+    <rect class="card" x="270" y="276" width="220" height="68" rx="16"/>
+    <text class="t" x="288" y="306">JOB-116755-KEYCHAIN</text><text class="m" x="288" y="326">model ready</text>
+    <path class="model" d="M450 296 l18 10 v18 l-18 10 l-18 -10 v-18 z"/>
+  </g>
+</svg>
