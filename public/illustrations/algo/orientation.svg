@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="Orientation scoring: each resting face is scored by its overhang area and the least-support face wins">
+  <style>
+    .t { font: 500 10px ui-monospace, Menlo, monospace; fill: #fff; fill-opacity: .7 }
+    .win { animation: glow 4s ease-in-out infinite }
+    @keyframes glow { 0%, 40% { fill-opacity: .4 } 60%, 100% { fill-opacity: 1 } }
+    @media (prefers-reduced-motion: reduce) { .win { animation: none } }
+  </style>
+  <g transform="translate(16 14)">
+    <path d="M10 80 V30 H70 V80 Z" fill="#fff" fill-opacity=".85"/>
+    <path d="M70 30 H92 V48 H70 Z" fill="#e5484d" fill-opacity=".8"/>
+    <text class="t" x="0" y="100">overhang 18%</text>
+  </g>
+  <g transform="translate(118 14)">
+    <path d="M0 80 V62 H90 V80 Z" fill="#fff" fill-opacity=".85"/>
+    <path d="M30 62 V24 H60 V62 Z" fill="#fff" fill-opacity=".85"/>
+    <path d="M60 24 H74 V36 H60 Z" fill="#e5484d" fill-opacity=".8"/>
+    <text class="t" x="0" y="100">overhang 6%</text>
+  </g>
+  <g transform="translate(222 14)">
+    <path class="win" d="M0 80 V42 L45 12 L90 42 V80 Z" fill="#d7f75b"/>
+    <text class="t" x="0" y="100">overhang 0%, wins</text>
+  </g>
+</svg>

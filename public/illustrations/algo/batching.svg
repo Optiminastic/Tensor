@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="Colour-first FCFS batching: the oldest jobs of one colour leave the queue together and lock onto a bed">
+  <style>
+    .w { fill: none; stroke: #fff; stroke-opacity: .35; stroke-width: 1.5 }
+    .t { font: 500 10px ui-monospace, Menlo, monospace; fill: #fff; fill-opacity: .7 }
+    .j { animation: go 5s ease-in-out infinite } .j2 { animation-delay: .4s } .j3 { animation-delay: .8s }
+    @keyframes go { 0%, 10% { transform: translateX(0) } 45%, 100% { transform: translateX(var(--d)) } }
+    @media (prefers-reduced-motion: reduce) { .j { animation: none } }
+  </style>
+  <text class="t" x="10" y="18">queue, oldest first</text>
+  <circle class="j" style="--d:170px" fill="#2d8af7" cx="20" cy="44" r="9"/>
+  <circle fill="#d7f75b" cx="44" cy="44" r="9"/>
+  <circle class="j j2" style="--d:170px" fill="#2d8af7" cx="68" cy="44" r="9"/>
+  <circle fill="#fff" fill-opacity=".85" cx="92" cy="44" r="9"/>
+  <circle class="j j3" style="--d:170px" fill="#2d8af7" cx="116" cy="44" r="9"/>
+  <rect class="w" x="176" y="27" width="134" height="34" rx="17"/>
+  <text class="t" x="214" y="80">one bed</text>
+  <text class="t" x="10" y="96">same material, colour and nozzle</text>
+  <text class="t" x="10" y="112">locks at 3+ units, at most 5</text>
+</svg>

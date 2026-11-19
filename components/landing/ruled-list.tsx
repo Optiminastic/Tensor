@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react'
 import type { JSX } from 'react'
 
 import { cn } from '@/lib/utils'
@@ -6,6 +7,7 @@ export interface RuledItem {
   title: string
   description: string
   points?: readonly string[]
+  icon?: LucideIcon
 }
 
 interface RuledListProps {
@@ -20,8 +22,13 @@ interface RuledListProps {
 export function RuledList({ items, columns = 3 }: RuledListProps): JSX.Element {
   return (
     <ul className={cn('grid gap-x-10 gap-y-8 sm:grid-cols-2', columns === 3 && 'lg:grid-cols-3')}>
-      {items.map(item => (
+      {items.map(({ icon: Icon, ...item }) => (
         <li key={item.title} className="border-landing-ink flex flex-col gap-2 border-t-2 pt-4">
+          {Icon ? (
+            <span className="bg-landing-lime text-landing-ink mb-1 flex size-10 items-center justify-center rounded-xl">
+              <Icon className="size-5" aria-hidden />
+            </span>
+          ) : null}
           <h3 className="text-lg font-medium tracking-[-0.02em]">{item.title}</h3>
           <p className="text-landing-ink/70 text-sm text-pretty">{item.description}</p>
           {item.points?.length ? (

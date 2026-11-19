@@ -1,3 +1,13 @@
+import {
+  Braces,
+  FlaskConical,
+  KeyRound,
+  ListOrdered,
+  RefreshCcw,
+  Ruler,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react'
 import type { Metadata } from 'next'
 import type { JSX } from 'react'
 
@@ -28,7 +38,22 @@ const SYSTEM_ITEMS = SYSTEM_PARTS.map(p => ({
   description: p.role,
   points: p.details,
 }))
-const PRACTICE_ITEMS = PRACTICES.map(p => ({ title: p.title, description: p.detail }))
+/** Each practice's icon, in the order PRACTICES lists them. */
+const PRACTICE_ICONS = [
+  ShieldCheck,
+  Ruler,
+  Braces,
+  ListOrdered,
+  RefreshCcw,
+  KeyRound,
+  FlaskConical,
+  Zap,
+]
+const PRACTICE_ITEMS = PRACTICES.map((p, i) => ({
+  title: p.title,
+  description: p.detail,
+  icon: PRACTICE_ICONS[i % PRACTICE_ICONS.length],
+}))
 
 export default function ArchitecturePage(): JSX.Element {
   return (

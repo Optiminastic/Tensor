@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="Guillotine packing: the bed is cut into free rectangles and each part fills the one that leaves least area">
+  <style>
+    .w { fill: none; stroke: #fff; stroke-opacity: .35; stroke-width: 1.5 }
+    .t { font: 500 10px ui-monospace, Menlo, monospace; fill: #fff; fill-opacity: .7 }
+    .p { animation: in 6s ease-out infinite } .p2 { animation-delay: .6s } .p3 { animation-delay: 1.2s } .p4 { animation-delay: 1.8s }
+    .cut { stroke: #d7f75b; stroke-dasharray: 4 4; stroke-width: 1.5 }
+    @keyframes in { 0% { opacity: 0 } 12%, 88% { opacity: 1 } 100% { opacity: 0 } }
+    @media (prefers-reduced-motion: reduce) { .p { animation: none } }
+  </style>
+  <rect class="w" x="10" y="10" width="190" height="100" rx="6"/>
+  <rect class="p" fill="#2d8af7" x="14" y="14" width="110" height="52" rx="4"/>
+  <line class="cut" x1="128" y1="10" x2="128" y2="110"/>
+  <line class="cut" x1="10" y1="70" x2="128" y2="70"/>
+  <rect class="p p2" fill="#d7f75b" x="132" y="14" width="64" height="60" rx="4"/>
+  <rect class="p p3" fill="#fff" fill-opacity=".85" x="14" y="74" width="54" height="32" rx="4"/>
+  <rect class="p p4" fill="#fff" fill-opacity=".85" x="72" y="74" width="52" height="32" rx="4"/>
+  <text class="t" x="216" y="40">largest first</text>
+  <text class="t" x="216" y="58">best area fit</text>
+  <text class="t" x="216" y="76">cut the rest</text>
+</svg>

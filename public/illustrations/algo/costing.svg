@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="Slicer-based costing: grams and minutes from the slicer become a cost, snapped up to the brand's price ladder">
+  <style>
+    .w { fill: none; stroke: #fff; stroke-opacity: .35; stroke-width: 1.5 }
+    .t { font: 500 10px ui-monospace, Menlo, monospace; fill: #fff; fill-opacity: .7 }
+    .k { font: 600 10px ui-monospace, Menlo, monospace; fill: #0e1116 }
+    .b { transform-box: fill-box; transform-origin: left; animation: fill 5s ease-out infinite }
+    @keyframes fill { 0% { transform: scaleX(0) } 40%, 100% { transform: scaleX(1) } }
+    @media (prefers-reduced-motion: reduce) { .b { animation: none } }
+  </style>
+  <text class="t" x="10" y="24">42.6 g</text><rect class="b" fill="#2d8af7" x="70" y="15" width="90" height="12" rx="6"/>
+  <text class="t" x="10" y="50">3h 18m</text><rect class="b" fill="#2d8af7" x="70" y="41" width="120" height="12" rx="6"/>
+  <text class="t" x="10" y="76">CP ₹298</text><rect class="b" fill="#fff" fill-opacity=".85" x="70" y="67" width="60" height="12" rx="6"/>
+  <rect class="w" x="216" y="10" width="94" height="22" rx="11"/><text class="t" x="232" y="25">₹1,499</text>
+  <rect fill="#d7f75b" x="216" y="38" width="94" height="22" rx="11"/><text class="k" x="232" y="53">₹1,299 ✓</text>
+  <rect class="w" x="216" y="66" width="94" height="22" rx="11"/><text class="t" x="232" y="81">₹999</text>
+  <text class="t" x="10" y="108">snapped up to the first rung the cost fits</text>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="Parametric rendering: customer fields become OpenSCAD variables and render a coloured 3MF">
+  <style>
+    .w { fill: none; stroke: #fff; stroke-opacity: .35; stroke-width: 1.5 }
+    .t { font: 500 10px ui-monospace, Menlo, monospace; fill: #fff; fill-opacity: .7 }
+    .f { stroke: #d7f75b; stroke-width: 1.5; stroke-dasharray: 3 6; fill: none; animation: d 1.4s linear infinite }
+    @keyframes d { to { stroke-dashoffset: -18 } }
+    @media (prefers-reduced-motion: reduce) { .f { animation: none } }
+  </style>
+  <rect class="w" x="10" y="20" width="104" height="70" rx="8"/>
+  <text class="t" x="20" y="40">name = "ARJUN"</text>
+  <text class="t" x="20" y="58">colour = red</text>
+  <text class="t" x="20" y="76">size = M</text>
+  <path class="f" d="M118 55 H156"/>
+  <rect class="w" x="160" y="30" width="60" height="50" rx="8"/><text class="t" x="172" y="59">.scad</text>
+  <path class="f" d="M224 55 H254"/>
+  <path d="M282 32 l22 12 v24 l-22 12 l-22 -12 v-24 z" fill="#d7f75b"/>
+  <text class="t" x="266" y="104">.3mf</text>
+</svg>
