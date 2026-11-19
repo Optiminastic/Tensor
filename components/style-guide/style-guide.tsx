@@ -1,6 +1,5 @@
 import type { ReactNode, JSX } from 'react'
 
-import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/style-guide/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -238,15 +237,15 @@ function LadderSection(): JSX.Element {
 
 export function StyleGuide(): JSX.Element {
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-12 px-6 py-12">
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Logo />
-          <p className="text-muted-foreground max-w-prose text-sm">
-            Editorial Ink - the design language for Tensor&apos;s costing, pricing and approval
-            workspace.
-          </p>
-        </div>
+    // The page frame (nav, title, footer) comes from the marketing shell, so
+    // this is the showcase alone: the in-app tokens and components, with the
+    // theme toggle to see them in dark mode.
+    <div className="flex flex-col gap-12">
+      <header className="flex items-center justify-between gap-4">
+        <p className="text-muted-foreground max-w-prose text-sm">
+          Editorial Ink - the design language inside Tensor&apos;s workspace: its colours, type,
+          controls and data displays.
+        </p>
         <ThemeToggle />
       </header>
       <ColorSection />

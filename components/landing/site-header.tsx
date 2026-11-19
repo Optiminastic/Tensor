@@ -4,10 +4,13 @@ import type { JSX } from 'react'
 import { PillLink } from '@/components/landing/pill-link'
 import { Logo } from '@/components/logo'
 
+// Each its own page, so a link to one can be shared and the nav works from
+// every page, not only from the homepage it used to scroll.
 const NAV_LINKS = [
-  { href: '#product', label: 'Product' },
-  { href: '#about', label: 'About' },
-  { href: '#works-with', label: 'Integrations' },
+  { href: '/features', label: 'Features' },
+  { href: '/about', label: 'About' },
+  { href: '/integrations', label: 'Integrations' },
+  { href: '/architecture', label: 'Architecture' },
   { href: '/style-guide', label: 'Design system' },
 ]
 
