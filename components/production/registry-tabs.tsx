@@ -7,6 +7,7 @@ import { DesignRegistryTable } from '@/components/production/design-registry-tab
 import { DesignTemplatesProvider } from '@/components/production/design-templates-context'
 import { ProductRegistryPanel } from '@/components/production/product-registry-panel'
 import { SKUPipelinePanel } from '@/components/production/sku-pipeline-panel'
+import { SlicingProfilesPanel } from '@/components/production/slicing-profiles-panel'
 import { Tabs, type TabItem } from '@/components/ui/tabs'
 import { useQueryTab } from '@/hooks/use-query-tab'
 import type { InventoryItem } from '@/lib/validators/inventory'
@@ -124,7 +125,10 @@ export function RegistryTabs({
           would turn into twenty visits. */}
       {active === SLICING_TAB ? (
         <div className={SCROLL_AREA}>
-          <SKUPipelinePanel brand={brand} />
+          <div className="flex flex-col gap-10">
+            <SKUPipelinePanel brand={brand} />
+            <SlicingProfilesPanel />
+          </div>
         </div>
       ) : null}
     </div>
