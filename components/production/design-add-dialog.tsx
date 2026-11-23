@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type JSX } from 'react'
 
+import { uploadDesignFontAction } from '@/app/dashboard/[brand]/production/design-font-actions'
 import {
   setTemplateSectionAction,
   uploadDesignTemplateAction,
@@ -12,6 +13,10 @@ import {
   DesignAddFileList,
   type DesignUploadOutcome,
 } from '@/components/production/design-add-file-list'
+import {
+  DesignAddFontList,
+  type FontUploadOutcome,
+} from '@/components/production/design-add-font-list'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -24,6 +29,7 @@ import {
 import { Field } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
 import { planDesignUploads, type DesignUploadCandidate } from '@/lib/design-upload-plan'
+import { isFontFile } from '@/lib/validators/design-fonts'
 
 interface DesignAddDialogProps {
   brand: string
@@ -67,6 +73,7 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
   const [pending, setPending] = useState(false)
   const [done, setDone] = useState(0)
   const [outcomes, setOutcomes] = useState<Map<string, DesignUploadOutcome> | null>(null)
+  const [fontOutcomes, setFontOutcomes] = useState<Map<string, FontUploadOutcome> | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -74,11 +81,20 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
     setFiles([])
     setSection('')
     setOutcomes(null)
+    setFontOutcomes(null)
     setDone(0)
     setError(null)
   }, [open])
 
-  const plan = planDesignUploads(files, existingKeys)
+  // Fonts ride along with the designs and go first, so a .scad that names a
+  // font Tensor does not ship goes in on the same click. Optional: most
+  // designs use Tensor's own fonts and need none.
+  const fonts = files.filter(f => isFontFile(f.name))
+  const plan = planDesignUploads(
+    files.filter(f => !isFontFile(f.name)),
+    existingKeys,
+  )
+  const total = fonts.length + plan.ready.length
 
   function choose(chosen: FileList | null): void {
     if (chosen === null) return
@@ -94,11 +110,13 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
   }
 
   async function save(): Promise<void> {
-    if (plan.ready.length === 0) return
+    if (total === 0) return
     setError(null)
     setPending(true)
     setDone(0)
 
+    const fontResults = await uploadFonts(brand, fonts, () => setDone(n => n + 1))
+    setFontOutcomes(fontResults)
     const results = new Map<string, DesignUploadOutcome>()
     // ONE AT A TIME. Each is an upload of a file plus a second call to file
     // it, and firing nine of those at once buys a second of wall clock for a
@@ -115,7 +133,7 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
     // page is refreshed either way.
     router.refresh()
 
-    const failed = [...results.values()].filter(r => !r.ok)
+    const failed = [...results.values(), ...fontResults.values()].filter(r => !r.ok)
     if (failed.length === 0 && plan.skipped.length === 0) {
       setOpen(false)
       return
@@ -124,13 +142,11 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
     // explanation and closing over it would leave somebody to work out from
     // the table which of nine files are missing.
     if (failed.length > 0) {
-      setError(`${failed.length} of ${plan.ready.length} could not be added. The rest are in.`)
+      setError(`${failed.length} of ${total} could not be added. The rest are in.`)
     }
   }
 
-  const label = pending
-    ? `Uploading ${done + 1} of ${plan.ready.length}…`
-    : addLabel(plan.ready.length)
+  const label = pending ? `Uploading ${done + 1} of ${total}…` : addLabel(total)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -145,7 +161,8 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
           <DialogTitle>Add design files</DialogTitle>
           <DialogDescription>
             OpenSCAD .scad files. Each is filed under its own name, which is the key variants link
-            to, and all of them under the section you choose.
+            to, and all of them under the section you choose. If a file uses a font Tensor does not
+            have, add that font&apos;s .ttf or .otf file here too.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
@@ -155,7 +172,7 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
             hint={
               files.length === 0
                 ? 'No files chosen — pick as many as you like'
-                : `${files.length} chosen, ${plan.ready.length} will be added`
+                : `${files.length} chosen, ${total} will be added`
             }
           >
             <div className="flex gap-2">
@@ -163,7 +180,7 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
                 ref={inputRef}
                 id="t-file"
                 type="file"
-                accept=".scad"
+                accept=".scad,.ttf,.otf"
                 multiple
                 className="hidden"
                 onChange={e => {
@@ -179,7 +196,7 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
                 onClick={() => inputRef.current?.click()}
                 disabled={pending}
               >
-                Choose .scad files
+                Choose files
               </Button>
               {files.length > 0 && !pending ? (
                 <Button variant="ghost" size="sm" onClick={() => setFiles([])}>
@@ -188,6 +205,13 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
               ) : null}
             </div>
           </Field>
+
+          <DesignAddFontList
+            fonts={fonts}
+            outcomes={fontOutcomes}
+            disabled={pending}
+            onRemove={name => setFiles(current => current.filter(f => f.name !== name))}
+          />
 
           <DesignAddFileList
             candidates={plan.candidates}
@@ -226,7 +250,7 @@ export function DesignAddDialog({ brand, existingKeys }: DesignAddDialogProps): 
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
               {outcomes === null ? 'Cancel' : 'Close'}
             </Button>
-            <Button onClick={() => void save()} disabled={pending || plan.ready.length === 0}>
+            <Button onClick={() => void save()} disabled={pending || total === 0}>
               {label}
             </Button>
           </div>
@@ -270,6 +294,33 @@ async function upload(
 
 function addLabel(count: number): string {
   if (count === 0) return 'Add design files'
-  if (count === 1) return 'Add 1 design file'
-  return `Add ${count} design files`
+  if (count === 1) return 'Add 1 file'
+  return `Add ${count} files`
+}
+
+/**
+ * Uploads the chosen fonts, one at a time, before any design.
+ *
+ * A font that is refused does not stop the designs: one that needed it is
+ * then refused by Tensor-Core naming the font, which says what to fix.
+ */
+async function uploadFonts(
+  brand: string,
+  fonts: File[],
+  onEach: () => void,
+): Promise<Map<string, FontUploadOutcome>> {
+  const results = new Map<string, FontUploadOutcome>()
+  for (const font of fonts) {
+    const form = new FormData()
+    form.set('file', font)
+    const added = await uploadDesignFontAction(brand, form)
+    results.set(
+      font.name,
+      added.ok
+        ? { fileName: font.name, ok: true, families: added.data?.families }
+        : { fileName: font.name, ok: false, error: added.error ?? 'could not be added' },
+    )
+    onEach()
+  }
+  return results
 }
