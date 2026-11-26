@@ -1,3 +1,5 @@
+import { type PhotoSheetSummary, parsePhotoSheetSummary } from '@/lib/validators/photo-sheet'
+
 /**
  * The products the Product Creation page can build from an order.
  *
@@ -25,6 +27,11 @@ export interface CreatableProduct {
    * beside the download, which then holds all of them.
    */
   parts?: readonly { value: string; label: string }[]
+  /**
+   * multiOrder: the product takes several order numbers, comma separated,
+   * and makes one file from all of them.
+   */
+  multiOrder?: boolean
   /** Shown above the preview. */
   check: string
 }
@@ -96,6 +103,14 @@ export const CREATABLE_PRODUCTS: readonly CreatableProduct[] = [
     buildFirst: true,
     check: 'every item the registry makes for this order - check each before printing.',
   },
+  {
+    value: 'custom-photo',
+    label: 'Custom Photo (A4 photo sheets)',
+    hint: 'Every customer photo in these orders, at its product’s size: DuoSnap 65 × 105 mm, fridge magnet 56.6 × 59.7 mm, Family Crossword by its photo frames (3 → 106 × 80, 4 → 89 × 67, 6 → 71 × 54 mm), social sticker round 51 mm (Large) or 41 mm. Each A4 sheet is filled before the next one starts.',
+    download: { format: 'pdf', label: 'Download print PDF' },
+    multiOrder: true,
+    check: 'check every photo and its order number before printing.',
+  },
 ]
 
 export type ProductBuild = {
@@ -145,7 +160,9 @@ export function productBuildFileUrl(brand: string, id: string): string {
   return `/api/product-creation/${encodeURIComponent(brand)}/builds/${encodeURIComponent(id)}/file`
 }
 
-export type BuildResult = { blob: Blob; filename: string } | { error: string }
+export type BuildResult =
+  | { blob: Blob; filename: string; summary: PhotoSheetSummary | null }
+  | { error: string }
 
 /** Asks the backend for one file of one product for one order. */
 export async function buildProductFile(
@@ -163,7 +180,11 @@ export async function buildProductFile(
   }
   const disposition = res.headers.get('Content-Disposition') ?? ''
   const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? `${product}.${body.format}`
-  return { blob: await res.blob(), filename }
+  return {
+    blob: await res.blob(),
+    filename,
+    summary: parsePhotoSheetSummary(res.headers.get('X-Photo-Sheet')),
+  }
 }
 
 /** Saves a blob through the browser's own download. */

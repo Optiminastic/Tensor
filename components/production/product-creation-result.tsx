@@ -4,9 +4,11 @@ import { Box, Download, FileText } from 'lucide-react'
 import type { JSX } from 'react'
 
 import { BackgroundBuildButton } from '@/components/production/background-build-button'
+import { PhotoSheetSummaryNote } from '@/components/production/photo-sheet-summary'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { CreatableProduct } from '@/lib/product-creation'
+import type { PhotoSheetSummary } from '@/lib/validators/photo-sheet'
 
 interface ProductCreationResultProps {
   brand: string
@@ -14,6 +16,8 @@ interface ProductCreationResultProps {
   order: string
   previewUrl: string
   previewName: string
+  /** Custom photo sheets only: what went on them and what was left out. */
+  summary?: PhotoSheetSummary | null
   downloading: boolean
   onDownload: () => void
 }
@@ -25,6 +29,7 @@ export function ProductCreationResult({
   order,
   previewUrl,
   previewName,
+  summary,
   downloading,
   onDownload,
 }: ProductCreationResultProps): JSX.Element {
@@ -33,7 +38,8 @@ export function ProductCreationResult({
     <Card className="flex w-full max-w-5xl flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm">
-          Order <span className="font-mono">{order}</span> — {product.check}
+          {product.multiOrder ? 'Orders' : 'Order'} <span className="font-mono">{order}</span> —{' '}
+          {product.check}
         </p>
         <div className="flex gap-2">
           <a href={previewUrl} download={previewName} className="contents">
@@ -56,6 +62,7 @@ export function ProductCreationResult({
           )}
         </div>
       </div>
+      {summary ? <PhotoSheetSummaryNote summary={summary} /> : null}
       {/* A blob URL from the backend, not a static asset next/image can optimise. */}
       <img
         src={previewUrl}

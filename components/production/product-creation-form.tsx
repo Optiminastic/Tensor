@@ -11,12 +11,19 @@ import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { buildProductFile, CREATABLE_PRODUCTS, saveBlob } from '@/lib/product-creation'
+import type { PhotoSheetSummary } from '@/lib/validators/photo-sheet'
 
 interface ProductCreationFormProps {
   brand: string
 }
 
-type Built = { product: string; order: string; url: string; filename: string }
+type Built = {
+  product: string
+  order: string
+  url: string
+  filename: string
+  summary: PhotoSheetSummary | null
+}
 /** run remounts the result, so Submit again starts (or finds) the build again. */
 type BuildFirst = { product: string; order: string; run: number }
 
@@ -61,7 +68,13 @@ export function ProductCreationForm({ brand }: ProductCreationFormProps): JSX.El
       setError(res.error)
       return
     }
-    setBuilt({ product, order, url: URL.createObjectURL(res.blob), filename: res.filename })
+    setBuilt({
+      product,
+      order,
+      url: URL.createObjectURL(res.blob),
+      filename: res.filename,
+      summary: res.summary,
+    })
   }
 
   async function download(): Promise<void> {
@@ -94,16 +107,20 @@ export function ProductCreationForm({ brand }: ProductCreationFormProps): JSX.El
             </Select>
           </Field>
           <Field
-            label="Order number"
+            label={chosen?.multiOrder ? 'Order numbers' : 'Order number'}
             htmlFor="pc-order"
-            hint="T3DPS-116597 or just 116597."
+            hint={
+              chosen?.multiOrder
+                ? 'Separate them with commas: 116324,115443,117584.'
+                : 'T3DPS-116597 or just 116597.'
+            }
             required
           >
             <Input
               id="pc-order"
               value={orderNumber}
               onChange={e => setOrderNumber(e.target.value)}
-              placeholder="116597"
+              placeholder={chosen?.multiOrder ? '116324,115443,117584' : '116597'}
               className="font-mono"
               autoComplete="off"
             />
@@ -115,7 +132,11 @@ export function ProductCreationForm({ brand }: ProductCreationFormProps): JSX.El
           ) : null}
           <Button type="submit" disabled={pending !== null || orderNumber.trim() === ''}>
             <ImagePlus className="size-4" aria-hidden />
-            {pending === 'preview' ? 'Building… (fetching the photo)' : 'Submit'}
+            {pending === 'preview'
+              ? chosen?.multiOrder
+                ? 'Building… (fetching every photo)'
+                : 'Building… (fetching the photo)'
+              : 'Submit'}
           </Button>
         </form>
       </Card>
@@ -127,6 +148,7 @@ export function ProductCreationForm({ brand }: ProductCreationFormProps): JSX.El
           order={built.order}
           previewUrl={built.url}
           previewName={built.filename}
+          summary={built.summary}
           downloading={pending === 'download'}
           onDownload={() => void download()}
         />

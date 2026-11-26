@@ -6,7 +6,15 @@ import { env } from '@/lib/env'
 export const runtime = 'nodejs'
 
 /** The products the page can build, by URL segment. Anything else is a 404. */
-const PRODUCTS = new Set(['dnp-photo-frame', 'night-lamp', 'moon-lamp'])
+const PRODUCTS = new Set(['dnp-photo-frame', 'night-lamp', 'moon-lamp', 'custom-photo'])
+
+/**
+ * How long the backend may take. Custom photo sheets download every photo of
+ * several orders - dozens of full-size phone pictures - before laying out.
+ */
+function timeoutFor(product: string): number {
+  return product === 'custom-photo' ? 240_000 : 90_000
+}
 
 /**
  * Proxies a product build to Tensor-Core and streams the file back.
@@ -42,7 +50,7 @@ export async function POST(
         body: JSON.stringify(body),
         cache: 'no-store',
         // Photos are downloaded and a 300 dpi page or a 900k-triangle model built.
-        signal: AbortSignal.timeout(90_000),
+        signal: AbortSignal.timeout(timeoutFor(product)),
       },
     )
   } catch {
@@ -60,12 +68,13 @@ async function relay(upstream: Response): Promise<NextResponse> {
       .catch(() => ({ detail: 'Could not build the file.' }))
     return NextResponse.json(payload, { status: upstream.status })
   }
-  return new NextResponse(await upstream.arrayBuffer(), {
-    status: 200,
-    headers: {
-      'Content-Type': upstream.headers.get('Content-Type') ?? 'application/octet-stream',
-      'Content-Disposition':
-        upstream.headers.get('Content-Disposition') ?? 'attachment; filename="product.bin"',
-    },
+  const headers = new Headers({
+    'Content-Type': upstream.headers.get('Content-Type') ?? 'application/octet-stream',
+    'Content-Disposition':
+      upstream.headers.get('Content-Disposition') ?? 'attachment; filename="product.bin"',
   })
+  // What the custom photo sheets hold and left out, for the page to show.
+  const summary = upstream.headers.get('X-Photo-Sheet')
+  if (summary) headers.set('X-Photo-Sheet', summary)
+  return new NextResponse(await upstream.arrayBuffer(), { status: 200, headers })
 }
