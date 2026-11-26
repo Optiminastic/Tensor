@@ -106,7 +106,7 @@ export const CREATABLE_PRODUCTS: readonly CreatableProduct[] = [
   {
     value: 'custom-photo',
     label: 'Custom Photo (A4 photo sheets)',
-    hint: 'Every customer photo in these orders, at its product’s size: DuoSnap 65 × 105 mm, fridge magnet 56.6 × 59.7 mm, Family Crossword by its photo frames (3 → 106 × 80, 4 → 89 × 67, 6 → 71 × 54 mm), social sticker round 51 mm (Large) or 41 mm. Each A4 sheet is filled before the next one starts.',
+    hint: 'Every customer photo in these orders, at the size set on its product’s Photo print size in the registry, or else the built-in size: DuoSnap 65 × 105 mm, fridge magnet 56.6 × 59.7 mm, Family Crossword by its photo frames (3 → 106 × 80, 4 → 89 × 67, 6 → 71 × 54 mm), social sticker round 51 mm (Large) or 41 mm. Each A4 sheet is filled before the next one starts.',
     download: { format: 'pdf', label: 'Download print PDF' },
     multiOrder: true,
     check: 'check every photo and its order number before printing.',

@@ -8,6 +8,7 @@ import {
   type ProductWorkspace,
 } from '@/app/dashboard/[brand]/production/registry-actions'
 import { DesignFieldsPanel } from '@/components/production/design-fields-panel'
+import { PhotoPrintPanel } from '@/components/production/photo-print-panel'
 import { PreviewDesignPanel } from '@/components/production/preview-design-panel'
 import { ProductComponentsPanel } from '@/components/production/product-components-panel'
 import { ProductDeleteDialog } from '@/components/production/product-delete-dialog'
@@ -205,6 +206,7 @@ function ProductDetail({ brand, workspace, components }: ProductDetailProps): JS
   const [showDesign, setShowDesign] = useState(true)
   const [showComponents, setShowComponents] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [showPhotoPrint, setShowPhotoPrint] = useState(false)
 
   return (
     <Card className="scrollbar-thin flex min-w-0 flex-1 flex-col gap-3 p-4 lg:min-h-0 lg:overflow-y-auto">
@@ -279,6 +281,17 @@ function ProductDetail({ brand, workspace, components }: ProductDetailProps): JS
           productCode={product.code}
           variantSkus={product.variants.flatMap(v => (v.sku ? [v.sku] : []))}
         />
+      </Disclosure>
+
+      {/* The size the customer's photo prints at on the Custom Photo A4
+          sheets, with a sample PDF. Optional and closed: most products carry
+          no photo at all. */}
+      <Disclosure
+        label="Photo print size (optional)"
+        open={showPhotoPrint}
+        onToggle={() => setShowPhotoPrint(open => !open)}
+      >
+        {showPhotoPrint ? <PhotoPrintPanel productCode={product.code} /> : null}
       </Disclosure>
 
       {/* The pieces that are NOT printed per order: made to stock or bought
