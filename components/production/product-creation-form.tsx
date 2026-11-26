@@ -3,13 +3,13 @@
 import { ImagePlus } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type JSX } from 'react'
 
+import { Select, SelectItem } from '@/components/base/select/select'
 import { BuildFirstResult } from '@/components/production/build-first-result'
 import { ProductCreationResult } from '@/components/production/product-creation-result'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import { buildProductFile, CREATABLE_PRODUCTS, saveBlob } from '@/lib/product-creation'
 import type { PhotoSheetSummary } from '@/lib/validators/photo-sheet'
 
@@ -97,12 +97,22 @@ export function ProductCreationForm({ brand }: ProductCreationFormProps): JSX.El
     <div className="flex w-full flex-col items-center gap-6">
       <Card className="w-full max-w-lg p-6">
         <form onSubmit={submit} className="flex flex-col gap-5">
-          <Field label="Product" htmlFor="pc-product" hint={chosen?.hint}>
-            <Select id="pc-product" value={product} onChange={e => setProduct(e.target.value)}>
+          <Field label="Product" hint={chosen?.hint}>
+            {/* The dashboard's own dropdown (as on the filter bars), not the
+                browser's: the native list opened in the OS style, unlike
+                every other picker in the product. */}
+            <Select
+              aria-label="Product"
+              selectedKey={product}
+              onSelectionChange={key => key !== null && setProduct(String(key))}
+              className="w-full"
+              triggerClassName="bg-surface border-border h-10 rounded-xl px-3 text-sm shadow-xs"
+              popoverClassName="w-(--trigger-width)"
+            >
               {CREATABLE_PRODUCTS.map(p => (
-                <option key={p.value} value={p.value}>
+                <SelectItem key={p.value} id={p.value}>
                   {p.label}
-                </option>
+                </SelectItem>
               ))}
             </Select>
           </Field>
